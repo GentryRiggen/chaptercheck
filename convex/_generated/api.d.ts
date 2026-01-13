@@ -8,12 +8,17 @@
  * @module
  */
 
+import type * as audioFiles_actions from "../audioFiles/actions.js";
+import type * as audioFiles_mutations from "../audioFiles/mutations.js";
+import type * as audioFiles_queries from "../audioFiles/queries.js";
+import type * as audioFiles_r2Client from "../audioFiles/r2Client.js";
 import type * as auth_clerkWebhook from "../auth/clerkWebhook.js";
 import type * as authors_mutations from "../authors/mutations.js";
 import type * as authors_queries from "../authors/queries.js";
 import type * as books_mutations from "../books/mutations.js";
 import type * as books_queries from "../books/queries.js";
 import type * as http from "../http.js";
+import type * as users_helpers from "../users/helpers.js";
 
 import type {
   ApiFromModules,
@@ -22,12 +27,17 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "audioFiles/actions": typeof audioFiles_actions;
+  "audioFiles/mutations": typeof audioFiles_mutations;
+  "audioFiles/queries": typeof audioFiles_queries;
+  "audioFiles/r2Client": typeof audioFiles_r2Client;
   "auth/clerkWebhook": typeof auth_clerkWebhook;
   "authors/mutations": typeof authors_mutations;
   "authors/queries": typeof authors_queries;
   "books/mutations": typeof books_mutations;
   "books/queries": typeof books_queries;
   http: typeof http;
+  "users/helpers": typeof users_helpers;
 }>;
 
 /**

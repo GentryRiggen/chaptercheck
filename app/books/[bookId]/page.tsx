@@ -5,6 +5,9 @@ import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
+import { AudioUpload } from "@/components/audio/AudioUpload";
+import { AudioPlayer } from "@/components/audio/AudioPlayer";
+import { useState } from "react";
 
 export default function BookDetailPage({
   params,
@@ -12,10 +15,23 @@ export default function BookDetailPage({
   params: { bookId: Id<"books"> };
 }) {
   const router = useRouter();
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const book = useQuery(api.books.queries.getBook, {
     bookId: params.bookId,
   });
+  const audioFiles = useQuery(api.audioFiles.queries.getAudioFilesForBook, {
+    bookId: params.bookId,
+  });
   const deleteBook = useMutation(api.books.mutations.deleteBook);
+
+  const handleUploadComplete = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleAudioDelete = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this book?")) {
@@ -148,11 +164,32 @@ export default function BookDetailPage({
               </div>
             )}
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Audio Files</h2>
-              <p className="text-gray-500">
-                Audio file upload coming in Phase 1C
-              </p>
+            <div className="space-y-6">
+              <AudioUpload
+                bookId={params.bookId}
+                onUploadComplete={handleUploadComplete}
+              />
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold mb-4">Audio Files</h2>
+                {audioFiles === undefined ? (
+                  <p className="text-gray-500">Loading audio files...</p>
+                ) : audioFiles.length === 0 ? (
+                  <p className="text-gray-500">
+                    No audio files yet. Upload one above to get started.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {audioFiles.map((audioFile) => (
+                      <AudioPlayer
+                        key={audioFile._id}
+                        audioFile={audioFile}
+                        onDelete={handleAudioDelete}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
