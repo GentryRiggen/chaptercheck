@@ -7,22 +7,34 @@ import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
 import { AudioUpload } from "@/components/audio/AudioUpload";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 export default function BookDetailPage({
   params,
 }: {
-  params: { bookId: Id<"books"> };
+  params: Promise<{ bookId: Id<"books"> }>;
 }) {
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [bookId, setBookId] = useState<Id<"books"> | null>(null);
 
-  const book = useQuery(api.books.queries.getBook, {
-    bookId: params.bookId,
-  });
-  const audioFiles = useQuery(api.audioFiles.queries.getAudioFilesForBook, {
-    bookId: params.bookId,
-  });
+  // Unwrap params on mount
+  useEffect(() => {
+    params.then((p) => setBookId(p.bookId));
+  }, [params]);
+
+  const book = useQuery(
+    bookId ? api.books.queries.getBook : "skip",
+    bookId ? { bookId } : undefined
+  );
+  const audioFiles = useQuery(
+    bookId ? api.audioFiles.queries.getAudioFilesForBook : "skip",
+    bookId ? { bookId } : undefined
+  );
   const deleteBook = useMutation(api.books.mutations.deleteBook);
 
   const handleUploadComplete = () => {
@@ -34,12 +46,12 @@ export default function BookDetailPage({
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this book?")) {
+    if (!bookId || !confirm("Are you sure you want to delete this book?")) {
       return;
     }
 
     try {
-      await deleteBook({ bookId: params.bookId });
+      await deleteBook({ bookId });
       router.push("/books");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete book");
@@ -48,18 +60,18 @@ export default function BookDetailPage({
 
   if (book === undefined) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
 
   if (book === null) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">Book not found</p>
-          <Link href="/books" className="text-blue-600 hover:underline">
+          <p className="text-muted-foreground mb-4">Book not found</p>
+          <Link href="/books" className="text-primary hover:underline">
             Back to Books
           </Link>
         </div>
@@ -68,31 +80,30 @@ export default function BookDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
+    <div className="min-h-screen bg-background">
+      <div className="border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-start">
             <div>
               <Link
                 href="/books"
-                className="text-sm text-blue-600 hover:underline mb-2 inline-block"
+                className="text-sm text-primary hover:underline mb-2 inline-block"
               >
                 ← Back to Books
               </Link>
               <h1 className="text-3xl font-bold">{book.title}</h1>
               {book.subtitle && (
-                <p className="text-xl text-gray-600 mt-2">{book.subtitle}</p>
+                <p className="text-xl text-muted-foreground mt-2">
+                  {book.subtitle}
+                </p>
               )}
             </div>
-            <button
-              onClick={handleDelete}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-            >
+            <Button variant="destructive" onClick={handleDelete}>
               Delete Book
-            </button>
+            </Button>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -104,105 +115,123 @@ export default function BookDetailPage({
                 className="w-full rounded-lg shadow-lg"
               />
             ) : (
-              <div className="w-full aspect-[2/3] bg-gray-200 rounded-lg flex items-center justify-center">
-                <p className="text-gray-400">No cover image</p>
+              <div className="w-full aspect-[2/3] bg-muted rounded-lg flex items-center justify-center">
+                <p className="text-muted-foreground">No cover image</p>
               </div>
             )}
 
-            <div className="mt-6 bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Details</h2>
-              <dl className="space-y-2 text-sm">
-                {book.series && (
-                  <>
-                    <dt className="text-gray-500">Series</dt>
-                    <dd className="font-medium">
-                      {book.series.name}
-                      {book.seriesOrder !== undefined && (
-                        <span className="text-gray-500 ml-1">
-                          (Book {book.seriesOrder})
-                        </span>
-                      )}
-                    </dd>
-                  </>
-                )}
-                {book.isbn && (
-                  <>
-                    <dt className="text-gray-500 mt-3">ISBN</dt>
-                    <dd className="font-medium">{book.isbn}</dd>
-                  </>
-                )}
-                {book.publishedYear && (
-                  <>
-                    <dt className="text-gray-500 mt-3">Published</dt>
-                    <dd className="font-medium">{book.publishedYear}</dd>
-                  </>
-                )}
-                {book.language && (
-                  <>
-                    <dt className="text-gray-500 mt-3">Language</dt>
-                    <dd className="font-medium">{book.language}</dd>
-                  </>
-                )}
-              </dl>
-            </div>
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-3 text-sm">
+                  {book.series && (
+                    <div>
+                      <dt className="text-muted-foreground">Series</dt>
+                      <dd className="font-medium">
+                        {book.series.name}
+                        {book.seriesOrder !== undefined && (
+                          <span className="text-muted-foreground ml-1">
+                            (Book {book.seriesOrder})
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                  )}
+                  {book.isbn && (
+                    <div>
+                      <dt className="text-muted-foreground">ISBN</dt>
+                      <dd className="font-medium">{book.isbn}</dd>
+                    </div>
+                  )}
+                  {book.publishedYear && (
+                    <div>
+                      <dt className="text-muted-foreground">Published</dt>
+                      <dd className="font-medium">{book.publishedYear}</dd>
+                    </div>
+                  )}
+                  {book.language && (
+                    <div>
+                      <dt className="text-muted-foreground">Language</dt>
+                      <dd className="font-medium">{book.language}</dd>
+                    </div>
+                  )}
+                </dl>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6">
             {book.authors && book.authors.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold mb-4">Authors</h2>
-                <div className="flex flex-wrap gap-2">
-                  {book.authors.map((author) => (
-                    <Link
-                      key={author._id}
-                      href={`/authors/${author._id}`}
-                      className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100"
-                    >
-                      {author.name}
-                      {author.role && author.role !== "author" && (
-                        <span className="ml-2 text-xs">({author.role})</span>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Authors</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {book.authors.map((author) => (
+                      <Link key={author._id} href={`/authors/${author._id}`}>
+                        <Badge variant="secondary" className="cursor-pointer">
+                          {author.name}
+                          {author.role && author.role !== "author" && (
+                            <span className="ml-1 text-xs">
+                              ({author.role})
+                            </span>
+                          )}
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {book.description && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold mb-4">Description</h2>
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {book.description}
-                </p>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-wrap">{book.description}</p>
+                </CardContent>
+              </Card>
             )}
 
             <div className="space-y-6">
-              <AudioUpload
-                bookId={params.bookId}
-                onUploadComplete={handleUploadComplete}
-              />
+              {bookId && (
+                <AudioUpload
+                  bookId={bookId}
+                  onUploadComplete={handleUploadComplete}
+                />
+              )}
 
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold mb-4">Audio Files</h2>
-                {audioFiles === undefined ? (
-                  <p className="text-gray-500">Loading audio files...</p>
-                ) : audioFiles.length === 0 ? (
-                  <p className="text-gray-500">
-                    No audio files yet. Upload one above to get started.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {audioFiles.map((audioFile) => (
-                      <AudioPlayer
-                        key={audioFile._id}
-                        audioFile={audioFile}
-                        onDelete={handleAudioDelete}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Audio Files</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {audioFiles === undefined ? (
+                    <p className="text-muted-foreground">
+                      Loading audio files...
+                    </p>
+                  ) : audioFiles.length === 0 ? (
+                    <p className="text-muted-foreground">
+                      No audio files yet. Upload one above to get started.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {audioFiles.map((audioFile) => (
+                        <AudioPlayer
+                          key={audioFile._id}
+                          audioFile={audioFile}
+                          onDelete={handleAudioDelete}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

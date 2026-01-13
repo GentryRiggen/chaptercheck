@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Play, Pause } from "lucide-react";
 
 interface AudioPlayerProps {
   audioFile: Doc<"audioFiles">;
@@ -105,49 +108,56 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 rounded-lg p-4">
-        <p className="text-gray-500">Loading audio...</p>
-      </div>
+      <Card className="p-4">
+        <p className="text-muted-foreground">Loading audio...</p>
+      </Card>
     );
   }
 
   if (!audioUrl) {
     return (
-      <div className="bg-red-50 rounded-lg p-4">
-        <p className="text-red-600">Failed to load audio file</p>
-      </div>
+      <Card className="p-4 bg-destructive/10">
+        <p className="text-destructive">Failed to load audio file</p>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white border rounded-lg p-4">
+    <Card className="p-4">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <h4 className="font-medium text-gray-900">{audioFile.fileName}</h4>
-          <p className="text-sm text-gray-500">
+          <h4 className="font-medium">{audioFile.fileName}</h4>
+          <p className="text-sm text-muted-foreground">
             {formatFileSize(audioFile.fileSize)} • {audioFile.format.toUpperCase()}
           </p>
         </div>
         {onDelete && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleDelete}
-            className="text-red-600 hover:text-red-700 text-sm"
+            className="text-destructive hover:text-destructive"
           >
             Delete
-          </button>
+          </Button>
         )}
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            size="icon"
             onClick={togglePlayPause}
-            className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700"
+            className="flex-shrink-0 rounded-full"
           >
-            {isPlaying ? "⏸" : "▶"}
-          </button>
+            {isPlaying ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </Button>
 
           <div className="flex-1">
             <input
@@ -156,20 +166,15 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
               max={duration || 0}
               value={currentTime}
               onChange={handleSeek}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, #2563eb 0%, #2563eb ${
-                  (currentTime / duration) * 100
-                }%, #e5e7eb ${(currentTime / duration) * 100}%, #e5e7eb 100%)`,
-              }}
+              className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>{formatTime(currentTime)}</span>
               <span>{formatTime(duration)}</span>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
