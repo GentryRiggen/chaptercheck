@@ -36,6 +36,21 @@ export default defineSchema({
       searchField: "name",
     }),
 
+  // Series
+  series: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    // Migration-ready
+    firebaseId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_name", ["name"])
+    .index("by_firebaseId", ["firebaseId"])
+    .searchIndex("search_series", {
+      searchField: "name",
+    }),
+
   // Books
   books: defineTable({
     title: v.string(),
@@ -46,6 +61,9 @@ export default defineSchema({
     coverImageUrl: v.optional(v.string()),
     language: v.optional(v.string()),
     duration: v.optional(v.number()), // Total audiobook duration in seconds
+    // Series relationship
+    seriesId: v.optional(v.id("series")),
+    seriesOrder: v.optional(v.number()), // Supports decimals (e.g., 2.5 for novellas)
     // Migration-ready
     firebaseId: v.optional(v.string()),
     createdAt: v.number(),
@@ -53,6 +71,8 @@ export default defineSchema({
   })
     .index("by_isbn", ["isbn"])
     .index("by_publishedYear", ["publishedYear"])
+    .index("by_series", ["seriesId"])
+    .index("by_series_and_order", ["seriesId", "seriesOrder"])
     .index("by_firebaseId", ["firebaseId"])
     .searchIndex("search_books", {
       searchField: "title",

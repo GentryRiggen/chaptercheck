@@ -112,9 +112,22 @@ export default function BookDetailPage({
             <div className="mt-6 bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold mb-4">Details</h2>
               <dl className="space-y-2 text-sm">
+                {book.series && (
+                  <>
+                    <dt className="text-gray-500">Series</dt>
+                    <dd className="font-medium">
+                      {book.series.name}
+                      {book.seriesOrder !== undefined && (
+                        <span className="text-gray-500 ml-1">
+                          (Book {book.seriesOrder})
+                        </span>
+                      )}
+                    </dd>
+                  </>
+                )}
                 {book.isbn && (
                   <>
-                    <dt className="text-gray-500">ISBN</dt>
+                    <dt className="text-gray-500 mt-3">ISBN</dt>
                     <dd className="font-medium">{book.isbn}</dd>
                   </>
                 )}

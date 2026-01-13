@@ -11,6 +11,8 @@ export const createBook = mutation({
     publishedYear: v.optional(v.number()),
     coverImageUrl: v.optional(v.string()),
     language: v.optional(v.string()),
+    seriesId: v.optional(v.id("series")),
+    seriesOrder: v.optional(v.number()),
     authorIds: v.optional(v.array(v.id("authors"))),
   },
   handler: async (ctx, args) => {
@@ -57,6 +59,8 @@ export const updateBook = mutation({
     coverImageUrl: v.optional(v.string()),
     language: v.optional(v.string()),
     duration: v.optional(v.number()),
+    seriesId: v.optional(v.id("series")),
+    seriesOrder: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();

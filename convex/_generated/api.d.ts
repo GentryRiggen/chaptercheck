@@ -18,6 +18,8 @@ import type * as authors_queries from "../authors/queries.js";
 import type * as books_mutations from "../books/mutations.js";
 import type * as books_queries from "../books/queries.js";
 import type * as http from "../http.js";
+import type * as series_mutations from "../series/mutations.js";
+import type * as series_queries from "../series/queries.js";
 import type * as users_helpers from "../users/helpers.js";
 
 import type {
@@ -37,6 +39,8 @@ declare const fullApi: ApiFromModules<{
   "books/mutations": typeof books_mutations;
   "books/queries": typeof books_queries;
   http: typeof http;
+  "series/mutations": typeof series_mutations;
+  "series/queries": typeof series_queries;
   "users/helpers": typeof users_helpers;
 }>;
 

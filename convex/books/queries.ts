@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 
-// Get a single book by ID with authors
+// Get a single book by ID with authors and series
 export const getBook = query({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {
@@ -21,9 +21,13 @@ export const getBook = query({
       })
     );
 
+    // Get series if book is part of one
+    const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
+
     return {
       ...book,
       authors: authors.filter((a) => a !== null),
+      series,
     };
   },
 });

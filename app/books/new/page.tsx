@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
+import { SeriesSelect } from "@/components/series/SeriesSelect";
 
 export default function NewBookPage() {
   const router = useRouter();
@@ -20,6 +21,10 @@ export default function NewBookPage() {
   const [language, setLanguage] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [selectedAuthors, setSelectedAuthors] = useState<Id<"authors">[]>([]);
+  const [seriesData, setSeriesData] = useState<{
+    seriesId?: Id<"series">;
+    seriesOrder?: number;
+  }>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +56,8 @@ export default function NewBookPage() {
         publishedYear: publishedYear ? parseInt(publishedYear) : undefined,
         language: language.trim() || undefined,
         coverImageUrl: coverImageUrl.trim() || undefined,
+        seriesId: seriesData.seriesId,
+        seriesOrder: seriesData.seriesOrder,
         authorIds: selectedAuthors.length > 0 ? selectedAuthors : undefined,
       });
 
@@ -196,6 +203,8 @@ export default function NewBookPage() {
                   </div>
                 )}
               </div>
+
+              <SeriesSelect value={seriesData} onChange={setSeriesData} />
 
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
