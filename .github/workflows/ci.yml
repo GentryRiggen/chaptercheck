@@ -44,7 +44,7 @@ jobs:
         run: npm ci
 
       - name: Deploy Convex
-        run: npx convex deploy --cmd 'npm run build'
+        run: npx convex deploy
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
