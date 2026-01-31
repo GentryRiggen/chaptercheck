@@ -4,17 +4,38 @@ import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getR2Client } from "../lib/r2Client";
 
-// Generate a presigned URL for uploading an audio file
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Generate a presigned URL for uploading an image
 export const generateUploadUrl = action({
   args: {
     fileName: v.string(),
     fileSize: v.number(),
     contentType: v.string(),
+    path: v.string(), // e.g., "authors", "books"
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
+    }
+
+    // Validate content type
+    if (!ALLOWED_IMAGE_TYPES.includes(args.contentType)) {
+      throw new Error(
+        `Invalid image type. Allowed: ${ALLOWED_IMAGE_TYPES.join(", ")}`
+      );
+    }
+
+    // Validate file size
+    if (args.fileSize > MAX_FILE_SIZE) {
+      throw new Error(`File too large. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`);
     }
 
     const r2Client = getR2Client();
@@ -27,7 +48,7 @@ export const generateUploadUrl = action({
     // Generate unique key for the file
     const timestamp = Date.now();
     const sanitizedFileName = args.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const r2Key = `audiobooks/${timestamp}-${sanitizedFileName}`;
+    const r2Key = `media/${args.path}/${timestamp}-${sanitizedFileName}`;
 
     const command = new PutObjectCommand({
       Bucket: bucketName,
@@ -45,11 +66,10 @@ export const generateUploadUrl = action({
   },
 });
 
-// Generate a presigned URL for streaming/downloading an audio file
-export const generateStreamUrl = action({
+// Generate a presigned URL for viewing an image
+export const generateImageUrl = action({
   args: {
     r2Key: v.string(),
-    r2Bucket: v.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -58,17 +78,22 @@ export const generateStreamUrl = action({
     }
 
     const r2Client = getR2Client();
+    const bucketName = process.env.R2_BUCKET_NAME;
+
+    if (!bucketName) {
+      throw new Error("R2_BUCKET_NAME not configured");
+    }
 
     const command = new GetObjectCommand({
-      Bucket: args.r2Bucket,
+      Bucket: bucketName,
       Key: args.r2Key,
     });
 
     // Generate presigned URL valid for 1 hour
-    const streamUrl = await getSignedUrl(r2Client, command, {
+    const imageUrl = await getSignedUrl(r2Client, command, {
       expiresIn: 3600, // 1 hour
     });
 
-    return { streamUrl };
+    return { imageUrl };
   },
 });

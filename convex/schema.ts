@@ -24,7 +24,7 @@ export default defineSchema({
   authors: defineTable({
     name: v.string(),
     bio: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    imageR2Key: v.optional(v.string()),
     // Migration-ready
     firebaseId: v.optional(v.string()),
     createdAt: v.number(),

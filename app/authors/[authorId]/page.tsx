@@ -1,39 +1,40 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useState, useEffect } from "react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
+import { AuthorImage } from "@/components/authors/AuthorImage";
+import { AuthorEditDialog } from "@/components/authors/AuthorEditDialog";
+import { AuthorDeleteDialog } from "@/components/authors/AuthorDeleteDialog";
+import { Button } from "@/components/ui/button";
 
 export default function AuthorDetailPage({
   params,
 }: {
-  params: { authorId: Id<"authors"> };
+  params: Promise<{ authorId: Id<"authors"> }>;
 }) {
   const router = useRouter();
-  const author = useQuery(api.authors.queries.getAuthor, {
-    authorId: params.authorId,
-  });
-  const books = useQuery(api.authors.queries.getAuthorBooks, {
-    authorId: params.authorId,
-  });
-  const deleteAuthor = useMutation(api.authors.mutations.deleteAuthor);
+  const [authorId, setAuthorId] = useState<Id<"authors"> | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this author?")) {
-      return;
-    }
+  useEffect(() => {
+    params.then((p) => setAuthorId(p.authorId));
+  }, [params]);
 
-    try {
-      await deleteAuthor({ authorId: params.authorId });
-      router.push("/authors");
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete author");
-    }
-  };
+  const author = useQuery(
+    api.authors.queries.getAuthor,
+    authorId ? { authorId } : "skip"
+  );
+  const books = useQuery(
+    api.authors.queries.getAuthorBooks,
+    authorId ? { authorId } : "skip"
+  );
 
-  if (author === undefined) {
+  if (author === undefined || authorId === null) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-500">Loading...</p>
@@ -59,21 +60,36 @@ export default function AuthorDetailPage({
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-start">
-            <div>
-              <Link
-                href="/authors"
-                className="text-sm text-blue-600 hover:underline mb-2 inline-block"
-              >
-                ← Back to Authors
-              </Link>
-              <h1 className="text-3xl font-bold">{author.name}</h1>
+            <div className="flex items-start gap-6">
+              <AuthorImage
+                imageR2Key={author.imageR2Key}
+                name={author.name}
+                size="lg"
+              />
+              <div>
+                <Link
+                  href="/authors"
+                  className="text-sm text-blue-600 hover:underline mb-2 inline-block"
+                >
+                  &larr; Back to Authors
+                </Link>
+                <h1 className="text-3xl font-bold">{author.name}</h1>
+              </div>
             </div>
-            <button
-              onClick={handleDelete}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-            >
-              Delete Author
-            </button>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setEditDialogOpen(true)}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -117,6 +133,20 @@ export default function AuthorDetailPage({
           )}
         </div>
       </main>
+
+      <AuthorEditDialog
+        author={author}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
+
+      <AuthorDeleteDialog
+        authorId={authorId}
+        authorName={author.name}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDeleted={() => router.push("/authors")}
+      />
     </div>
   );
 }
