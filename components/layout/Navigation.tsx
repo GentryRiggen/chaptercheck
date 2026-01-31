@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Menu, BookOpen, Users, Home } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Navigation() {
   const pathname = usePathname();
@@ -109,8 +110,9 @@ export function Navigation() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* User Menu */}
-          <div className="flex items-center">
+          {/* Theme Toggle & User Menu */}
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <UserButton afterSignOutUrl="/sign-in" />
           </div>
         </div>

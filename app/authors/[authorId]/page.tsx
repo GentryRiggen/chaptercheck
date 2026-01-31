@@ -36,18 +36,18 @@ export default function AuthorDetailPage({
 
   if (author === undefined || authorId === null) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
 
   if (author === null) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">Author not found</p>
-          <Link href="/authors" className="text-blue-600 hover:underline">
+          <p className="text-muted-foreground mb-4">Author not found</p>
+          <Link href="/authors" className="text-primary hover:underline">
             Back to Authors
           </Link>
         </div>
@@ -56,8 +56,8 @@ export default function AuthorDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
+    <div className="min-h-screen bg-background">
+      <header className="bg-card border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-start">
             <div className="flex items-start gap-6">
@@ -69,7 +69,7 @@ export default function AuthorDetailPage({
               <div>
                 <Link
                   href="/authors"
-                  className="text-sm text-blue-600 hover:underline mb-2 inline-block"
+                  className="text-sm text-primary hover:underline mb-2 inline-block"
                 >
                   &larr; Back to Authors
                 </Link>
@@ -96,18 +96,18 @@ export default function AuthorDetailPage({
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {author.bio && (
-          <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="bg-card rounded-lg shadow p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4">Bio</h2>
-            <p className="text-gray-700 whitespace-pre-wrap">{author.bio}</p>
+            <p className="text-foreground whitespace-pre-wrap">{author.bio}</p>
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Books</h2>
           {books === undefined ? (
-            <p className="text-gray-500">Loading books...</p>
+            <p className="text-muted-foreground">Loading books...</p>
           ) : books.length === 0 ? (
-            <p className="text-gray-500">No books by this author yet</p>
+            <p className="text-muted-foreground">No books by this author yet</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {books.map((book) => (
@@ -118,12 +118,12 @@ export default function AuthorDetailPage({
                 >
                   <h3 className="font-semibold">{book.title}</h3>
                   {book.subtitle && (
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       {book.subtitle}
                     </p>
                   )}
                   {book.role && (
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       Role: {book.role}
                     </p>
                   )}

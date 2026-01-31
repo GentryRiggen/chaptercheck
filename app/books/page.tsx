@@ -94,8 +94,8 @@ export default function BooksPage() {
   const isEmpty = books !== undefined && books.length === 0 && !isLoading;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
+    <div className="min-h-screen bg-background">
+      <header className="bg-card border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold">Books</h1>
@@ -122,12 +122,12 @@ export default function BooksPage() {
         ) : isEmpty ? (
           <div className="text-center py-12">
             {isSearching ? (
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 No books found for &quot;{debouncedSearch}&quot;
               </p>
             ) : (
               <>
-                <p className="text-gray-500 mb-4">No books yet</p>
+                <p className="text-muted-foreground mb-4">No books yet</p>
                 <Button variant="link" onClick={() => setDialogOpen(true)}>
                   Create your first book
                 </Button>
@@ -135,12 +135,12 @@ export default function BooksPage() {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow divide-y">
+          <div className="bg-card rounded-lg shadow divide-y divide-border">
             {books?.map((book) => (
               <Link
                 key={book._id}
                 href={`/books/${book._id}`}
-                className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-4 p-4 hover:bg-muted transition-colors"
               >
                 <BookCover
                   coverImageR2Key={book.coverImageR2Key}
@@ -148,9 +148,9 @@ export default function BooksPage() {
                   size="sm"
                 />
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-medium text-gray-900">{book.title}</h2>
+                  <h2 className="font-medium text-foreground">{book.title}</h2>
                   {book.subtitle && (
-                    <p className="text-sm text-gray-500">{book.subtitle}</p>
+                    <p className="text-sm text-muted-foreground">{book.subtitle}</p>
                   )}
                   {book.authors && book.authors.length > 0 && (
                     <p className="text-sm text-muted-foreground mt-1">

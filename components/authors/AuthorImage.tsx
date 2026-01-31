@@ -35,7 +35,7 @@ export function AuthorImage({
     return (
       <div
         className={cn(
-          "rounded-full bg-gray-200 animate-pulse",
+          "rounded-full bg-muted animate-pulse",
           sizeClasses[size],
           className
         )}
@@ -47,12 +47,12 @@ export function AuthorImage({
     return (
       <div
         className={cn(
-          "rounded-full bg-gray-200 flex items-center justify-center",
+          "rounded-full bg-muted flex items-center justify-center",
           sizeClasses[size],
           className
         )}
       >
-        <User className={cn("text-gray-400", iconSizes[size])} />
+        <User className={cn("text-muted-foreground", iconSizes[size])} />
       </div>
     );
   }

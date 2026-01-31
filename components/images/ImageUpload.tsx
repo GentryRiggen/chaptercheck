@@ -72,10 +72,10 @@ export function ImageUpload({
           )}
         </div>
       ) : (
-        <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+        <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted transition-colors">
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <User className="w-8 h-8 mb-2 text-gray-400" />
-            <p className="text-xs text-gray-500">Upload photo</p>
+            <User className="w-8 h-8 mb-2 text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">Upload photo</p>
           </div>
           <input
             type="file"
@@ -90,13 +90,13 @@ export function ImageUpload({
       {uploading && (
         <div className="w-32 space-y-1">
           <Progress value={progress} />
-          <p className="text-xs text-gray-500 text-center">
+          <p className="text-xs text-muted-foreground text-center">
             {Math.round(progress)}%
           </p>
         </div>
       )}
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {(preview || previewUrl) && !uploading && (
         <label className="cursor-pointer">

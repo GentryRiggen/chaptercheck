@@ -94,8 +94,8 @@ export default function AuthorsPage() {
   const isEmpty = authors !== undefined && authors.length === 0 && !isLoading;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
+    <div className="min-h-screen bg-background">
+      <header className="bg-card border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold">Authors</h1>
@@ -122,12 +122,12 @@ export default function AuthorsPage() {
         ) : isEmpty ? (
           <div className="text-center py-12">
             {isSearching ? (
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 No authors found for &quot;{debouncedSearch}&quot;
               </p>
             ) : (
               <>
-                <p className="text-gray-500 mb-4">No authors yet</p>
+                <p className="text-muted-foreground mb-4">No authors yet</p>
                 <Button variant="link" onClick={() => setDialogOpen(true)}>
                   Create your first author
                 </Button>
@@ -135,12 +135,12 @@ export default function AuthorsPage() {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow divide-y">
+          <div className="bg-card rounded-lg shadow divide-y divide-border">
             {authors?.map((author) => (
               <Link
                 key={author._id}
                 href={`/authors/${author._id}`}
-                className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-4 p-4 hover:bg-muted transition-colors"
               >
                 <AuthorImage
                   imageR2Key={author.imageR2Key}
@@ -148,9 +148,9 @@ export default function AuthorsPage() {
                   size="sm"
                 />
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-medium text-gray-900">{author.name}</h2>
+                  <h2 className="font-medium text-foreground">{author.name}</h2>
                   {author.bio && (
-                    <p className="text-sm text-gray-500 truncate">
+                    <p className="text-sm text-muted-foreground truncate">
                       {author.bio}
                     </p>
                   )}
