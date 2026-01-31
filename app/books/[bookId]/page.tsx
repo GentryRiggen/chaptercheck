@@ -1,17 +1,19 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useState, useEffect } from "react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
 import { AudioUpload } from "@/components/audio/AudioUpload";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
-import { useState, useEffect } from "react";
+import { BookCover } from "@/components/books/BookCover";
+import { BookEditDialog } from "@/components/books/BookEditDialog";
+import { BookDeleteDialog } from "@/components/books/BookDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 
 export default function BookDetailPage({
   params,
@@ -19,46 +21,24 @@ export default function BookDetailPage({
   params: Promise<{ bookId: Id<"books"> }>;
 }) {
   const router = useRouter();
-  const [refreshKey, setRefreshKey] = useState(0);
   const [bookId, setBookId] = useState<Id<"books"> | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Unwrap params on mount
   useEffect(() => {
     params.then((p) => setBookId(p.bookId));
   }, [params]);
 
   const book = useQuery(
-    bookId ? api.books.queries.getBook : "skip",
-    bookId ? { bookId } : undefined
+    api.books.queries.getBook,
+    bookId ? { bookId } : "skip"
   );
   const audioFiles = useQuery(
-    bookId ? api.audioFiles.queries.getAudioFilesForBook : "skip",
-    bookId ? { bookId } : undefined
+    api.audioFiles.queries.getAudioFilesForBook,
+    bookId ? { bookId } : "skip"
   );
-  const deleteBook = useMutation(api.books.mutations.deleteBook);
 
-  const handleUploadComplete = () => {
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleAudioDelete = () => {
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleDelete = async () => {
-    if (!bookId || !confirm("Are you sure you want to delete this book?")) {
-      return;
-    }
-
-    try {
-      await deleteBook({ bookId });
-      router.push("/books");
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete book");
-    }
-  };
-
-  if (book === undefined) {
+  if (book === undefined || bookId === null) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
@@ -89,7 +69,7 @@ export default function BookDetailPage({
                 href="/books"
                 className="text-sm text-primary hover:underline mb-2 inline-block"
               >
-                ← Back to Books
+                &larr; Back to Books
               </Link>
               <h1 className="text-3xl font-bold">{book.title}</h1>
               {book.subtitle && (
@@ -98,9 +78,20 @@ export default function BookDetailPage({
                 </p>
               )}
             </div>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete Book
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setEditDialogOpen(true)}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -108,17 +99,12 @@ export default function BookDetailPage({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
-            {book.coverImageUrl ? (
-              <img
-                src={book.coverImageUrl}
-                alt={book.title}
-                className="w-full rounded-lg shadow-lg"
-              />
-            ) : (
-              <div className="w-full aspect-[2/3] bg-muted rounded-lg flex items-center justify-center">
-                <p className="text-muted-foreground">No cover image</p>
-              </div>
-            )}
+            <BookCover
+              coverImageR2Key={book.coverImageR2Key}
+              title={book.title}
+              size="lg"
+              className="w-full h-auto aspect-[2/3]"
+            />
 
             <Card className="mt-6">
               <CardHeader>
@@ -199,12 +185,7 @@ export default function BookDetailPage({
             )}
 
             <div className="space-y-6">
-              {bookId && (
-                <AudioUpload
-                  bookId={bookId}
-                  onUploadComplete={handleUploadComplete}
-                />
-              )}
+              <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
 
               <Card>
                 <CardHeader>
@@ -225,7 +206,7 @@ export default function BookDetailPage({
                         <AudioPlayer
                           key={audioFile._id}
                           audioFile={audioFile}
-                          onDelete={handleAudioDelete}
+                          onDelete={() => {}}
                         />
                       ))}
                     </div>
@@ -236,6 +217,20 @@ export default function BookDetailPage({
           </div>
         </div>
       </main>
+
+      <BookEditDialog
+        book={book}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
+
+      <BookDeleteDialog
+        bookId={bookId}
+        bookTitle={book.title}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDeleted={() => router.push("/books")}
+      />
     </div>
   );
 }

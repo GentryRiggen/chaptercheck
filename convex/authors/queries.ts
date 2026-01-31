@@ -22,6 +22,14 @@ export const listAuthors = query({
   },
 });
 
+// Get all authors (for forms/selects)
+export const getAllAuthors = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("authors").order("asc").collect();
+  },
+});
+
 // Search authors by name
 export const searchAuthors = query({
   args: { search: v.string() },

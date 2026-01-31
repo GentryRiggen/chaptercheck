@@ -26,9 +26,10 @@ interface SeriesSelectProps {
     seriesId?: Id<"series">;
     seriesOrder?: number;
   }) => void;
+  error?: string;
 }
 
-export function SeriesSelect({ value, onChange }: SeriesSelectProps) {
+export function SeriesSelect({ value, onChange, error }: SeriesSelectProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -222,7 +223,7 @@ export function SeriesSelect({ value, onChange }: SeriesSelectProps) {
 
       {value?.seriesId && (
         <div className="space-y-2">
-          <Label htmlFor="seriesOrder">Book Position in Series</Label>
+          <Label htmlFor="seriesOrder">Book Position in Series *</Label>
           <Input
             id="seriesOrder"
             type="number"
@@ -230,10 +231,15 @@ export function SeriesSelect({ value, onChange }: SeriesSelectProps) {
             value={value.seriesOrder ?? ""}
             onChange={(e) => handleSeriesOrderChange(e.target.value)}
             placeholder="e.g., 1, 2.5, 3..."
+            className={error ? "border-destructive" : ""}
           />
-          <p className="text-sm text-muted-foreground">
-            Use decimals for novellas (e.g., 2.5 for a book between 2 and 3)
-          </p>
+          {error ? (
+            <p className="text-sm text-destructive">{error}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Use decimals for novellas (e.g., 2.5 for a book between 2 and 3)
+            </p>
+          )}
         </div>
       )}
     </div>

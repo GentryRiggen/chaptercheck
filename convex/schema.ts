@@ -58,7 +58,7 @@ export default defineSchema({
     description: v.optional(v.string()),
     isbn: v.optional(v.string()),
     publishedYear: v.optional(v.number()),
-    coverImageUrl: v.optional(v.string()),
+    coverImageR2Key: v.optional(v.string()),
     language: v.optional(v.string()),
     duration: v.optional(v.number()), // Total audiobook duration in seconds
     // Series relationship

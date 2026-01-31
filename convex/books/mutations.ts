@@ -9,7 +9,7 @@ export const createBook = mutation({
     description: v.optional(v.string()),
     isbn: v.optional(v.string()),
     publishedYear: v.optional(v.number()),
-    coverImageUrl: v.optional(v.string()),
+    coverImageR2Key: v.optional(v.string()),
     language: v.optional(v.string()),
     seriesId: v.optional(v.id("series")),
     seriesOrder: v.optional(v.number()),
@@ -56,11 +56,12 @@ export const updateBook = mutation({
     description: v.optional(v.string()),
     isbn: v.optional(v.string()),
     publishedYear: v.optional(v.number()),
-    coverImageUrl: v.optional(v.string()),
+    coverImageR2Key: v.optional(v.string()),
     language: v.optional(v.string()),
     duration: v.optional(v.number()),
     seriesId: v.optional(v.id("series")),
     seriesOrder: v.optional(v.number()),
+    authorIds: v.optional(v.array(v.id("authors"))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -68,12 +69,36 @@ export const updateBook = mutation({
       throw new Error("Not authenticated");
     }
 
-    const { bookId, ...updates } = args;
+    const { bookId, authorIds, ...updates } = args;
 
     await ctx.db.patch(bookId, {
       ...updates,
       updatedAt: Date.now(),
     });
+
+    // Update author relationships if provided
+    if (authorIds !== undefined) {
+      // Delete existing relationships
+      const existingBookAuthors = await ctx.db
+        .query("bookAuthors")
+        .withIndex("by_book", (q) => q.eq("bookId", bookId))
+        .collect();
+
+      await Promise.all(existingBookAuthors.map((ba) => ctx.db.delete(ba._id)));
+
+      // Add new relationships
+      if (authorIds.length > 0) {
+        await Promise.all(
+          authorIds.map((authorId) =>
+            ctx.db.insert("bookAuthors", {
+              bookId,
+              authorId,
+              role: "author",
+            })
+          )
+        );
+      }
+    }
 
     return bookId;
   },

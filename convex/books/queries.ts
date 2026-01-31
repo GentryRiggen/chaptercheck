@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { paginationOptsValidator } from "convex/server";
 
 // Get a single book by ID with authors and series
 export const getBook = query({
@@ -32,21 +33,14 @@ export const getBook = query({
   },
 });
 
-// List all books with pagination and authors
+// List all books with pagination and authors (for infinite scroll)
 export const listBooks = query({
-  args: {
-    paginationOpts: v.optional(
-      v.object({
-        numItems: v.number(),
-        cursor: v.union(v.string(), v.null()),
-      })
-    ),
-  },
+  args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     const results = await ctx.db
       .query("books")
       .order("desc")
-      .paginate(args.paginationOpts || { numItems: 20, cursor: null });
+      .paginate(args.paginationOpts);
 
     // Enrich with authors
     const booksWithAuthors = await Promise.all(
@@ -79,41 +73,18 @@ export const listBooks = query({
 
 // Search books by title
 export const searchBooks = query({
-  args: { searchQuery: v.string() },
+  args: { search: v.string() },
   handler: async (ctx, args) => {
-    if (!args.searchQuery || args.searchQuery.trim().length === 0) {
-      // Return recent books if no search query
-      const recentBooks = await ctx.db.query("books").order("desc").take(20);
+    const searchTerm = args.search.trim();
 
-      // Enrich with authors
-      return await Promise.all(
-        recentBooks.map(async (book) => {
-          const bookAuthors = await ctx.db
-            .query("bookAuthors")
-            .withIndex("by_book", (q) => q.eq("bookId", book._id))
-            .collect();
-
-          const authors = await Promise.all(
-            bookAuthors.map(async (ba) => {
-              const author = await ctx.db.get(ba.authorId);
-              return author ? { ...author, role: ba.role } : null;
-            })
-          );
-
-          return {
-            ...book,
-            authors: authors.filter((a) => a !== null),
-          };
-        })
-      );
+    if (searchTerm.length === 0) {
+      return [];
     }
 
     const books = await ctx.db
       .query("books")
-      .withSearchIndex("search_books", (q) =>
-        q.search("title", args.searchQuery)
-      )
-      .take(20);
+      .withSearchIndex("search_books", (q) => q.search("title", searchTerm))
+      .take(50);
 
     // Enrich with authors
     const booksWithAuthors = await Promise.all(
@@ -138,5 +109,39 @@ export const searchBooks = query({
     );
 
     return booksWithAuthors;
+  },
+});
+
+// Preview what will happen when deleting a book
+export const getBookDeletionPreview = query({
+  args: { bookId: v.id("books") },
+  handler: async (ctx, args) => {
+    const book = await ctx.db.get(args.bookId);
+    if (!book) return null;
+
+    // Get audio files count
+    const audioFiles = await ctx.db
+      .query("audioFiles")
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
+      .collect();
+
+    // Get authors
+    const bookAuthors = await ctx.db
+      .query("bookAuthors")
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
+      .collect();
+
+    const authors = await Promise.all(
+      bookAuthors.map(async (ba) => {
+        const author = await ctx.db.get(ba.authorId);
+        return author?.name || "Unknown";
+      })
+    );
+
+    return {
+      title: book.title,
+      audioFilesCount: audioFiles.length,
+      authors,
+    };
   },
 });

@@ -47,9 +47,14 @@ export function AuthorForm({
     });
   };
 
+  const onFormSubmit = (e: React.FormEvent) => {
+    e.stopPropagation();
+    form.handleSubmit(handleSubmit)(e);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form onSubmit={onFormSubmit} className="space-y-6">
         <FormField
           control={form.control}
           name="imageR2Key"
