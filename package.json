@@ -9,7 +9,7 @@
     "lint": "next lint",
     "build:worker": "opennextjs-cloudflare build",
     "preview": "opennextjs-cloudflare preview",
-    "cf-deploy": "opennextjs-cloudflare deploy"
+    "cf-deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.965.0",
