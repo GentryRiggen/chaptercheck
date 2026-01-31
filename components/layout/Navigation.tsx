@@ -24,7 +24,7 @@ export function Navigation() {
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
           <div className="flex items-center">
-            <Link href="/books" className="flex items-center">
+            <Link href="/" className="flex items-center">
               <span className="text-xl font-bold">ChapterCheck</span>
             </Link>
           </div>

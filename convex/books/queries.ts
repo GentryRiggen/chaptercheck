@@ -112,6 +112,39 @@ export const searchBooks = query({
   },
 });
 
+// Get recent books (for home page)
+export const getRecentBooks = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 6;
+    const books = await ctx.db.query("books").order("desc").take(limit);
+
+    // Enrich with authors
+    const booksWithAuthors = await Promise.all(
+      books.map(async (book) => {
+        const bookAuthors = await ctx.db
+          .query("bookAuthors")
+          .withIndex("by_book", (q) => q.eq("bookId", book._id))
+          .collect();
+
+        const authors = await Promise.all(
+          bookAuthors.map(async (ba) => {
+            const author = await ctx.db.get(ba.authorId);
+            return author ? { _id: author._id, name: author.name } : null;
+          })
+        );
+
+        return {
+          ...book,
+          authors: authors.filter((a) => a !== null),
+        };
+      })
+    );
+
+    return booksWithAuthors;
+  },
+});
+
 // Preview what will happen when deleting a book
 export const getBookDeletionPreview = query({
   args: { bookId: v.id("books") },

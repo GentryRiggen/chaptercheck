@@ -22,6 +22,15 @@ export const listAuthors = query({
   },
 });
 
+// Get recent authors (for home page)
+export const getRecentAuthors = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 6;
+    return await ctx.db.query("authors").order("desc").take(limit);
+  },
+});
+
 // Get all authors (for forms/selects)
 export const getAllAuthors = query({
   args: {},
