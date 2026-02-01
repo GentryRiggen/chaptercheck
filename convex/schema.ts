@@ -70,6 +70,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_title", ["title"])
     .index("by_isbn", ["isbn"])
     .index("by_publishedYear", ["publishedYear"])
     .index("by_series", ["seriesId"])

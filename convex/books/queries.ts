@@ -1,6 +1,7 @@
-import { v } from "convex/values";
-import { query } from "../_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import { v } from "convex/values";
+
+import { query } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
 
 // Get a single book by ID with authors and series
@@ -35,12 +36,16 @@ export const getBook = query({
   },
 });
 
-// List all books with pagination and authors (for infinite scroll)
+// List all books with pagination and authors (for infinite scroll), sorted alphabetically
 export const listBooks = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    const results = await ctx.db.query("books").order("desc").paginate(args.paginationOpts);
+    const results = await ctx.db
+      .query("books")
+      .withIndex("by_title")
+      .order("asc")
+      .paginate(args.paginationOpts);
 
     // Enrich with authors
     const booksWithAuthors = await Promise.all(

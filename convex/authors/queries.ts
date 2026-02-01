@@ -1,8 +1,9 @@
-import { v } from "convex/values";
-import { query } from "../_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import { v } from "convex/values";
+
+import { type Id } from "../_generated/dataModel";
+import { query } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
-import { Id } from "../_generated/dataModel";
 
 // Get a single author by ID
 export const getAuthor = query({
@@ -14,12 +15,16 @@ export const getAuthor = query({
   },
 });
 
-// List all authors with pagination (for infinite scroll)
+// List all authors with pagination (for infinite scroll), sorted alphabetically
 export const listAuthors = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    return await ctx.db.query("authors").order("desc").paginate(args.paginationOpts);
+    return await ctx.db
+      .query("authors")
+      .withIndex("by_name")
+      .order("asc")
+      .paginate(args.paginationOpts);
   },
 });
 

@@ -20,6 +20,7 @@ import type * as http from "../http.js";
 import type * as images_actions from "../images/actions.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_r2Client from "../lib/r2Client.js";
+import type * as migration_mutations from "../migration/mutations.js";
 import type * as series_mutations from "../series/mutations.js";
 import type * as series_queries from "../series/queries.js";
 import type * as users_helpers from "../users/helpers.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   "images/actions": typeof images_actions;
   "lib/auth": typeof lib_auth;
   "lib/r2Client": typeof lib_r2Client;
+  "migration/mutations": typeof migration_mutations;
   "series/mutations": typeof series_mutations;
   "series/queries": typeof series_queries;
   "users/helpers": typeof users_helpers;

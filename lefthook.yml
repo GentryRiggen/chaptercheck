@@ -10,7 +10,8 @@ pre-commit:
 
     - name: lint
       glob: "*.{js,jsx,ts,tsx,mjs,mts}"
-      run: npx eslint {staged_files} --max-warnings=0
+      exclude: "_generated"
+      run: npx eslint {staged_files} --max-warnings=0 --no-warn-ignored
 
     - name: typecheck
-      run: npm run type-check
+      run: npx convex codegen && npm run type-check
