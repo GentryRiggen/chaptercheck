@@ -13,7 +13,6 @@ import { BookEditDialog } from "@/components/books/BookEditDialog";
 import { BookDeleteDialog } from "@/components/books/BookDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 export default function BookDetailPage({
   params,
@@ -61,31 +60,82 @@ export default function BookDetailPage({
 
   return (
     <div className="min-h-screen">
-      <div className="border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <Link
-                href="/books"
-                className="text-sm text-primary hover:underline mb-2 inline-block"
-              >
-                &larr; Back to Books
-              </Link>
-              <h1 className="text-3xl font-bold">{book.title}</h1>
-              {book.subtitle && (
-                <p className="text-xl text-muted-foreground mt-2">
-                  {book.subtitle}
-                </p>
-              )}
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Back link */}
+        <Link
+          href="/books"
+          className="text-sm text-primary hover:underline mb-4 inline-block"
+        >
+          &larr; Back to Books
+        </Link>
+
+        {/* Hero section - always side by side */}
+        <div className="flex gap-4 sm:gap-6 mb-6">
+          {/* Fixed-size cover */}
+          <div className="flex-shrink-0">
+            <BookCover
+              coverImageR2Key={book.coverImageR2Key}
+              title={book.title}
+              size="lg"
+              className="w-24 h-36 sm:w-32 sm:h-48 md:w-40 md:h-60 rounded-lg shadow-lg"
+            />
+          </div>
+
+          {/* Book info */}
+          <div className="flex-1 min-w-0">
+            {book.series && (
+              <p className="text-sm text-muted-foreground italic mb-1">
+                {book.series.name}
+                {book.seriesOrder !== undefined && ` #${book.seriesOrder}`}
+              </p>
+            )}
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight">{book.title}</h1>
+            {book.subtitle && (
+              <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                {book.subtitle}
+              </p>
+            )}
+
+            {book.authors && book.authors.length > 0 && (
+              <div className="mt-2 sm:mt-3">
+                <span className="text-sm sm:text-base text-muted-foreground">by </span>
+                {book.authors.map((author, i) => (
+                  <span key={author._id}>
+                    <Link
+                      href={`/authors/${author._id}`}
+                      className="text-sm sm:text-base text-primary hover:underline"
+                    >
+                      {author.name}
+                    </Link>
+                    {author.role && author.role !== "author" && (
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({author.role})
+                      </span>
+                    )}
+                    {i < book.authors.length - 1 && ", "}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Meta info */}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs sm:text-sm text-muted-foreground">
+              {book.publishedYear && <span>{book.publishedYear}</span>}
+              {book.language && <span>{book.language}</span>}
+              {book.isbn && <span className="hidden sm:inline">ISBN: {book.isbn}</span>}
             </div>
-            <div className="flex gap-3">
+
+            {/* Action buttons */}
+            <div className="flex gap-2 mt-4">
               <Button
+                size="sm"
                 variant="secondary"
                 onClick={() => setEditDialogOpen(true)}
               >
                 Edit
               </Button>
               <Button
+                size="sm"
                 variant="destructive"
                 onClick={() => setDeleteDialogOpen(true)}
               >
@@ -94,127 +144,45 @@ export default function BookDetailPage({
             </div>
           </div>
         </div>
-      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <BookCover
-              coverImageR2Key={book.coverImageR2Key}
-              title={book.title}
-              size="lg"
-              className="w-full h-auto aspect-[2/3]"
-            />
-
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="space-y-3 text-sm">
-                  {book.series && (
-                    <div>
-                      <dt className="text-muted-foreground">Series</dt>
-                      <dd className="font-medium">
-                        {book.series.name}
-                        {book.seriesOrder !== undefined && (
-                          <span className="text-muted-foreground ml-1">
-                            (Book {book.seriesOrder})
-                          </span>
-                        )}
-                      </dd>
-                    </div>
-                  )}
-                  {book.isbn && (
-                    <div>
-                      <dt className="text-muted-foreground">ISBN</dt>
-                      <dd className="font-medium">{book.isbn}</dd>
-                    </div>
-                  )}
-                  {book.publishedYear && (
-                    <div>
-                      <dt className="text-muted-foreground">Published</dt>
-                      <dd className="font-medium">{book.publishedYear}</dd>
-                    </div>
-                  )}
-                  {book.language && (
-                    <div>
-                      <dt className="text-muted-foreground">Language</dt>
-                      <dd className="font-medium">{book.language}</dd>
-                    </div>
-                  )}
-                </dl>
-              </CardContent>
-            </Card>
+        {/* Description */}
+        {book.description && (
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</h2>
+            <p className="text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{book.description}</p>
           </div>
+        )}
 
-          <div className="lg:col-span-2 space-y-6">
-            {book.authors && book.authors.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Authors</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {book.authors.map((author) => (
-                      <Link key={author._id} href={`/authors/${author._id}`}>
-                        <Badge variant="secondary" className="cursor-pointer">
-                          {author.name}
-                          {author.role && author.role !== "author" && (
-                            <span className="ml-1 text-xs">
-                              ({author.role})
-                            </span>
-                          )}
-                        </Badge>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+        {/* Audio section */}
+        <div className="space-y-4">
+          <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
 
-            {book.description && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Description</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="whitespace-pre-wrap">{book.description}</p>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="space-y-6">
-              <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Audio Files</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {audioFiles === undefined ? (
-                    <p className="text-muted-foreground">
-                      Loading audio files...
-                    </p>
-                  ) : audioFiles.length === 0 ? (
-                    <p className="text-muted-foreground">
-                      No audio files yet. Upload one above to get started.
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {audioFiles.map((audioFile) => (
-                        <AudioPlayer
-                          key={audioFile._id}
-                          audioFile={audioFile}
-                          onDelete={() => {}}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base">Audio Files</CardTitle>
+            </CardHeader>
+            <CardContent className="py-3">
+              {audioFiles === undefined ? (
+                <p className="text-sm text-muted-foreground">
+                  Loading audio files...
+                </p>
+              ) : audioFiles.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No audio files yet. Upload one above to get started.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {audioFiles.map((audioFile) => (
+                    <AudioPlayer
+                      key={audioFile._id}
+                      audioFile={audioFile}
+                      onDelete={() => {}}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </main>
 

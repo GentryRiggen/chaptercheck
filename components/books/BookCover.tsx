@@ -7,18 +7,20 @@ import { cn } from "@/lib/utils";
 interface BookCoverProps {
   coverImageR2Key?: string;
   title: string;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   className?: string;
 }
 
 const sizeClasses = {
-  sm: "w-12 h-16",
+  xs: "w-8 h-12",
+  sm: "w-10 h-14",
   md: "w-20 h-28",
   lg: "w-32 h-44",
 };
 
 const iconSizes = {
-  sm: "w-6 h-6",
+  xs: "w-4 h-4",
+  sm: "w-5 h-5",
   md: "w-10 h-10",
   lg: "w-16 h-16",
 };

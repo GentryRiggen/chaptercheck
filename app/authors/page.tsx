@@ -95,66 +95,64 @@ export default function AuthorsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="bg-card/40 backdrop-blur-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold">Authors</h1>
-            <Button onClick={() => setDialogOpen(true)}>Add Author</Button>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search authors..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-9"
-            />
+      <header className="bg-card/40 backdrop-blur-sm border-b sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex justify-between items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold">Authors</h1>
+            <div className="flex items-center gap-2 flex-1 max-w-md">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-8 h-9"
+                />
+              </div>
+              <Button size="sm" onClick={() => setDialogOpen(true)}>
+                Add
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4">
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : isEmpty ? (
-          <div className="text-center py-12">
+          <div className="text-center py-8">
             {isSearching ? (
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 No authors found for &quot;{debouncedSearch}&quot;
               </p>
             ) : (
               <>
-                <p className="text-muted-foreground mb-4">No authors yet</p>
-                <Button variant="link" onClick={() => setDialogOpen(true)}>
+                <p className="text-muted-foreground text-sm mb-3">No authors yet</p>
+                <Button variant="link" size="sm" onClick={() => setDialogOpen(true)}>
                   Create your first author
                 </Button>
               </>
             )}
           </div>
         ) : (
-          <div className="bg-card rounded-lg shadow divide-y divide-border">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {authors?.map((author) => (
               <Link
                 key={author._id}
                 href={`/authors/${author._id}`}
-                className="flex items-center gap-4 p-4 hover:bg-muted transition-colors"
+                className="bg-card/60 rounded-lg p-3 hover:bg-muted/50 transition-colors text-center group"
               >
                 <AuthorImage
                   imageR2Key={author.imageR2Key}
                   name={author.name}
-                  size="sm"
+                  size="md"
+                  className="mx-auto mb-2 group-hover:ring-2 ring-primary/50 transition-all"
                 />
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-medium text-foreground">{author.name}</h2>
-                  {author.bio && (
-                    <p className="text-sm text-muted-foreground truncate">
-                      {author.bio}
-                    </p>
-                  )}
-                </div>
+                <h2 className="font-medium text-sm text-foreground truncate">{author.name}</h2>
               </Link>
             ))}
           </div>
@@ -162,15 +160,15 @@ export default function AuthorsPage() {
 
         {/* Infinite scroll trigger (only when not searching) */}
         {!isSearching && (
-          <div ref={loadMoreRef} className="py-4">
+          <div ref={loadMoreRef} className="py-3">
             {isLoadingMore && (
               <div className="flex justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             )}
             {canLoadMore && !isLoadingMore && (
               <div className="flex justify-center">
-                <Button variant="ghost" onClick={handleLoadMore}>
+                <Button variant="ghost" size="sm" onClick={handleLoadMore}>
                   Load more
                 </Button>
               </div>

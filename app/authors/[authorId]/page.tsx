@@ -9,6 +9,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { AuthorImage } from "@/components/authors/AuthorImage";
 import { AuthorEditDialog } from "@/components/authors/AuthorEditDialog";
 import { AuthorDeleteDialog } from "@/components/authors/AuthorDeleteDialog";
+import { BookCover } from "@/components/books/BookCover";
 import { Button } from "@/components/ui/button";
 
 export default function AuthorDetailPage({
@@ -57,33 +58,48 @@ export default function AuthorDetailPage({
 
   return (
     <div className="min-h-screen">
-      <header className="bg-card border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-start">
-            <div className="flex items-start gap-6">
-              <AuthorImage
-                imageR2Key={author.imageR2Key}
-                name={author.name}
-                size="lg"
-              />
-              <div>
-                <Link
-                  href="/authors"
-                  className="text-sm text-primary hover:underline mb-2 inline-block"
-                >
-                  &larr; Back to Authors
-                </Link>
-                <h1 className="text-3xl font-bold">{author.name}</h1>
-              </div>
-            </div>
-            <div className="flex gap-3">
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Back link */}
+        <Link
+          href="/authors"
+          className="text-sm text-primary hover:underline mb-4 inline-block"
+        >
+          &larr; Back to Authors
+        </Link>
+
+        {/* Hero section - always side by side */}
+        <div className="flex gap-4 sm:gap-6 mb-6">
+          {/* Fixed-size image */}
+          <div className="flex-shrink-0">
+            <AuthorImage
+              imageR2Key={author.imageR2Key}
+              name={author.name}
+              size="lg"
+              className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 shadow-lg"
+            />
+          </div>
+
+          {/* Author info */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight">{author.name}</h1>
+
+            {books && books.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {books.length} book{books.length !== 1 ? "s" : ""}
+              </p>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex gap-2 mt-3">
               <Button
+                size="sm"
                 variant="secondary"
                 onClick={() => setEditDialogOpen(true)}
               >
                 Edit
               </Button>
               <Button
+                size="sm"
                 variant="destructive"
                 onClick={() => setDeleteDialogOpen(true)}
               >
@@ -92,41 +108,51 @@ export default function AuthorDetailPage({
             </div>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Bio */}
         {author.bio && (
-          <div className="bg-card rounded-lg shadow p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4">Bio</h2>
-            <p className="text-foreground whitespace-pre-wrap">{author.bio}</p>
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">About</h2>
+            <p className="text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{author.bio}</p>
           </div>
         )}
 
-        <div className="bg-card rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Books</h2>
+        {/* Books */}
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Books by {author.name}
+          </h2>
           {books === undefined ? (
-            <p className="text-muted-foreground">Loading books...</p>
+            <p className="text-sm text-muted-foreground">Loading books...</p>
           ) : books.length === 0 ? (
-            <p className="text-muted-foreground">No books by this author yet</p>
+            <p className="text-sm text-muted-foreground">No books by this author yet</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-card/60 rounded-lg divide-y divide-border/50">
               {books.map((book) => (
                 <Link
                   key={book._id}
                   href={`/books/${book._id}`}
-                  className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  className="flex items-start gap-3 px-3 py-3 hover:bg-muted/50 transition-colors"
                 >
-                  <h3 className="font-semibold">{book.title}</h3>
-                  {book.subtitle && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {book.subtitle}
-                    </p>
-                  )}
-                  {book.role && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Role: {book.role}
-                    </p>
-                  )}
+                  <BookCover
+                    coverImageR2Key={book.coverImageR2Key}
+                    title={book.title}
+                    size="sm"
+                  />
+                  <div className="flex-1 min-w-0 py-0.5">
+                    <h3 className="font-medium text-sm">{book.title}</h3>
+                    {book.subtitle && (
+                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                        {book.subtitle}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                      {book.publishedYear && <span>{book.publishedYear}</span>}
+                      {book.role && book.role !== "author" && (
+                        <span className="bg-muted px-1.5 py-0.5 rounded">{book.role}</span>
+                      )}
+                    </div>
+                  </div>
                 </Link>
               ))}
             </div>
