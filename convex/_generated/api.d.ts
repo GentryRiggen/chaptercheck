@@ -18,6 +18,7 @@ import type * as books_mutations from "../books/mutations.js";
 import type * as books_queries from "../books/queries.js";
 import type * as http from "../http.js";
 import type * as images_actions from "../images/actions.js";
+import type * as lib_audioFileNames from "../lib/audioFileNames.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_r2Client from "../lib/r2Client.js";
 import type * as migration_mutations from "../migration/mutations.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   "books/queries": typeof books_queries;
   http: typeof http;
   "images/actions": typeof images_actions;
+  "lib/audioFileNames": typeof lib_audioFileNames;
   "lib/auth": typeof lib_auth;
   "lib/r2Client": typeof lib_r2Client;
   "migration/mutations": typeof migration_mutations;

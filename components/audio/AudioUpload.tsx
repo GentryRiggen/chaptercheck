@@ -1,6 +1,16 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, FileAudio, Loader2, Upload, X } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  CheckCircle2,
+  FileAudio,
+  GripVertical,
+  Loader2,
+  Upload,
+  X,
+} from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -13,6 +23,7 @@ import { cn } from "@/lib/utils";
 
 interface AudioUploadProps {
   bookId: Id<"books">;
+  existingFileCount?: number; // Number of existing audio files for this book
   onUploadComplete: () => void;
 }
 
@@ -29,10 +40,11 @@ const VALID_TYPES = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a", "audio
 const VALID_EXTENSIONS = /\.(mp3|m4a|m4b)$/i;
 const MAX_CONCURRENT_UPLOADS = 3;
 
-export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
+export function AudioUpload({ bookId, existingFileCount = 0, onUploadComplete }: AudioUploadProps) {
   const [files, setFiles] = useState<FileWithStatus[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadAudio } = useAudioUpload(bookId);
 
@@ -97,7 +109,9 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragOver(true);
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragOver(true);
+    }
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
@@ -119,15 +133,47 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
     [addFiles]
   );
 
+  // Reorder functions
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    setFiles((prev) => {
+      const newFiles = [...prev];
+      [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
+      return newFiles;
+    });
+  };
+
+  const handleMoveDown = (index: number) => {
+    setFiles((prev) => {
+      if (index >= prev.length - 1) return prev;
+      const newFiles = [...prev];
+      [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
+      return newFiles;
+    });
+  };
+
   const handleUploadAll = async () => {
     const pendingFiles = files.filter((f) => f.status === "pending");
     if (pendingFiles.length === 0) return;
 
+    // Exit reorder mode when uploading
+    setIsReordering(false);
     setIsUploading(true);
     let successCount = 0;
 
+    // Get the indices of pending files in the main files array to determine part numbers
+    const pendingIndices = files
+      .map((f, i) => ({ file: f, index: i }))
+      .filter((item) => item.file.status === "pending");
+
     // Upload a single file and return whether it succeeded
-    const uploadSingleFile = async (fileWithStatus: FileWithStatus): Promise<boolean> => {
+    const uploadSingleFile = async (
+      fileWithStatus: FileWithStatus,
+      pendingIndex: number
+    ): Promise<boolean> => {
+      // Calculate part number: existing files + position in pending files (1-based)
+      const partNumber = existingFileCount + pendingIndex + 1;
+
       // Update status to uploading
       setFiles((prev) =>
         prev.map((f) =>
@@ -136,7 +182,11 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
       );
 
       try {
-        const success = await uploadAudioWithProgress(fileWithStatus.file, fileWithStatus.id);
+        const success = await uploadAudioWithProgress(
+          fileWithStatus.file,
+          fileWithStatus.id,
+          partNumber
+        );
 
         if (success) {
           setFiles((prev) =>
@@ -171,10 +221,14 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
       }
     };
 
-    // Process files with concurrency limit
+    // Process files with concurrency limit, tracking their pending index
     const results = await processWithConcurrency(
-      pendingFiles,
-      uploadSingleFile,
+      pendingIndices,
+      ({ file, index }) => {
+        // Find the pending index (0-based position among pending files)
+        const pendingIdx = pendingIndices.findIndex((p) => p.index === index);
+        return uploadSingleFile(file, pendingIdx);
+      },
       MAX_CONCURRENT_UPLOADS
     );
     successCount = results.filter(Boolean).length;
@@ -212,12 +266,16 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
     return results;
   };
 
-  const uploadAudioWithProgress = async (file: File, fileId: string): Promise<boolean> => {
+  const uploadAudioWithProgress = async (
+    file: File,
+    fileId: string,
+    partNumber: number
+  ): Promise<boolean> => {
     const onProgress = (progress: number) => {
       setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, progress } : f)));
     };
 
-    return await uploadAudio(file, { onProgress });
+    return await uploadAudio(file, { partNumber, onProgress });
   };
 
   const clearCompleted = () => {
@@ -227,6 +285,7 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
   const clearAll = () => {
     if (!isUploading) {
       setFiles([]);
+      setIsReordering(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -240,7 +299,8 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
     return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
   };
 
-  const pendingCount = files.filter((f) => f.status === "pending").length;
+  const pendingFiles = files.filter((f) => f.status === "pending");
+  const pendingCount = pendingFiles.length;
   const uploadingCount = files.filter((f) => f.status === "uploading").length;
   const completedCount = files.filter((f) => f.status === "complete").length;
   const hasFiles = files.length > 0;
@@ -290,6 +350,16 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
                 {files.length} file{files.length > 1 ? "s" : ""} selected
               </p>
               <div className="flex gap-2">
+                {pendingCount > 1 && !isUploading && (
+                  <Button
+                    variant={isReordering ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsReordering(!isReordering)}
+                  >
+                    <GripVertical className="mr-1 h-4 w-4" />
+                    {isReordering ? "Done" : "Reorder"}
+                  </Button>
+                )}
                 {completedCount > 0 && (
                   <Button variant="ghost" size="sm" onClick={clearCompleted} disabled={isUploading}>
                     Clear completed
@@ -301,60 +371,106 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
               </div>
             </div>
 
-            <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border p-2">
-              {files.map((fileWithStatus) => (
-                <div
-                  key={fileWithStatus.id}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md p-2",
-                    fileWithStatus.status === "complete" && "bg-green-500/10",
-                    fileWithStatus.status === "error" && "bg-destructive/10"
-                  )}
-                >
-                  <div className="flex-shrink-0">
-                    {fileWithStatus.status === "complete" ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    ) : fileWithStatus.status === "error" ? (
-                      <AlertCircle className="h-5 w-5 text-destructive" />
-                    ) : fileWithStatus.status === "uploading" ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                    ) : (
-                      <FileAudio className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
+            <div className="max-h-80 space-y-1 overflow-y-auto rounded-lg border p-2">
+              {files.map((fileWithStatus, index) => {
+                const isPending = fileWithStatus.status === "pending";
+                // Calculate display part number for pending files
+                const pendingIndex = pendingFiles.findIndex((f) => f.id === fileWithStatus.id);
+                const displayPartNumber =
+                  isPending && pendingIndex !== -1
+                    ? existingFileCount + pendingIndex + 1
+                    : undefined;
 
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{fileWithStatus.file.name}</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-muted-foreground">
-                        {formatFileSize(fileWithStatus.file.size)}
-                      </p>
-                      {fileWithStatus.status === "uploading" && (
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(fileWithStatus.progress)}%
-                        </span>
-                      )}
-                      {fileWithStatus.status === "error" && fileWithStatus.error && (
-                        <span className="text-xs text-destructive">{fileWithStatus.error}</span>
+                return (
+                  <div
+                    key={fileWithStatus.id}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md p-2 transition-colors",
+                      fileWithStatus.status === "complete" && "bg-green-500/10",
+                      fileWithStatus.status === "error" && "bg-destructive/10"
+                    )}
+                  >
+                    {/* Reorder Controls */}
+                    {isReordering && isPending && (
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveUp(index)}
+                          disabled={index === 0 || files[index - 1]?.status !== "pending"}
+                          className="rounded p-0.5 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Move up"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveDown(index)}
+                          disabled={
+                            index >= files.length - 1 || files[index + 1]?.status !== "pending"
+                          }
+                          className="rounded p-0.5 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Move down"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Part Number Badge */}
+                    {displayPartNumber !== undefined && (
+                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-primary/10 text-xs font-medium text-primary">
+                        {displayPartNumber}
+                      </div>
+                    )}
+
+                    {/* Status Icon */}
+                    <div className="flex-shrink-0">
+                      {fileWithStatus.status === "complete" ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : fileWithStatus.status === "error" ? (
+                        <AlertCircle className="h-5 w-5 text-destructive" />
+                      ) : fileWithStatus.status === "uploading" ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      ) : (
+                        <FileAudio className="h-5 w-5 text-muted-foreground" />
                       )}
                     </div>
-                    {fileWithStatus.status === "uploading" && (
-                      <Progress value={fileWithStatus.progress} className="mt-1 h-1" />
+
+                    {/* File Info */}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{fileWithStatus.file.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(fileWithStatus.file.size)}
+                        </p>
+                        {fileWithStatus.status === "uploading" && (
+                          <span className="text-xs text-muted-foreground">
+                            {Math.round(fileWithStatus.progress)}%
+                          </span>
+                        )}
+                        {fileWithStatus.status === "error" && fileWithStatus.error && (
+                          <span className="text-xs text-destructive">{fileWithStatus.error}</span>
+                        )}
+                      </div>
+                      {fileWithStatus.status === "uploading" && (
+                        <Progress value={fileWithStatus.progress} className="mt-1 h-1" />
+                      )}
+                    </div>
+
+                    {/* Remove Button */}
+                    {isPending && !isUploading && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(fileWithStatus.id)}
+                        className="h-6 w-6 flex-shrink-0 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     )}
                   </div>
-
-                  {fileWithStatus.status === "pending" && !isUploading && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(fileWithStatus.id)}
-                      className="h-6 w-6 flex-shrink-0 p-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 
 export interface UploadOptions {
+  partNumber: number;
   onProgress?: (progress: number) => void;
 }
 
@@ -16,14 +17,14 @@ export const useAudioUpload = (bookId: Id<"books">) => {
   const generateUploadUrl = useAction(api.audioFiles.actions.generateUploadUrl);
   const createAudioFile = useMutation(api.audioFiles.mutations.createAudioFile);
 
-  const uploadAudio = async (file: File, options?: UploadOptions) => {
+  const uploadAudio = async (file: File, options: UploadOptions) => {
     setUploading(true);
     setProgress(0);
     setError(null);
 
     const updateProgress = (value: number) => {
       setProgress(value);
-      options?.onProgress?.(value);
+      options.onProgress?.(value);
     };
 
     try {
@@ -77,6 +78,7 @@ export const useAudioUpload = (bookId: Id<"books">) => {
         r2Key,
         r2Bucket,
         storageAccountId,
+        partNumber: options.partNumber,
         duration: 0, // TODO: Extract actual duration from audio file
       });
 

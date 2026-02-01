@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { AudioPlayer } from "@/components/audio/AudioPlayer";
+import { AudioFileList } from "@/components/audio/AudioFileList";
 import { AudioUpload } from "@/components/audio/AudioUpload";
 import { BookCover } from "@/components/books/BookCover";
 import { BookDeleteDialog } from "@/components/books/BookDeleteDialog";
@@ -147,26 +147,18 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
         <div className="space-y-4">
           <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
 
-          <Card>
-            <CardHeader className="py-3">
-              <CardTitle className="text-base">Audio Files</CardTitle>
-            </CardHeader>
-            <CardContent className="py-3">
-              {audioFiles === undefined ? (
+          {audioFiles === undefined ? (
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-base">Audio Files</CardTitle>
+              </CardHeader>
+              <CardContent className="py-3">
                 <p className="text-sm text-muted-foreground">Loading audio files...</p>
-              ) : audioFiles.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No audio files yet. Upload one above to get started.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {audioFiles.map((audioFile) => (
-                    <AudioPlayer key={audioFile._id} audioFile={audioFile} onDelete={() => {}} />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <AudioFileList bookId={bookId} audioFiles={audioFiles} />
+          )}
         </div>
       </main>
 

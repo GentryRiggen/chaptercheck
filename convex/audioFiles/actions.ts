@@ -72,6 +72,8 @@ export const generateStreamUrl = action({
   args: {
     r2Key: v.string(),
     r2Bucket: v.string(),
+    // Optional friendly filename for Content-Disposition header (used for downloads)
+    downloadFileName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -84,6 +86,10 @@ export const generateStreamUrl = action({
     const command = new GetObjectCommand({
       Bucket: args.r2Bucket,
       Key: args.r2Key,
+      // Set Content-Disposition for downloads if filename provided
+      ...(args.downloadFileName && {
+        ResponseContentDisposition: `attachment; filename="${args.downloadFileName}"`,
+      }),
     });
 
     // Generate presigned URL valid for 1 hour

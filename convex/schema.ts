@@ -123,11 +123,14 @@ export default defineSchema({
     firebaseStoragePath: v.optional(v.string()),
     uploadedBy: v.id("users"),
     uploadedAt: v.number(),
-    // Playback tracking
+    // Ordering within book (optional for migration, new uploads should always have this)
+    partNumber: v.optional(v.number()), // 1-based order for display naming (part1, part2, etc.)
+    // Playback tracking (optional chapter metadata)
     chapterNumber: v.optional(v.number()),
     chapterTitle: v.optional(v.string()),
   })
     .index("by_book", ["bookId"])
+    .index("by_book_and_part", ["bookId", "partNumber"])
     .index("by_book_and_chapter", ["bookId", "chapterNumber"])
     .index("by_r2Key", ["r2Key"])
     .index("by_uploadedBy", ["uploadedBy"])
