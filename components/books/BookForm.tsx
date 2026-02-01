@@ -25,6 +25,7 @@ interface BookFormProps {
   onSubmit: (values: BookFormValues) => Promise<void>;
   onCancel?: () => void;
   submitLabel: string;
+  bookId?: Id<"books">; // The book being edited (if editing)
 }
 
 export function BookForm({
@@ -33,6 +34,7 @@ export function BookForm({
   onSubmit,
   onCancel,
   submitLabel,
+  bookId,
 }: BookFormProps) {
   const form = useForm<BookFormValues>({
     resolver: zodResolver(bookSchema),
@@ -215,6 +217,8 @@ export function BookForm({
             form.setValue("seriesOrder", val.seriesOrder ?? null);
           }}
           error={form.formState.errors.seriesOrder?.message}
+          currentBookId={bookId}
+          currentBookTitle={form.watch("title") || "New book"}
         />
 
         <div className="flex gap-4 pt-2">

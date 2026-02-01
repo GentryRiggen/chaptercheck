@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
 import { BookCover } from "@/components/books/BookCover";
-import { Library } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Library, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
 
 export default function SeriesDetailPage({
   params,
@@ -15,8 +16,11 @@ export default function SeriesDetailPage({
   params: Promise<{ seriesId: Id<"series"> }>;
 }) {
   const [seriesId, setSeriesId] = useState<Id<"series"> | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
   const searchParams = useSearchParams();
   const fromBook = searchParams.get("fromBook");
+
+  const reorderBooks = useMutation(api.series.mutations.reorderBooks);
 
   useEffect(() => {
     params.then((p) => setSeriesId(p.seriesId));
@@ -30,6 +34,26 @@ export default function SeriesDetailPage({
     api.series.queries.getBooksInSeriesWithAuthors,
     seriesId ? { seriesId } : "skip"
   );
+
+  const handleMoveUp = async (index: number) => {
+    if (!books || !seriesId || index === 0) return;
+    const newOrder = [...books];
+    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    await reorderBooks({
+      seriesId,
+      bookIds: newOrder.map((b) => b._id),
+    });
+  };
+
+  const handleMoveDown = async (index: number) => {
+    if (!books || !seriesId || index === books.length - 1) return;
+    const newOrder = [...books];
+    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    await reorderBooks({
+      seriesId,
+      bookIds: newOrder.map((b) => b._id),
+    });
+  };
 
   if (series === undefined || seriesId === null) {
     return (
@@ -132,59 +156,95 @@ export default function SeriesDetailPage({
 
         {/* Books */}
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Books in Series
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Books in Series
+            </h2>
+            {books && books.length > 1 && (
+              <Button
+                variant={isReordering ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsReordering(!isReordering)}
+              >
+                <GripVertical className="h-4 w-4 mr-1" />
+                {isReordering ? "Done" : "Reorder"}
+              </Button>
+            )}
+          </div>
           {books === undefined ? (
             <p className="text-sm text-muted-foreground">Loading books...</p>
           ) : books.length === 0 ? (
             <p className="text-sm text-muted-foreground">No books in this series yet</p>
           ) : (
             <div className="bg-card/60 rounded-lg divide-y divide-border/50">
-              {books.map((book) => (
-                <Link
+              {books.map((book, index) => (
+                <div
                   key={book._id}
-                  href={`/books/${book._id}`}
-                  className="flex items-start gap-3 px-3 py-3 hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-2 px-3 py-3"
                 >
-                  <BookCover
-                    coverImageR2Key={book.coverImageR2Key}
-                    title={book.title}
-                    size="sm"
-                  />
-                  <div className="flex-1 min-w-0 py-0.5">
-                    <div className="flex items-baseline gap-2">
-                      {book.seriesOrder !== undefined && (
-                        <span className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                          #{book.seriesOrder}
-                        </span>
-                      )}
-                      <h3 className="font-medium text-sm">{book.title}</h3>
+                  {isReordering && (
+                    <div className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveUp(index)}
+                        disabled={index === 0}
+                        className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Move up"
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveDown(index)}
+                        disabled={index === books.length - 1}
+                        className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Move down"
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </button>
                     </div>
-                    {book.subtitle && (
-                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                        {book.subtitle}
-                      </p>
-                    )}
-                    {book.authors && book.authors.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        by{" "}
-                        {book.authors.map((author, index) => (
-                          <span key={author._id}>
-                            {index > 0 && ", "}
-                            {author.name}
-                            {author.role && author.role !== "author" && (
-                              <span className="text-muted-foreground/70">
-                                {" "}
-                                ({author.role})
-                              </span>
-                            )}
-                          </span>
-                        ))}
-                      </p>
-                    )}
-                  </div>
-                </Link>
+                  )}
+                  <Link
+                    href={`/books/${book._id}`}
+                    className="flex items-start gap-3 flex-1 hover:bg-muted/50 -my-3 -mr-3 py-3 pr-3 transition-colors rounded-r-lg"
+                  >
+                    <BookCover
+                      coverImageR2Key={book.coverImageR2Key}
+                      title={book.title}
+                      size="sm"
+                    />
+                    <div className="flex-1 min-w-0 py-0.5">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                          #{index + 1}
+                        </span>
+                        <h3 className="font-medium text-sm">{book.title}</h3>
+                      </div>
+                      {book.subtitle && (
+                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                          {book.subtitle}
+                        </p>
+                      )}
+                      {book.authors && book.authors.length > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          by{" "}
+                          {book.authors.map((author, authorIndex) => (
+                            <span key={author._id}>
+                              {authorIndex > 0 && ", "}
+                              {author.name}
+                              {author.role && author.role !== "author" && (
+                                <span className="text-muted-foreground/70">
+                                  {" "}
+                                  ({author.role})
+                                </span>
+                              )}
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                </div>
               ))}
             </div>
           )}

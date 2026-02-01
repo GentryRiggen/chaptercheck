@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "../_generated/server";
 import { requireAuthMutation } from "../lib/auth";
+import { Id } from "../_generated/dataModel";
 
 // Create a new series
 export const createSeries = mutation({
@@ -73,6 +74,34 @@ export const deleteSeries = mutation({
     }
 
     await ctx.db.delete(args.seriesId);
+
+    return { success: true };
+  },
+});
+
+// Reorder books in a series
+export const reorderBooks = mutation({
+  args: {
+    seriesId: v.id("series"),
+    bookIds: v.array(v.id("books")),
+  },
+  handler: async (ctx, args) => {
+    await requireAuthMutation(ctx);
+
+    const now = Date.now();
+
+    // Update each book's seriesOrder based on its position in the array
+    await Promise.all(
+      args.bookIds.map(async (bookId, index) => {
+        const book = await ctx.db.get(bookId);
+        if (book && book.seriesId === args.seriesId) {
+          await ctx.db.patch(bookId, {
+            seriesOrder: index + 1,
+            updatedAt: now,
+          });
+        }
+      })
+    );
 
     return { success: true };
   },

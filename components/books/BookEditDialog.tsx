@@ -81,6 +81,7 @@ export function BookEditDialog({
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}
           submitLabel="Save Changes"
+          bookId={book._id}
         />
       </DialogContent>
     </Dialog>
