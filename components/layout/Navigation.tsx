@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
+import { UserMenu } from "./UserMenu";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -113,7 +113,7 @@ export function Navigation() {
           {/* Theme Toggle & User Menu */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <UserButton afterSignOutUrl="/sign-in" />
+            <UserMenu />
           </div>
         </div>
       </div>

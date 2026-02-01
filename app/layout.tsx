@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navigation } from "@/components/layout/Navigation";
+import { MeshBackground } from "@/components/layout/MeshBackground";
 
 export const metadata: Metadata = {
   title: "ChapterCheck",
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>
+          <MeshBackground />
           <Navigation />
           {children}
         </Providers>

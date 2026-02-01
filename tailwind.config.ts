@@ -55,6 +55,27 @@ export default {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
+  		},
+  		animation: {
+  			'slow-spin': 'slow-spin 30s linear infinite',
+  			'slow-spin-reverse': 'slow-spin 25s linear infinite reverse',
+  			'float': 'float 20s ease-in-out infinite',
+  			'ripple': 'ripple 1s ease-out forwards',
+  		},
+  		keyframes: {
+  			'slow-spin': {
+  				'0%': { transform: 'rotate(0deg)' },
+  				'100%': { transform: 'rotate(360deg)' },
+  			},
+  			'float': {
+  				'0%, 100%': { transform: 'translate(-50%, -50%) scale(1)' },
+  				'33%': { transform: 'translate(calc(-50% + 15px), calc(-50% - 15px)) scale(1.05)' },
+  				'66%': { transform: 'translate(calc(-50% - 10px), calc(-50% + 10px)) scale(0.95)' },
+  			},
+  			'ripple': {
+  				'0%': { transform: 'translate(-50%, -50%) scale(0)', opacity: '1' },
+  				'100%': { transform: 'translate(-50%, -50%) scale(2)', opacity: '0' },
+  			},
   		}
   	}
   },

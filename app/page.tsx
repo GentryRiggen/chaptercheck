@@ -128,7 +128,7 @@ function RecentAuthors() {
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <SignedOut>
           <div className="text-center py-20">

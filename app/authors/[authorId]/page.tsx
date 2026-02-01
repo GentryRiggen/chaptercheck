@@ -36,7 +36,7 @@ export default function AuthorDetailPage({
 
   if (author === undefined || authorId === null) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     );
@@ -44,7 +44,7 @@ export default function AuthorDetailPage({
 
   if (author === null) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Author not found</p>
           <Link href="/authors" className="text-primary hover:underline">
@@ -56,7 +56,7 @@ export default function AuthorDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <header className="bg-card border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-start">
