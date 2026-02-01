@@ -1,6 +1,5 @@
 "use client";
 
-import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
@@ -130,45 +129,31 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <SignedOut>
-          <div className="text-center py-20">
-            <h1 className="text-5xl font-bold mb-4">Welcome to ChapterCheck</h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              Your personal audiobook library
-            </p>
-            <SignInButton mode="modal">
-              <Button size="lg">Get Started</Button>
-            </SignInButton>
-          </div>
-        </SignedOut>
+        <div className="space-y-12">
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Recent Books</h2>
+              <Link href="/books">
+                <Button variant="ghost" className="gap-2">
+                  View all <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <RecentBooks />
+          </section>
 
-        <SignedIn>
-          <div className="space-y-12">
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Recent Books</h2>
-                <Link href="/books">
-                  <Button variant="ghost" className="gap-2">
-                    View all <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-              <RecentBooks />
-            </section>
-
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Recent Authors</h2>
-                <Link href="/authors">
-                  <Button variant="ghost" className="gap-2">
-                    View all <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-              <RecentAuthors />
-            </section>
-          </div>
-        </SignedIn>
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Recent Authors</h2>
+              <Link href="/authors">
+                <Button variant="ghost" className="gap-2">
+                  View all <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <RecentAuthors />
+          </section>
+        </div>
       </main>
     </div>
   );
