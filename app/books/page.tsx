@@ -1,9 +1,9 @@
 "use client";
 
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 
 import { BookCover } from "@/components/books/BookCover";
 import { BookDialog } from "@/components/books/BookDialog";
@@ -12,12 +12,10 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useScrolled } from "@/hooks/useScrolled";
 import { cn } from "@/lib/utils";
-
-const ITEMS_PER_PAGE = 20;
 
 export default function BooksPage() {
   usePageTitle("Books");
@@ -25,19 +23,19 @@ export default function BooksPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
   const scrolled = useScrolled();
 
   const isSearching = debouncedSearch.trim().length > 0;
 
   // Paginated query for browsing (when not searching)
   const {
-    results: paginatedResults,
-    status,
+    items: paginatedResults,
+    isLoading: isPaginatedLoading,
+    isLoadingMore,
+    canLoadMore,
+    loadMoreRef,
     loadMore,
-  } = usePaginatedQuery(api.books.queries.listBooks, shouldSkipQuery || isSearching ? "skip" : {}, {
-    initialNumItems: ITEMS_PER_PAGE,
-  });
+  } = usePaginatedList(api.books.queries.listBooks, {}, { skip: shouldSkipQuery || isSearching });
 
   // Search query (when searching)
   const searchResults = useQuery(
@@ -45,20 +43,9 @@ export default function BooksPage() {
     shouldSkipQuery || !isSearching ? "skip" : { search: debouncedSearch }
   );
 
-  const handleLoadMore = useCallback(() => {
-    if (status === "CanLoadMore") {
-      loadMore(ITEMS_PER_PAGE);
-    }
-  }, [status, loadMore]);
-
-  // Infinite scroll
-  useInfiniteScroll(loadMoreRef, handleLoadMore, { enabled: !isSearching });
-
   // Determine which results to show
   const books = isSearching ? searchResults : paginatedResults;
-  const isLoading = isSearching ? searchResults === undefined : status === "LoadingFirstPage";
-  const isLoadingMore = !isSearching && status === "LoadingMore";
-  const canLoadMore = !isSearching && status === "CanLoadMore";
+  const isLoading = isSearching ? searchResults === undefined : isPaginatedLoading;
   const isEmpty = books !== undefined && books.length === 0 && !isLoading;
 
   return (
@@ -175,7 +162,7 @@ export default function BooksPage() {
             )}
             {canLoadMore && !isLoadingMore && (
               <div className="flex justify-center">
-                <Button variant="ghost" size="sm" onClick={handleLoadMore}>
+                <Button variant="ghost" size="sm" onClick={loadMore}>
                   Load more
                 </Button>
               </div>
