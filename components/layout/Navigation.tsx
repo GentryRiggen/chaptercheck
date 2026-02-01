@@ -41,7 +41,7 @@ export function Navigation() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background">
+    <nav className="sticky top-0 z-50 border-b bg-background/60 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 items-center sm:h-16">
           {/* Mobile Menu Button */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePaginatedQuery, useQuery } from "convex/react";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 
@@ -13,6 +13,8 @@ import { api } from "@/convex/_generated/api";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useScrolled } from "@/hooks/useScrolled";
+import { cn } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -22,6 +24,7 @@ export default function BooksPage() {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const scrolled = useScrolled();
 
   const isSearching = debouncedSearch.trim().length > 0;
 
@@ -58,25 +61,53 @@ export default function BooksPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b bg-card/40 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-4 lg:px-8">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-xl font-bold sm:text-2xl">Books</h1>
-            <div className="flex max-w-md flex-1 items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="h-9 pl-8"
-                />
-              </div>
-              <Button size="sm" onClick={() => setDialogOpen(true)}>
-                Add
-              </Button>
+      <header className="sticky top-14 z-10 border-b bg-card/30 backdrop-blur-sm transition-all duration-200 sm:top-16">
+        <div
+          className={cn(
+            "mx-auto max-w-7xl px-3 py-2.5 transition-all duration-200 sm:px-6 sm:py-3 lg:px-8",
+            scrolled && "py-1.5 sm:py-2"
+          )}
+        >
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1
+              className={cn(
+                "shrink-0 font-bold transition-all duration-200",
+                scrolled ? "text-sm sm:text-lg" : "text-lg sm:text-xl"
+              )}
+            >
+              Books
+            </h1>
+            <div className="relative flex-1">
+              <Search
+                className={cn(
+                  "absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-all duration-200",
+                  scrolled ? "h-3.5 w-3.5" : "h-4 w-4"
+                )}
+              />
+              <Input
+                type="text"
+                placeholder="Search..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className={cn(
+                  "transition-all duration-200",
+                  scrolled ? "h-7 pl-7 text-sm" : "h-8 pl-8"
+                )}
+              />
             </div>
+            <Button
+              size="icon"
+              onClick={() => setDialogOpen(true)}
+              className={cn(
+                "shrink-0 transition-all duration-200",
+                scrolled ? "h-7 w-7" : "h-8 w-8"
+              )}
+            >
+              <Plus
+                className={cn("transition-all duration-200", scrolled ? "h-4 w-4" : "h-5 w-5")}
+              />
+              <span className="sr-only">Add book</span>
+            </Button>
           </div>
         </div>
       </header>
