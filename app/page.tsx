@@ -10,6 +10,7 @@ import { BookCover } from "@/components/books/BookCover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 function RecentBooks() {
   const books = useQuery(api.books.queries.getRecentBooks, { limit: 4 });
@@ -210,6 +211,7 @@ function Dashboard() {
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useAuth();
+  usePageTitle(isSignedIn ? "Home" : null);
 
   if (!isLoaded) {
     return (

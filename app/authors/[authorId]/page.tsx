@@ -14,6 +14,7 @@ import { BookDialog } from "@/components/books/BookDialog";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function AuthorDetailPage({
   params,
@@ -33,6 +34,8 @@ export default function AuthorDetailPage({
   const author = useQuery(api.authors.queries.getAuthor, authorId ? { authorId } : "skip");
   const books = useQuery(api.authors.queries.getAuthorBooks, authorId ? { authorId } : "skip");
   const series = useQuery(api.authors.queries.getAuthorSeries, authorId ? { authorId } : "skip");
+
+  usePageTitle(author?.name || null);
 
   if (author === undefined || authorId === null) {
     return (

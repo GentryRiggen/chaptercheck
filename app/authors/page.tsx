@@ -13,12 +13,14 @@ import { api } from "@/convex/_generated/api";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useScrolled } from "@/hooks/useScrolled";
 import { cn } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 20;
 
 export default function AuthorsPage() {
+  usePageTitle("Authors");
   const { shouldSkipQuery } = useAuthReady();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");

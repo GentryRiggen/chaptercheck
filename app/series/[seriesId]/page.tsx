@@ -10,6 +10,7 @@ import { BookCover } from "@/components/books/BookCover";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function SeriesDetailPage({
   params,
@@ -32,6 +33,8 @@ export default function SeriesDetailPage({
     api.series.queries.getBooksInSeriesWithAuthors,
     seriesId ? { seriesId } : "skip"
   );
+
+  usePageTitle(series?.name || null);
 
   const handleMoveUp = async (index: number) => {
     if (!books || !seriesId || index === 0) return;

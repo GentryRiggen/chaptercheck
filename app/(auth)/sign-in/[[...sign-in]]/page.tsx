@@ -1,6 +1,11 @@
+import { type Metadata } from "next";
 import { Suspense } from "react";
 
 import { SignInCard } from "@/components/auth/SignInCard";
+
+export const metadata: Metadata = {
+  title: "Sign In | ChapterCheck",
+};
 
 function SignInFallback() {
   return <div className="h-64 w-full max-w-md animate-pulse rounded-xl bg-muted" />;

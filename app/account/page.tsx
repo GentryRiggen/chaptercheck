@@ -27,9 +27,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { type AccountSettingsFormValues, accountSettingsSchema } from "@/lib/validations/auth";
 
 export default function AccountPage() {
+  usePageTitle("Account");
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();

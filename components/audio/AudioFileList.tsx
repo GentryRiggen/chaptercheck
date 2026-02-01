@@ -2,7 +2,7 @@
 
 import { useMutation } from "convex/react";
 import { ArrowDown, ArrowUp, Download, GripVertical, Pause, Play, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { AudioFileDeleteDialog } from "@/components/audio/AudioFileDeleteDialog";
@@ -20,12 +20,28 @@ type AudioFileWithNames = Doc<"audioFiles"> & {
 interface AudioFileListProps {
   bookId: Id<"books">;
   audioFiles: AudioFileWithNames[];
+  onPlayingChange?: (title: string | null) => void;
 }
 
-export function AudioFileList({ bookId, audioFiles }: AudioFileListProps) {
+export function AudioFileList({ bookId, audioFiles, onPlayingChange }: AudioFileListProps) {
   const [isReordering, setIsReordering] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<AudioFileWithNames | null>(null);
+  const [currentlyPlayingId, setCurrentlyPlayingId] = useState<Id<"audioFiles"> | null>(null);
+
+  // Notify parent when playing state changes
+  useEffect(() => {
+    if (currentlyPlayingId) {
+      const playingFile = audioFiles.find((f) => f._id === currentlyPlayingId);
+      onPlayingChange?.(playingFile?.displayName || playingFile?.fileName || null);
+    } else {
+      onPlayingChange?.(null);
+    }
+  }, [currentlyPlayingId, audioFiles, onPlayingChange]);
+
+  const handlePlayingChange = (fileId: Id<"audioFiles">, isPlaying: boolean) => {
+    setCurrentlyPlayingId(isPlaying ? fileId : null);
+  };
 
   const reorderAudioFiles = useMutation(api.audioFiles.mutations.reorderAudioFiles);
 
@@ -97,6 +113,7 @@ export function AudioFileList({ bookId, audioFiles }: AudioFileListProps) {
                   onMoveUp={() => handleMoveUp(index)}
                   onMoveDown={() => handleMoveDown(index)}
                   onDelete={() => handleDeleteClick(audioFile)}
+                  onPlayingChange={(isPlaying) => handlePlayingChange(audioFile._id, isPlaying)}
                 />
               ))}
             </div>
@@ -126,6 +143,7 @@ interface AudioFileRowProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDelete: () => void;
+  onPlayingChange: (isPlaying: boolean) => void;
 }
 
 function AudioFileRow({
@@ -136,6 +154,7 @@ function AudioFileRow({
   onMoveUp,
   onMoveDown,
   onDelete,
+  onPlayingChange,
 }: AudioFileRowProps) {
   const {
     isPlaying,
@@ -146,6 +165,11 @@ function AudioFileRow({
     togglePlayPause,
     generateDownloadUrl,
   } = useAudioPlayer(audioFile);
+
+  // Notify parent when playing state changes
+  useEffect(() => {
+    onPlayingChange(isPlaying);
+  }, [isPlaying, onPlayingChange]);
 
   const formatTime = (seconds: number) => {
     if (!isFinite(seconds)) return "0:00";

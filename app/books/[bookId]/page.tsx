@@ -14,12 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function BookDetailPage({ params }: { params: Promise<{ bookId: Id<"books"> }> }) {
   const router = useRouter();
   const [bookId, setBookId] = useState<Id<"books"> | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [nowPlayingTitle, setNowPlayingTitle] = useState<string | null>(null);
 
   useEffect(() => {
     params.then((p) => setBookId(p.bookId));
@@ -30,6 +32,9 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
     api.audioFiles.queries.getAudioFilesForBook,
     bookId ? { bookId } : "skip"
   );
+
+  // Page title: show now playing title if playing, otherwise book title
+  usePageTitle(nowPlayingTitle || book?.title || null);
 
   if (book === undefined || bookId === null) {
     return (
@@ -157,7 +162,11 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
               </CardContent>
             </Card>
           ) : (
-            <AudioFileList bookId={bookId} audioFiles={audioFiles} />
+            <AudioFileList
+              bookId={bookId}
+              audioFiles={audioFiles}
+              onPlayingChange={setNowPlayingTitle}
+            />
           )}
         </div>
       </main>
