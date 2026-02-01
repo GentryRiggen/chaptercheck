@@ -13,27 +13,58 @@ interface Ripple {
 
 export function MeshBackground() {
   const [mounted, setMounted] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+  const [smoothMousePos, setSmoothMousePos] = useState({ x: 0.5, y: 0.5 });
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const rippleIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const targetMousePos = useRef({ x: 0.5, y: 0.5 });
+  const animationFrameRef = useRef<number | null>(null);
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Mouse tracking
+  // Mouse tracking with smooth interpolation
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({
+      targetMousePos.current = {
         x: e.clientX / window.innerWidth,
         y: e.clientY / window.innerHeight,
+      };
+    };
+
+    // Lerp factor - lower = slower/more delayed (0.02 = very subtle, 0.1 = responsive)
+    const lerpFactor = 0.03;
+
+    const animate = () => {
+      setSmoothMousePos((prev) => {
+        const dx = targetMousePos.current.x - prev.x;
+        const dy = targetMousePos.current.y - prev.y;
+
+        // Only update if there's meaningful difference
+        if (Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001) {
+          return prev;
+        }
+
+        return {
+          x: prev.x + dx * lerpFactor,
+          y: prev.y + dy * lerpFactor,
+        };
       });
+
+      animationFrameRef.current = requestAnimationFrame(animate);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, []);
 
   // Keystroke ripples
@@ -74,9 +105,9 @@ export function MeshBackground() {
   const theme = getMeshTheme(isDark);
   const { primary, secondary, baseGradient, opacity, orbs } = theme;
 
-  // Mouse-reactive gradient position
-  const gradientX = 30 + mousePos.x * 40;
-  const gradientY = 30 + mousePos.y * 40;
+  // Mouse-reactive gradient position (reduced range: 40-60% instead of 30-70%)
+  const gradientX = 40 + smoothMousePos.x * 20;
+  const gradientY = 40 + smoothMousePos.y * 20;
 
   return (
     <div ref={containerRef} className="fixed inset-0 -z-10 overflow-hidden">
@@ -88,7 +119,7 @@ export function MeshBackground() {
 
       {/* Mouse-following gradient spotlight */}
       <div
-        className="absolute inset-0 transition-opacity duration-300"
+        className="absolute inset-0"
         style={{
           background: `radial-gradient(circle at ${gradientX}% ${gradientY}%, rgba(${primary.rgbString}, ${opacity.spotlight}) 0%, transparent 40%)`,
         }}
@@ -102,7 +133,7 @@ export function MeshBackground() {
         }}
       />
 
-      {/* Animated mesh grid */}
+      {/* Animated mesh grid (reduced movement: 3px instead of 10px) */}
       <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern
@@ -110,7 +141,7 @@ export function MeshBackground() {
             width="50"
             height="50"
             patternUnits="userSpaceOnUse"
-            patternTransform={`translate(${mousePos.x * 10 - 5}, ${mousePos.y * 10 - 5})`}
+            patternTransform={`translate(${smoothMousePos.x * 3 - 1.5}, ${smoothMousePos.y * 3 - 1.5})`}
           >
             <circle cx="25" cy="25" r="1" fill={`rgba(${primary.rgbString}, ${opacity.gridDot})`} />
             <path
@@ -131,15 +162,15 @@ export function MeshBackground() {
         <rect width="100%" height="100%" fill="url(#grid-pattern)" mask="url(#grid-mask)" />
       </svg>
 
-      {/* Floating orbs that react to mouse */}
+      {/* Floating orbs that react to mouse (reduced movement: 15px instead of 30px) */}
       {orbs.map((orb, i) => {
-        const offsetX = (mousePos.x - 0.5) * 30 * orb.speed;
-        const offsetY = (mousePos.y - 0.5) * 30 * orb.speed;
+        const offsetX = (smoothMousePos.x - 0.5) * 15 * orb.speed;
+        const offsetY = (smoothMousePos.y - 0.5) * 15 * orb.speed;
         const color = i % 2 === 0 ? primary : secondary;
         return (
           <div
             key={i}
-            className="absolute animate-float rounded-full transition-transform duration-700 ease-out"
+            className="absolute animate-float rounded-full"
             style={{
               width: orb.size,
               height: orb.size,
