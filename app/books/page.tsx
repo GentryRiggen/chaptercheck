@@ -1,5 +1,6 @@
 "use client";
 
+import { useConvexAuth } from "convex/react";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { Loader2, Search } from "lucide-react";
 import Link from "next/link";
@@ -16,6 +17,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 const ITEMS_PER_PAGE = 20;
 
 export default function BooksPage() {
+  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -23,19 +25,24 @@ export default function BooksPage() {
 
   const isSearching = debouncedSearch.trim().length > 0;
 
+  // Skip queries until auth is ready
+  const shouldSkipQuery = isAuthLoading || !isAuthenticated;
+
   // Paginated query for browsing (when not searching)
   const {
     results: paginatedResults,
     status,
     loadMore,
-  } = usePaginatedQuery(api.books.queries.listBooks, isSearching ? "skip" : {}, {
-    initialNumItems: ITEMS_PER_PAGE,
-  });
+  } = usePaginatedQuery(
+    api.books.queries.listBooks,
+    shouldSkipQuery || isSearching ? "skip" : {},
+    { initialNumItems: ITEMS_PER_PAGE }
+  );
 
   // Search query (when searching)
   const searchResults = useQuery(
     api.books.queries.searchBooks,
-    isSearching ? { search: debouncedSearch } : "skip"
+    shouldSkipQuery || !isSearching ? "skip" : { search: debouncedSearch }
   );
 
   const handleLoadMore = useCallback(() => {
