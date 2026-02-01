@@ -1,6 +1,6 @@
 "use client";
 
-import { useConvexAuth, usePaginatedQuery, useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { Loader2, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
@@ -10,22 +10,20 @@ import { AuthorImage } from "@/components/authors/AuthorImage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 const ITEMS_PER_PAGE = 20;
 
 export default function AuthorsPage() {
-  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
+  const { shouldSkipQuery } = useAuthReady();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const isSearching = debouncedSearch.trim().length > 0;
-
-  // Skip queries until auth is ready
-  const shouldSkipQuery = isAuthLoading || !isAuthenticated;
 
   // Paginated query for browsing (when not searching)
   const {
