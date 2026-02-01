@@ -82,7 +82,7 @@ export default function SeriesDetailPage({
 
   return (
     <div className="min-h-screen">
-      <main className="mx-auto max-w-4xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <main className="mx-auto max-w-4xl px-3 py-4 pb-24 sm:px-6 sm:py-6 lg:px-8">
         {/* Back link */}
         <Link
           href={fromBook ? `/books/${fromBook}` : "/books"}

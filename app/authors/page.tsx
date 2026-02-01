@@ -104,7 +104,7 @@ export default function AuthorsPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-3 py-4 pb-24 sm:px-6 lg:px-8">
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

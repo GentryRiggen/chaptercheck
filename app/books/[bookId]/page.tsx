@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AudioFileList } from "@/components/audio/AudioFileList";
 import { AudioUpload } from "@/components/audio/AudioUpload";
@@ -12,6 +12,7 @@ import { BookDeleteDialog } from "@/components/books/BookDeleteDialog";
 import { BookEditDialog } from "@/components/books/BookEditDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -21,7 +22,8 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
   const [bookId, setBookId] = useState<Id<"books"> | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [nowPlayingTitle, setNowPlayingTitle] = useState<string | null>(null);
+
+  const { currentTrack, isPlaying } = useAudioPlayerContext();
 
   useEffect(() => {
     params.then((p) => setBookId(p.bookId));
@@ -34,7 +36,20 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
   );
 
   // Page title: show now playing title if playing, otherwise book title
+  const nowPlayingTitle = isPlaying ? currentTrack?.displayName : null;
   usePageTitle(nowPlayingTitle || book?.title || null);
+
+  // Build bookInfo for AudioFileList
+  const bookInfo = useMemo(() => {
+    if (!book || !audioFiles) return null;
+    return {
+      bookTitle: book.title,
+      coverImageR2Key: book.coverImageR2Key,
+      seriesName: book.series?.name,
+      seriesOrder: book.seriesOrder,
+      totalParts: audioFiles.length,
+    };
+  }, [book, audioFiles]);
 
   if (book === undefined || bookId === null) {
     return (
@@ -59,7 +74,7 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
 
   return (
     <div className="min-h-screen">
-      <main className="mx-auto max-w-4xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <main className="mx-auto max-w-4xl px-3 py-4 pb-24 sm:px-6 sm:py-6 lg:px-8">
         {/* Back link */}
         <Link href="/books" className="mb-4 inline-block text-sm text-primary hover:underline">
           &larr; Back to Books
@@ -152,7 +167,7 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
         <div className="space-y-4">
           <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
 
-          {audioFiles === undefined ? (
+          {audioFiles === undefined || !bookInfo ? (
             <Card>
               <CardHeader className="py-3">
                 <CardTitle className="text-base">Audio Files</CardTitle>
@@ -162,11 +177,7 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
               </CardContent>
             </Card>
           ) : (
-            <AudioFileList
-              bookId={bookId}
-              audioFiles={audioFiles}
-              onPlayingChange={setNowPlayingTitle}
-            />
+            <AudioFileList bookId={bookId} audioFiles={audioFiles} bookInfo={bookInfo} />
           )}
         </div>
       </main>

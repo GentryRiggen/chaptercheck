@@ -1,6 +1,7 @@
 import { useAction } from "convex/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
+import { type TrackInfo, useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { api } from "@/convex/_generated/api";
 import { type Doc } from "@/convex/_generated/dataModel";
 
@@ -9,36 +10,35 @@ type AudioFileWithNames = Doc<"audioFiles"> & {
   displayName: string | null;
 };
 
-export function useAudioPlayer(audioFile: AudioFileWithNames) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+export interface BookInfo {
+  bookTitle: string;
+  coverImageR2Key?: string;
+  seriesName?: string;
+  seriesOrder?: number;
+  totalParts: number;
+}
+
+export function useAudioPlayer(audioFile: AudioFileWithNames, bookInfo: BookInfo) {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+
+  const {
+    currentTrack,
+    isPlaying: globalIsPlaying,
+    isLoading: globalIsLoading,
+    currentTime: globalCurrentTime,
+    duration: globalDuration,
+    play,
+    pause,
+  } = useAudioPlayerContext();
 
   const generateStreamUrl = useAction(api.audioFiles.actions.generateStreamUrl);
 
-  // Load audio on first play
-  const loadAudio = useCallback(async () => {
-    if (audioUrl) return audioUrl;
-
-    setIsLoading(true);
-    try {
-      const { streamUrl } = await generateStreamUrl({
-        r2Key: audioFile.r2Key,
-        r2Bucket: audioFile.r2Bucket,
-      });
-      setAudioUrl(streamUrl);
-      return streamUrl;
-    } catch (err) {
-      console.error("Failed to load audio:", err);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [audioFile.r2Key, audioFile.r2Bucket, audioUrl, generateStreamUrl]);
+  // Check if this track is the currently playing one
+  const isCurrentTrack = currentTrack?.audioFileId === audioFile._id;
+  const isPlaying = isCurrentTrack && globalIsPlaying;
+  const isLoading = isCurrentTrack && globalIsLoading;
+  const currentTime = isCurrentTrack ? globalCurrentTime : 0;
+  const duration = isCurrentTrack ? globalDuration : 0;
 
   // Generate download URL with friendly filename
   const generateDownloadUrl = useCallback(async () => {
@@ -65,73 +65,67 @@ export function useAudioPlayer(audioFile: AudioFileWithNames) {
     generateStreamUrl,
   ]);
 
-  // Create and manage audio element
-  useEffect(() => {
-    if (!audioUrl) return;
-
-    const audio = new Audio(audioUrl);
-    audioRef.current = audio;
-
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
-    const handleEnded = () => setIsPlaying(false);
-    const handlePause = () => setIsPlaying(false);
-    const handlePlay = () => setIsPlaying(true);
-
-    audio.addEventListener("timeupdate", updateTime);
-    audio.addEventListener("loadedmetadata", updateDuration);
-    audio.addEventListener("ended", handleEnded);
-    audio.addEventListener("pause", handlePause);
-    audio.addEventListener("play", handlePlay);
-
-    return () => {
-      audio.pause();
-      audio.removeEventListener("timeupdate", updateTime);
-      audio.removeEventListener("loadedmetadata", updateDuration);
-      audio.removeEventListener("ended", handleEnded);
-      audio.removeEventListener("pause", handlePause);
-      audio.removeEventListener("play", handlePlay);
-      audioRef.current = null;
-    };
-  }, [audioUrl]);
-
   const togglePlayPause = useCallback(async () => {
-    if (!audioRef.current) {
-      // First time playing - load the audio
-      const url = await loadAudio();
-      if (!url) return;
-
-      // Wait for the audio element to be created in the useEffect
-      setTimeout(() => {
-        audioRef.current?.play();
-      }, 100);
-      return;
-    }
-
-    if (isPlaying) {
-      audioRef.current.pause();
+    if (isCurrentTrack) {
+      // This track is current - toggle play/pause
+      if (globalIsPlaying) {
+        pause();
+      } else {
+        const trackInfo: TrackInfo = {
+          audioFileId: audioFile._id,
+          r2Key: audioFile.r2Key,
+          r2Bucket: audioFile.r2Bucket,
+          displayName: audioFile.displayName || audioFile.fileName,
+          bookId: audioFile.bookId,
+          bookTitle: bookInfo.bookTitle,
+          coverImageR2Key: bookInfo.coverImageR2Key,
+          seriesName: bookInfo.seriesName,
+          seriesOrder: bookInfo.seriesOrder,
+          partNumber: audioFile.partNumber ?? undefined,
+          totalParts: bookInfo.totalParts,
+        };
+        await play(trackInfo);
+      }
     } else {
-      audioRef.current.play();
+      // Start playing this track
+      const trackInfo: TrackInfo = {
+        audioFileId: audioFile._id,
+        r2Key: audioFile.r2Key,
+        r2Bucket: audioFile.r2Bucket,
+        displayName: audioFile.displayName || audioFile.fileName,
+        bookId: audioFile.bookId,
+        bookTitle: bookInfo.bookTitle,
+        coverImageR2Key: bookInfo.coverImageR2Key,
+        seriesName: bookInfo.seriesName,
+        seriesOrder: bookInfo.seriesOrder,
+        partNumber: audioFile.partNumber ?? undefined,
+        totalParts: bookInfo.totalParts,
+      };
+      await play(trackInfo);
     }
-  }, [isPlaying, loadAudio]);
-
-  const seek = useCallback((time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-      setCurrentTime(time);
-    }
-  }, []);
+  }, [
+    isCurrentTrack,
+    globalIsPlaying,
+    pause,
+    play,
+    audioFile._id,
+    audioFile.r2Key,
+    audioFile.r2Bucket,
+    audioFile.displayName,
+    audioFile.fileName,
+    audioFile.bookId,
+    audioFile.partNumber,
+    bookInfo,
+  ]);
 
   return {
     isPlaying,
     isLoading,
     currentTime,
     duration,
-    audioUrl,
     downloadUrl,
     togglePlayPause,
-    seek,
-    loadAudio,
     generateDownloadUrl,
+    isCurrentTrack,
   };
 }

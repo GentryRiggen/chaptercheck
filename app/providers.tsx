@@ -6,6 +6,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ThemeProvider } from "next-themes";
 
 import { Toaster } from "@/components/ui/sonner";
+import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -19,8 +20,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster richColors position="bottom-right" />
+          <AudioPlayerProvider>
+            {children}
+            <Toaster richColors position="bottom-right" />
+          </AudioPlayerProvider>
         </ThemeProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>

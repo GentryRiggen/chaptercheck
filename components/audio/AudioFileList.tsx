@@ -2,7 +2,7 @@
 
 import { useMutation } from "convex/react";
 import { ArrowDown, ArrowUp, Download, GripVertical, Pause, Play, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { AudioFileDeleteDialog } from "@/components/audio/AudioFileDeleteDialog";
@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
 import { type Doc, type Id } from "@/convex/_generated/dataModel";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { type BookInfo, useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { cn } from "@/lib/utils";
 
 type AudioFileWithNames = Doc<"audioFiles"> & {
   friendlyName: string | null;
@@ -20,28 +21,13 @@ type AudioFileWithNames = Doc<"audioFiles"> & {
 interface AudioFileListProps {
   bookId: Id<"books">;
   audioFiles: AudioFileWithNames[];
-  onPlayingChange?: (title: string | null) => void;
+  bookInfo: BookInfo;
 }
 
-export function AudioFileList({ bookId, audioFiles, onPlayingChange }: AudioFileListProps) {
+export function AudioFileList({ bookId, audioFiles, bookInfo }: AudioFileListProps) {
   const [isReordering, setIsReordering] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<AudioFileWithNames | null>(null);
-  const [currentlyPlayingId, setCurrentlyPlayingId] = useState<Id<"audioFiles"> | null>(null);
-
-  // Notify parent when playing state changes
-  useEffect(() => {
-    if (currentlyPlayingId) {
-      const playingFile = audioFiles.find((f) => f._id === currentlyPlayingId);
-      onPlayingChange?.(playingFile?.displayName || playingFile?.fileName || null);
-    } else {
-      onPlayingChange?.(null);
-    }
-  }, [currentlyPlayingId, audioFiles, onPlayingChange]);
-
-  const handlePlayingChange = (fileId: Id<"audioFiles">, isPlaying: boolean) => {
-    setCurrentlyPlayingId(isPlaying ? fileId : null);
-  };
 
   const reorderAudioFiles = useMutation(api.audioFiles.mutations.reorderAudioFiles);
 
@@ -107,13 +93,13 @@ export function AudioFileList({ bookId, audioFiles, onPlayingChange }: AudioFile
                 <AudioFileRow
                   key={audioFile._id}
                   audioFile={audioFile}
+                  bookInfo={bookInfo}
                   index={index}
                   totalFiles={audioFiles.length}
                   isReordering={isReordering}
                   onMoveUp={() => handleMoveUp(index)}
                   onMoveDown={() => handleMoveDown(index)}
                   onDelete={() => handleDeleteClick(audioFile)}
-                  onPlayingChange={(isPlaying) => handlePlayingChange(audioFile._id, isPlaying)}
                 />
               ))}
             </div>
@@ -137,24 +123,24 @@ export function AudioFileList({ bookId, audioFiles, onPlayingChange }: AudioFile
 
 interface AudioFileRowProps {
   audioFile: AudioFileWithNames;
+  bookInfo: BookInfo;
   index: number;
   totalFiles: number;
   isReordering: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDelete: () => void;
-  onPlayingChange: (isPlaying: boolean) => void;
 }
 
 function AudioFileRow({
   audioFile,
+  bookInfo,
   index,
   totalFiles,
   isReordering,
   onMoveUp,
   onMoveDown,
   onDelete,
-  onPlayingChange,
 }: AudioFileRowProps) {
   const {
     isPlaying,
@@ -164,12 +150,8 @@ function AudioFileRow({
     downloadUrl,
     togglePlayPause,
     generateDownloadUrl,
-  } = useAudioPlayer(audioFile);
-
-  // Notify parent when playing state changes
-  useEffect(() => {
-    onPlayingChange(isPlaying);
-  }, [isPlaying, onPlayingChange]);
+    isCurrentTrack,
+  } = useAudioPlayer(audioFile, bookInfo);
 
   const formatTime = (seconds: number) => {
     if (!isFinite(seconds)) return "0:00";
@@ -195,7 +177,12 @@ function AudioFileRow({
   };
 
   return (
-    <div className="flex items-center gap-2 py-3 first:pt-0 last:pb-0">
+    <div
+      className={cn(
+        "flex items-center gap-2 py-3 first:pt-0 last:pb-0",
+        isCurrentTrack && "rounded-lg bg-primary/5"
+      )}
+    >
       {isReordering && (
         <div className="flex flex-col gap-1">
           <button
@@ -220,7 +207,12 @@ function AudioFileRow({
       )}
 
       {/* Part number badge */}
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+      <div
+        className={cn(
+          "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-medium",
+          isCurrentTrack ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+        )}
+      >
         {audioFile.partNumber ?? index + 1}
       </div>
 
@@ -246,13 +238,13 @@ function AudioFileRow({
             <>
               <Button
                 size="icon"
-                variant="ghost"
+                variant={isCurrentTrack ? "default" : "ghost"}
                 onClick={togglePlayPause}
                 className="h-8 w-8 rounded-full"
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               </Button>
-              {duration > 0 && (
+              {isCurrentTrack && duration > 0 && (
                 <span className="min-w-[80px] text-xs text-muted-foreground">
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </span>
