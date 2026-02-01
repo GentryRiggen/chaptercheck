@@ -96,17 +96,16 @@ export default function BooksPage() {
               />
             </div>
             <Button
-              size="icon"
               onClick={() => setDialogOpen(true)}
               className={cn(
                 "shrink-0 transition-all duration-200",
-                scrolled ? "h-7 w-7" : "h-8 w-8"
+                scrolled ? "h-7 px-2 sm:px-3" : "h-8 px-2 sm:px-3"
               )}
             >
               <Plus
                 className={cn("transition-all duration-200", scrolled ? "h-4 w-4" : "h-5 w-5")}
               />
-              <span className="sr-only">Add book</span>
+              <span className="hidden sm:inline">Add Book</span>
             </Button>
           </div>
         </div>
