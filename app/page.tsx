@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
@@ -7,7 +8,7 @@ import { BookCover } from "@/components/books/BookCover";
 import { AuthorImage } from "@/components/authors/AuthorImage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, BookOpen, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Users, Library, Star, BarChart3 } from "lucide-react";
 
 function RecentBooks() {
   const books = useQuery(api.books.queries.getRecentBooks, { limit: 4 });
@@ -125,7 +126,61 @@ function RecentAuthors() {
   );
 }
 
-export default function Home() {
+function LandingPage() {
+  return (
+    <div className="min-h-screen">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="py-20 text-center">
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+            Track Your Reading Journey
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+            Organize your book collection, track your reading progress, and discover your next favorite read.
+          </p>
+          <Link href="/sign-in">
+            <Button size="lg" className="gap-2">
+              Get Started <ArrowRight className="h-5 w-5" />
+            </Button>
+          </Link>
+        </section>
+
+        <section className="py-16 border-t">
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <Library className="h-12 w-12 mx-auto text-primary mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Organize Your Library</h3>
+                <p className="text-muted-foreground">
+                  Catalog your books with cover images, authors, and detailed information.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <Star className="h-12 w-12 mx-auto text-primary mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Rate & Review</h3>
+                <p className="text-muted-foreground">
+                  Keep track of your thoughts with ratings and personal reviews.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <BarChart3 className="h-12 w-12 mx-auto text-primary mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Track Progress</h3>
+                <p className="text-muted-foreground">
+                  Monitor your reading habits and set goals to read more.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function Dashboard() {
   return (
     <div className="min-h-screen">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -157,4 +212,18 @@ export default function Home() {
       </main>
     </div>
   );
+}
+
+export default function Home() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  return isSignedIn ? <Dashboard /> : <LandingPage />;
 }
