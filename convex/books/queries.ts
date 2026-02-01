@@ -40,10 +40,7 @@ export const listBooks = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    const results = await ctx.db
-      .query("books")
-      .order("desc")
-      .paginate(args.paginationOpts);
+    const results = await ctx.db.query("books").order("desc").paginate(args.paginationOpts);
 
     // Enrich with authors
     const booksWithAuthors = await Promise.all(

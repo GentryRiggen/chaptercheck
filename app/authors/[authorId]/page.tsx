@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { Library, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AuthorDeleteDialog } from "@/components/authors/AuthorDeleteDialog";
 import { AuthorEditDialog } from "@/components/authors/AuthorEditDialog";

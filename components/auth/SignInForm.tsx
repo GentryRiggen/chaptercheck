@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { type EmailFormValues,emailSchema } from "@/lib/validations/auth";
+import { type EmailFormValues, emailSchema } from "@/lib/validations/auth";
 
 interface SignInFormProps {
   onSubmit: (email: string) => Promise<void>;

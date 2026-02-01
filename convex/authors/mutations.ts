@@ -68,9 +68,7 @@ export const deleteAuthor = mutation({
         .collect();
 
       // Check if this author is the only author
-      const otherAuthors = allBookAuthors.filter(
-        (a) => a.authorId !== args.authorId
-      );
+      const otherAuthors = allBookAuthors.filter((a) => a.authorId !== args.authorId);
 
       if (otherAuthors.length === 0) {
         // This is the only author - delete the book and its audio files

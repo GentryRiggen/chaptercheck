@@ -2,10 +2,7 @@ import { z } from "zod";
 
 export const bookSchema = z
   .object({
-    title: z
-      .string()
-      .min(1, "Title is required")
-      .max(200, "Title must be at most 200 characters"),
+    title: z.string().min(1, "Title is required").max(200, "Title must be at most 200 characters"),
     subtitle: z
       .string()
       .max(200, "Subtitle must be at most 200 characters")
@@ -16,11 +13,7 @@ export const bookSchema = z
       .max(5000, "Description must be at most 5000 characters")
       .optional()
       .or(z.literal("")),
-    isbn: z
-      .string()
-      .max(20, "ISBN must be at most 20 characters")
-      .optional()
-      .or(z.literal("")),
+    isbn: z.string().max(20, "ISBN must be at most 20 characters").optional().or(z.literal("")),
     publishedYear: z
       .number()
       .min(1000)

@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { ArrowRight, BarChart3,BookOpen, Library, Star, Users } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, Library, Star, Users } from "lucide-react";
 import Link from "next/link";
 
 import { AuthorImage } from "@/components/authors/AuthorImage";

@@ -1,7 +1,7 @@
 "use client";
 
 import { User, X } from "lucide-react";
-import { useCallback,useState } from "react";
+import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";

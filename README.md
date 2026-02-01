@@ -23,6 +23,7 @@
 <td width="50%">
 
 ### 📖 Book Management
+
 - Add, edit, and organize your audiobook collection
 - Upload custom cover images
 - Track series and reading order
@@ -32,6 +33,7 @@
 <td width="50%">
 
 ### 👤 Author Tracking
+
 - Detailed author profiles with photos
 - Link multiple authors to books
 - Support for narrators and translators
@@ -43,6 +45,7 @@
 <td width="50%">
 
 ### 🎧 Audio Player
+
 - Stream audio files directly in browser
 - Progress tracking and seeking
 - Support for MP3, M4A, and M4B formats
@@ -52,6 +55,7 @@
 <td width="50%">
 
 ### 📚 Series Organization
+
 - Group books into series
 - Drag-and-drop reordering
 - Automatic position numbering
@@ -90,17 +94,17 @@
 </tr>
 </table>
 
-| Category | Technology |
-|----------|------------|
-| **Framework** | Next.js 15 (App Router) |
-| **Database** | [Convex](https://convex.dev) (Real-time) |
-| **Authentication** | [Clerk](https://clerk.com) |
-| **Storage** | Cloudflare R2 (S3-compatible) |
-| **Deployment** | Cloudflare Workers + Pages |
-| **UI Components** | [shadcn/ui](https://ui.shadcn.com) + Radix UI |
-| **Styling** | Tailwind CSS + CSS Variables |
-| **Forms** | React Hook Form + Zod |
-| **Testing** | Vitest + React Testing Library |
+| Category           | Technology                                    |
+| ------------------ | --------------------------------------------- |
+| **Framework**      | Next.js 15 (App Router)                       |
+| **Database**       | [Convex](https://convex.dev) (Real-time)      |
+| **Authentication** | [Clerk](https://clerk.com)                    |
+| **Storage**        | Cloudflare R2 (S3-compatible)                 |
+| **Deployment**     | Cloudflare Workers + Pages                    |
+| **UI Components**  | [shadcn/ui](https://ui.shadcn.com) + Radix UI |
+| **Styling**        | Tailwind CSS + CSS Variables                  |
+| **Forms**          | React Hook Form + Zod                         |
+| **Testing**        | Vitest + React Testing Library                |
 
 ---
 
@@ -242,18 +246,18 @@ npm run test:coverage
 
 ## 📝 Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Fix ESLint errors |
-| `npm run format` | Format code with Prettier |
-| `npm run format:check` | Check code formatting |
-| `npm run type-check` | Run TypeScript check |
-| `npm run test` | Run tests in watch mode |
-| `npm run test:run` | Run tests once |
-| `npm run cf-deploy` | Deploy to Cloudflare |
+| Script                 | Description               |
+| ---------------------- | ------------------------- |
+| `npm run dev`          | Start development server  |
+| `npm run build`        | Build for production      |
+| `npm run lint`         | Run ESLint                |
+| `npm run lint:fix`     | Fix ESLint errors         |
+| `npm run format`       | Format code with Prettier |
+| `npm run format:check` | Check code formatting     |
+| `npm run type-check`   | Run TypeScript check      |
+| `npm run test`         | Run tests in watch mode   |
+| `npm run test:run`     | Run tests once            |
+| `npm run cf-deploy`    | Deploy to Cloudflare      |
 
 ---
 

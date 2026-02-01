@@ -1,11 +1,11 @@
 "use client";
 
-import { useClerk,useUser } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft,Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { type AccountSettingsFormValues,accountSettingsSchema } from "@/lib/validations/auth";
+import { type AccountSettingsFormValues, accountSettingsSchema } from "@/lib/validations/auth";
 
 export default function AccountPage() {
   const { user, isLoaded } = useUser();

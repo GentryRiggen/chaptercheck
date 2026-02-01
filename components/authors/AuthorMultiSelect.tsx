@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
-import { useMemo,useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

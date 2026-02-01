@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { type OtpFormValues,otpSchema } from "@/lib/validations/auth";
+import { type OtpFormValues, otpSchema } from "@/lib/validations/auth";
 
 interface OtpVerificationFormProps {
   email: string;

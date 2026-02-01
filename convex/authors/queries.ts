@@ -19,10 +19,7 @@ export const listAuthors = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    return await ctx.db
-      .query("authors")
-      .order("desc")
-      .paginate(args.paginationOpts);
+    return await ctx.db.query("authors").order("desc").paginate(args.paginationOpts);
   },
 });
 
@@ -107,10 +104,7 @@ export const getAuthorSeries = query({
       const book = await ctx.db.get(ba.bookId);
       if (!book || !book.seriesId) continue;
 
-      seriesCounts.set(
-        book.seriesId,
-        (seriesCounts.get(book.seriesId) || 0) + 1
-      );
+      seriesCounts.set(book.seriesId, (seriesCounts.get(book.seriesId) || 0) + 1);
     }
 
     // Fetch series details

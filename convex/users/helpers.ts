@@ -9,7 +9,4 @@
  * - isAdmin, isAuthenticated, getCurrentUser
  */
 
-export {
-  requireAuthMutation as getOrCreateUser,
-  requireAuth as getUser,
-} from "../lib/auth";
+export { requireAuthMutation as getOrCreateUser, requireAuth as getUser } from "../lib/auth";

@@ -29,8 +29,7 @@ export const meshBackground = {
   dark: {
     primary: neonColors.cyan,
     secondary: neonColors.pink,
-    baseGradient:
-      "radial-gradient(ellipse at 50% 50%, #1a1a2e 0%, #0a0a0a 100%)",
+    baseGradient: "radial-gradient(ellipse at 50% 50%, #1a1a2e 0%, #0a0a0a 100%)",
     opacity: {
       spotlight: 0.12,
       ambientGlow: 0.08,
@@ -51,8 +50,7 @@ export const meshBackground = {
   light: {
     primary: neonColors.deepPink,
     secondary: neonColors.deepCyan,
-    baseGradient:
-      "radial-gradient(ellipse at 50% 50%, #fdf2f8 0%, #f0f4f8 50%, #ecfeff 100%)",
+    baseGradient: "radial-gradient(ellipse at 50% 50%, #fdf2f8 0%, #f0f4f8 50%, #ecfeff 100%)",
     opacity: {
       spotlight: 0.18,
       ambientGlow: 0.12,

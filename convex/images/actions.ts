@@ -4,12 +4,7 @@ import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getR2Client } from "../lib/r2Client";
 
-const ALLOWED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-];
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Generate a presigned URL for uploading an image
@@ -28,9 +23,7 @@ export const generateUploadUrl = action({
 
     // Validate content type
     if (!ALLOWED_IMAGE_TYPES.includes(args.contentType)) {
-      throw new Error(
-        `Invalid image type. Allowed: ${ALLOWED_IMAGE_TYPES.join(", ")}`
-      );
+      throw new Error(`Invalid image type. Allowed: ${ALLOWED_IMAGE_TYPES.join(", ")}`);
     }
 
     // Validate file size

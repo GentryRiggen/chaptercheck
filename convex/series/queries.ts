@@ -34,10 +34,7 @@ export const listSeries = query({
   args: {},
   handler: async (ctx) => {
     await requireAuth(ctx);
-    return await ctx.db
-      .query("series")
-      .order("desc")
-      .take(100);
+    return await ctx.db.query("series").order("desc").take(100);
   },
 });
 
@@ -102,4 +99,3 @@ export const getBooksInSeriesWithAuthors = query({
     return booksWithAuthors;
   },
 });
-
