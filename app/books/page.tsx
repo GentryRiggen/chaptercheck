@@ -95,7 +95,7 @@ export default function BooksPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="bg-card border-b">
+      <header className="bg-card/40 backdrop-blur-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold">Books</h1>
