@@ -29,9 +29,6 @@ jobs:
       - name: 🔍 Run ESLint
         run: npm run lint
 
-      - name: 🔧 Generate Convex types
-        run: npx convex codegen
-
       - name: 🔷 TypeScript check
         run: npm run type-check
 
