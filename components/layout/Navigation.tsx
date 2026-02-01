@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { BookOpen, Home, Menu, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,17 +17,21 @@ import { UserMenu } from "./UserMenu";
 export function Navigation() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { isSignedIn } = useAuth();
 
   // Don't show navigation on auth pages
   if (pathname?.startsWith("/sign-in") || pathname?.startsWith("/sign-up")) {
     return null;
   }
 
-  const navLinks = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/books", label: "Books", icon: BookOpen },
-    { href: "/authors", label: "Authors", icon: Users },
-  ];
+  // Only show protected routes to authenticated users
+  const navLinks = isSignedIn
+    ? [
+        { href: "/", label: "Home", icon: Home },
+        { href: "/books", label: "Books", icon: BookOpen },
+        { href: "/authors", label: "Authors", icon: Users },
+      ]
+    : [{ href: "/", label: "Home", icon: Home }];
 
   const isActive = (href: string) => {
     if (href === "/") {
@@ -114,7 +119,13 @@ export function Navigation() {
           {/* Theme Toggle & User Menu */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <UserMenu />
+            {isSignedIn ? (
+              <UserMenu />
+            ) : (
+              <Link href="/sign-in">
+                <Button size="sm">Sign In</Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
