@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 
 /**
  * Migration Script: Firebase -> ChapterCheck (Convex)
@@ -26,7 +26,73 @@ import { ConvexHttpClient } from "convex/browser";
 import { anyApi } from "convex/server";
 import { cert, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
+import { resolve } from "path";
+
+import type { Id } from "../convex/_generated/dataModel";
+
+// ============================================
+// TYPES
+// ============================================
+
+interface FirebaseAuthor {
+  id: string;
+  firstName?: string;
+  middleInitial?: string;
+  lastName?: string;
+}
+
+interface FirebaseBook {
+  id: string;
+  title: string;
+  authors: FirebaseAuthor[];
+}
+
+interface OpenLibraryBookResult {
+  title: string;
+  description: string | null;
+  publishedYear: number | null;
+  isbn: string | null;
+  coverId: number | null;
+  language: string | null;
+  authorKey: string | null;
+}
+
+interface OpenLibraryAuthorResult {
+  key: string;
+  name: string;
+  bio: string | null;
+  birthDate: string | null;
+  deathDate: string | null;
+  photoUrl: string | null;
+}
+
+interface SeriesParseResult {
+  cleanTitle: string;
+  seriesName: string | null;
+  seriesOrder: number | null;
+}
+
+// ============================================
+// LOAD ENVIRONMENT VARIABLES
+// ============================================
+
+function loadEnvFile(): void {
+  const envPath = resolve(process.cwd(), ".env.local");
+  if (!existsSync(envPath)) return;
+
+  const content = readFileSync(envPath, "utf-8");
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const [key, ...valueParts] = trimmed.split("=");
+    if (key && !process.env[key]) {
+      process.env[key] = valueParts.join("=");
+    }
+  }
+}
+
+loadEnvFile();
 
 // ============================================
 // CONFIGURATION
@@ -47,6 +113,7 @@ const api = {
     },
   },
 };
+
 const OPEN_LIBRARY_DELAY_MS = 100; // Rate limiting for Open Library API
 const DRY_RUN = process.argv.includes("--dry-run");
 const LIMIT = parseInt(process.argv.find((a) => a.startsWith("--limit="))?.split("=")[1] || "0");
@@ -55,16 +122,19 @@ const LIMIT = parseInt(process.argv.find((a) => a.startsWith("--limit="))?.split
 // OPEN LIBRARY API HELPERS
 // ============================================
 
-async function sleep(ms) {
+async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Convert null to undefined for Convex optional fields
-function nullToUndefined(value) {
+function nullToUndefined<T>(value: T | null): T | undefined {
   return value === null ? undefined : value;
 }
 
-async function searchOpenLibrary(title, authorName) {
+async function searchOpenLibrary(
+  title: string,
+  authorName: string
+): Promise<OpenLibraryBookResult | null> {
   try {
     // Clean up the title - remove series info for better search
     const cleanTitle = title.replace(/\s*\([^)]*#[\d.]+\)\s*$/g, "").trim();
@@ -90,50 +160,85 @@ async function searchOpenLibrary(title, authorName) {
       authorKey: doc.author_key?.[0] || null,
     };
   } catch (error) {
-    console.error(`  ⚠️  Open Library search failed: ${error.message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`  ⚠️  Open Library search failed: ${message}`);
     return null;
   }
 }
 
-async function getAuthorFromOpenLibrary(authorName) {
+async function getAuthorFromOpenLibrary(
+  authorName: string
+): Promise<OpenLibraryAuthorResult | null> {
   try {
+    // Step 1: Search for the author to get their key
     const query = encodeURIComponent(authorName);
-    const url = `https://openlibrary.org/search/authors.json?q=${query}&limit=3`;
+    const searchUrl = `https://openlibrary.org/search/authors.json?q=${query}&limit=3`;
 
-    const response = await fetch(url);
-    if (!response.ok) return null;
+    const searchResponse = await fetch(searchUrl);
+    if (!searchResponse.ok) return null;
 
-    const data = await response.json();
-    if (!data.docs || data.docs.length === 0) return null;
+    const searchData = await searchResponse.json();
+    if (!searchData.docs || searchData.docs.length === 0) return null;
 
-    const author = data.docs[0];
+    const authorDoc = searchData.docs[0];
+    const authorKey = authorDoc.key; // e.g., "OL123456A"
+
+    // Step 2: Fetch full author details for bio and other info
+    await sleep(OPEN_LIBRARY_DELAY_MS);
+    const detailsUrl = `https://openlibrary.org/authors/${authorKey}.json`;
+    const detailsResponse = await fetch(detailsUrl);
+
+    let bio: string | null = null;
+    let birthDate: string | null = null;
+    let deathDate: string | null = null;
+
+    if (detailsResponse.ok) {
+      const details = await detailsResponse.json();
+
+      // Bio can be a string or an object with "value" property
+      if (details.bio) {
+        bio = typeof details.bio === "string" ? details.bio : details.bio.value || null;
+      }
+      birthDate = details.birth_date || null;
+      deathDate = details.death_date || null;
+
+      // If no bio but has top_work, create a simple one
+      if (!bio && authorDoc.top_work) {
+        bio = `Author of "${authorDoc.top_work}"`;
+      }
+    }
+
+    // Construct photo URL if author has photos
+    const photoUrl = authorKey ? `https://covers.openlibrary.org/a/olid/${authorKey}-L.jpg` : null;
 
     return {
-      name: author.name,
-      bio: author.top_work ? `Author of "${author.top_work}"` : null,
-      photoId: author.key ? author.key.replace("/authors/", "") : null,
+      key: authorKey,
+      name: authorDoc.name, // Use the canonical name from Open Library
+      bio,
+      birthDate,
+      deathDate,
+      photoUrl,
     };
   } catch (error) {
-    console.error(`  ⚠️  Open Library author search failed: ${error.message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`  ⚠️  Open Library author search failed: ${message}`);
     return null;
   }
 }
 
-function getOpenLibraryCoverUrl(coverId, size = "L") {
+function getOpenLibraryCoverUrl(
+  coverId: number | null,
+  size: "S" | "M" | "L" = "L"
+): string | null {
   if (!coverId) return null;
   return `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg`;
-}
-
-function getOpenLibraryAuthorPhotoUrl(authorKey, size = "L") {
-  if (!authorKey) return null;
-  return `https://covers.openlibrary.org/a/olid/${authorKey}-${size}.jpg`;
 }
 
 // ============================================
 // SERIES PARSING
 // ============================================
 
-function parseSeriesFromTitle(title) {
+function parseSeriesFromTitle(title: string): SeriesParseResult {
   // Patterns to match series info:
   // "Book Title (Series Name #1)"
   // "Book Title (Series Name #1.5)"
@@ -190,7 +295,7 @@ function parseSeriesFromTitle(title) {
 // MAIN MIGRATION LOGIC
 // ============================================
 
-async function main() {
+async function main(): Promise<void> {
   console.log("🚀 Starting Firebase to ChapterCheck Migration");
   console.log("=".repeat(60));
 
@@ -238,21 +343,24 @@ async function main() {
   console.log(`   Found ${booksSnapshot.size} books`);
 
   // Build a map of all books with their authors
-  const firebaseBooks = [];
+  const firebaseBooks: FirebaseBook[] = [];
   for (const bookDoc of booksSnapshot.docs) {
     const book = bookDoc.data();
     const authorsSnapshot = await bookDoc.ref.collection("authors").get();
-    const authors = authorsSnapshot.docs.map((a) => ({ id: a.id, ...a.data() }));
+    const authors = authorsSnapshot.docs.map((a) => ({
+      id: a.id,
+      ...a.data(),
+    })) as FirebaseAuthor[];
 
     firebaseBooks.push({
       id: bookDoc.id,
-      ...book,
+      title: book.title,
       authors,
     });
   }
 
   // Get unique authors
-  const authorMap = new Map();
+  const authorMap = new Map<string, FirebaseAuthor & { name: string }>();
   for (const book of firebaseBooks) {
     for (const author of book.authors) {
       if (!authorMap.has(author.id)) {
@@ -260,7 +368,7 @@ async function main() {
           .filter(Boolean)
           .join(" ")
           .trim();
-        authorMap.set(author.id, { id: author.id, name, ...author });
+        authorMap.set(author.id, { ...author, name });
       }
     }
   }
@@ -268,48 +376,67 @@ async function main() {
   console.log(`   Found ${authorMap.size} unique authors`);
 
   // ==========================================
-  // STEP 2: Migrate Authors
+  // STEP 2: Migrate Authors (with enrichment)
   // ==========================================
   console.log("\n👤 Step 2: Migrating authors...");
 
-  const authorIdMap = new Map(); // firebaseId -> convexId
+  const authorIdMap = new Map<string, Id<"authors">>(); // firebaseId -> convexId
   let authorCount = 0;
+  let authorsEnriched = 0;
+  let authorsWithPhotos = 0;
 
   for (const [firebaseId, author] of authorMap) {
     authorCount++;
-    process.stdout.write(`\r   Processing author ${authorCount}/${authorMap.size}: ${author.name}`);
+    process.stdout.write(
+      `\r   Processing author ${authorCount}/${authorMap.size}: ${author.name.padEnd(30)}`
+    );
 
     // Look up author on Open Library for bio/photo
     await sleep(OPEN_LIBRARY_DELAY_MS);
     const olAuthor = await getAuthorFromOpenLibrary(author.name);
-    const photoUrl = olAuthor?.photoId ? getOpenLibraryAuthorPhotoUrl(olAuthor.photoId) : undefined;
+
+    // Use the canonical name from Open Library if available, otherwise keep original
+    const authorName = olAuthor?.name || author.name;
+    const bio = olAuthor?.bio || undefined;
+    const photoUrl = olAuthor?.photoUrl || undefined;
+
+    if (olAuthor) {
+      authorsEnriched++;
+      if (olAuthor.photoUrl) {
+        authorsWithPhotos++;
+      }
+    }
 
     if (!DRY_RUN) {
       try {
         const result = await convex.action(api.migration.mutations.migrateAuthor, {
           firebaseId,
-          name: author.name,
-          bio: nullToUndefined(olAuthor?.bio),
+          name: authorName,
+          bio: nullToUndefined(bio),
           imageUrl: photoUrl,
         });
         authorIdMap.set(firebaseId, result.authorId);
       } catch (error) {
-        console.error(`\n   ❌ Error migrating author ${author.name}: ${error.message}`);
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`\n   ❌ Error migrating author ${author.name}: ${message}`);
       }
     }
   }
 
   console.log(`\n   ✅ Migrated ${authorCount} authors`);
+  console.log(`   📝 Enriched ${authorsEnriched} authors with Open Library data`);
+  console.log(`   📷 Found photos for ${authorsWithPhotos} authors`);
 
   // ==========================================
   // STEP 3: Migrate Books (with series parsing)
   // ==========================================
   console.log("\n📚 Step 3: Migrating books...");
 
-  const seriesMap = new Map(); // seriesName -> convexId
+  const seriesMap = new Map<string, Id<"series">>(); // seriesName -> convexId
   let bookCount = 0;
   let enrichedCount = 0;
   let seriesCount = 0;
+  let booksWithCovers = 0;
 
   const booksToProcess = LIMIT > 0 ? firebaseBooks.slice(0, LIMIT) : firebaseBooks;
 
@@ -321,14 +448,14 @@ async function main() {
     const primaryAuthor = authorNames[0] || "Unknown";
 
     process.stdout.write(
-      `\r   Processing book ${bookCount}/${booksToProcess.length}: ${book.title.substring(0, 40)}...`
+      `\r   Processing book ${bookCount}/${booksToProcess.length}: ${book.title.substring(0, 40).padEnd(40)}...`
     );
 
     // Parse series from title
     const { cleanTitle, seriesName, seriesOrder } = parseSeriesFromTitle(book.title);
 
     // Get or create series
-    let seriesId = null;
+    let seriesId: Id<"series"> | null = null;
     if (seriesName && !DRY_RUN) {
       if (!seriesMap.has(seriesName)) {
         try {
@@ -338,10 +465,11 @@ async function main() {
           seriesMap.set(seriesName, series);
           seriesCount++;
         } catch (error) {
-          console.error(`\n   ⚠️  Error creating series "${seriesName}": ${error.message}`);
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`\n   ⚠️  Error creating series "${seriesName}": ${message}`);
         }
       }
-      seriesId = seriesMap.get(seriesName);
+      seriesId = seriesMap.get(seriesName) || null;
     }
 
     // Look up book on Open Library
@@ -350,6 +478,9 @@ async function main() {
 
     if (olBook) {
       enrichedCount++;
+      if (olBook.coverId) {
+        booksWithCovers++;
+      }
     }
 
     const coverUrl = olBook?.coverId ? getOpenLibraryCoverUrl(olBook.coverId) : undefined;
@@ -373,13 +504,15 @@ async function main() {
           authorFirebaseIds,
         });
       } catch (error) {
-        console.error(`\n   ❌ Error migrating book "${book.title}": ${error.message}`);
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`\n   ❌ Error migrating book "${book.title}": ${message}`);
       }
     }
   }
 
   console.log(`\n   ✅ Migrated ${bookCount} books`);
   console.log(`   📖 Enriched ${enrichedCount} books with Open Library data`);
+  console.log(`   🖼️  Found covers for ${booksWithCovers} books`);
   console.log(`   📚 Created ${seriesCount} series`);
 
   // ==========================================
@@ -388,10 +521,12 @@ async function main() {
   console.log("\n" + "=".repeat(60));
   console.log("✅ Migration Complete!");
   console.log("=".repeat(60));
-  console.log(`   Authors: ${authorCount}`);
-  console.log(`   Books: ${bookCount}`);
+  console.log("\n📊 Summary:");
+  console.log(
+    `   Authors: ${authorCount} (${authorsEnriched} enriched, ${authorsWithPhotos} with photos)`
+  );
+  console.log(`   Books: ${bookCount} (${enrichedCount} enriched, ${booksWithCovers} with covers)`);
   console.log(`   Series: ${seriesCount}`);
-  console.log(`   Books enriched: ${enrichedCount}`);
 
   if (DRY_RUN) {
     console.log("\n⚠️  This was a DRY RUN - no data was written");
