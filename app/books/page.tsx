@@ -79,8 +79,8 @@ export default function BooksPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className={cn(
-                  "transition-all duration-200",
-                  scrolled ? "h-7 pl-7 text-sm" : "h-8 pl-8"
+                  "text-base transition-all duration-200",
+                  scrolled ? "h-7 pl-7" : "h-8 pl-8"
                 )}
               />
             </div>
