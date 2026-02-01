@@ -162,6 +162,14 @@ export const uploadImageFromUrl = internalAction({
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
+      // Reject placeholder images (Open Library returns ~43 byte 1x1 GIF when no image)
+      if (buffer.length < 1000) {
+        console.log(
+          `Image too small (${buffer.length} bytes), likely a placeholder: ${args.imageUrl}`
+        );
+        return null;
+      }
+
       const r2Client = getR2Client();
       const bucketName = process.env.R2_BUCKET_NAME;
 

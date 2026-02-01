@@ -116,6 +116,7 @@ const api = {
 
 const OPEN_LIBRARY_DELAY_MS = 100; // Rate limiting for Open Library API
 const DRY_RUN = process.argv.includes("--dry-run");
+const VERBOSE = process.argv.includes("--verbose") || process.argv.includes("-v");
 const LIMIT = parseInt(process.argv.find((a) => a.startsWith("--limit="))?.split("=")[1] || "0");
 
 // ============================================
@@ -191,6 +192,7 @@ async function getAuthorFromOpenLibrary(
     let bio: string | null = null;
     let birthDate: string | null = null;
     let deathDate: string | null = null;
+    let photoUrl: string | null = null;
 
     if (detailsResponse.ok) {
       const details = await detailsResponse.json();
@@ -206,10 +208,15 @@ async function getAuthorFromOpenLibrary(
       if (!bio && authorDoc.top_work) {
         bio = `Author of "${authorDoc.top_work}"`;
       }
-    }
 
-    // Construct photo URL if author has photos
-    const photoUrl = authorKey ? `https://covers.openlibrary.org/a/olid/${authorKey}-L.jpg` : null;
+      // Only construct photo URL if author actually has photos in their record
+      // The photos array contains photo IDs when photos exist
+      if (details.photos && Array.isArray(details.photos) && details.photos.length > 0) {
+        // Use the first photo ID to construct the URL
+        const photoId = details.photos[0];
+        photoUrl = `https://covers.openlibrary.org/b/id/${photoId}-L.jpg`;
+      }
+    }
 
     return {
       key: authorKey,
@@ -234,19 +241,33 @@ function getOpenLibraryCoverUrl(
   return `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg`;
 }
 
+// Validate that a cover URL returns an actual image (not a 1x1 placeholder)
+async function validateCoverUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+    if (!response.ok) return false;
+
+    // Open Library returns a 1x1 transparent GIF (~43 bytes) when no cover exists
+    const contentLength = response.headers.get("content-length");
+    if (contentLength && parseInt(contentLength) < 1000) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ============================================
 // SERIES PARSING
 // ============================================
 
 function parseSeriesFromTitle(title: string): SeriesParseResult {
-  // Patterns to match series info:
-  // "Book Title (Series Name #1)"
-  // "Book Title (Series Name #1.5)"
-  // "Series Name Book #1 - Book Title"
-  // "Book 1 - Series Name: Book Title"
+  // Try multiple patterns in order of specificity
 
-  // Pattern 1: "Title (Series #N)"
-  const pattern1 = /^(.+?)\s*\(([^#]+?)#([\d.]+)\)\s*$/;
+  // Pattern: "Title (Series Name #1)" or "Title (Series Name #1.5)"
+  const pattern1 = /^(.+?)\s*\(([^)]+?)\s*#([\d.]+)\)\s*$/;
   const match1 = title.match(pattern1);
   if (match1) {
     return {
@@ -256,8 +277,30 @@ function parseSeriesFromTitle(title: string): SeriesParseResult {
     };
   }
 
-  // Pattern 2: "Series Book #N - Title"
-  const pattern2 = /^(.+?)\s+Book\s*#?(\d+)\s*[-–:]\s*(.+)$/i;
+  // Pattern: "Title (Series Name, #1)" or "Title (Series Name, Book 1)"
+  const pattern1b = /^(.+?)\s*\(([^,]+),\s*(?:Book\s*)?#?([\d.]+)\)\s*$/i;
+  const match1b = title.match(pattern1b);
+  if (match1b) {
+    return {
+      cleanTitle: match1b[1].trim(),
+      seriesName: match1b[2].trim(),
+      seriesOrder: parseFloat(match1b[3]),
+    };
+  }
+
+  // Pattern: "Title (Series Name Book 1)" - no comma, no #
+  const pattern1c = /^(.+?)\s*\(([^)]+?)\s+Book\s*([\d.]+)\)\s*$/i;
+  const match1c = title.match(pattern1c);
+  if (match1c) {
+    return {
+      cleanTitle: match1c[1].trim(),
+      seriesName: match1c[2].trim(),
+      seriesOrder: parseFloat(match1c[3]),
+    };
+  }
+
+  // Pattern: "Series Name #1: Title" or "Series Name #1 - Title"
+  const pattern2 = /^(.+?)\s*#([\d.]+)\s*[-–:]\s*(.+)$/;
   const match2 = title.match(pattern2);
   if (match2) {
     return {
@@ -267,24 +310,82 @@ function parseSeriesFromTitle(title: string): SeriesParseResult {
     };
   }
 
-  // Pattern 3: "Book N - Series: Title" (like "Book 2 - Harry Potter...")
-  const pattern3 = /^Book\s*(\d+)\s*[-–:]\s*(.+)$/i;
+  // Pattern: "Series Name Book #N - Title" or "Series Name Book N: Title"
+  const pattern3 = /^(.+?)\s+Book\s*#?([\d.]+)\s*[-–:]\s*(.+)$/i;
   const match3 = title.match(pattern3);
   if (match3) {
-    // Extract series from the remaining title if it contains a colon
-    const remaining = match3[2];
+    return {
+      cleanTitle: match3[3].trim(),
+      seriesName: match3[1].trim(),
+      seriesOrder: parseFloat(match3[2]),
+    };
+  }
+
+  // Pattern: "Title, Book 1" or "Title, #1"
+  const pattern4 = /^(.+?),\s*(?:Book\s*)?#?([\d.]+)$/i;
+  const match4 = title.match(pattern4);
+  if (match4) {
+    return {
+      cleanTitle: match4[1].trim(),
+      seriesName: null, // No series name in this format
+      seriesOrder: parseFloat(match4[2]),
+    };
+  }
+
+  // Pattern: "Book N - Series: Title" (like "Book 2 - Harry Potter: Chamber of Secrets")
+  const pattern5 = /^Book\s*([\d.]+)\s*[-–:]\s*(.+)$/i;
+  const match5 = title.match(pattern5);
+  if (match5) {
+    const remaining = match5[2];
     const colonIndex = remaining.indexOf(":");
     if (colonIndex > 0) {
       return {
         cleanTitle: remaining.substring(colonIndex + 1).trim(),
         seriesName: remaining.substring(0, colonIndex).trim(),
-        seriesOrder: parseFloat(match3[1]),
+        seriesOrder: parseFloat(match5[1]),
       };
     }
     return {
       cleanTitle: remaining.trim(),
       seriesName: null,
-      seriesOrder: parseFloat(match3[1]),
+      seriesOrder: parseFloat(match5[1]),
+    };
+  }
+
+  // Pattern: "Title: Book One/Two/Three" etc
+  const wordToNum: Record<string, number> = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+  };
+  const pattern6 = /^(.+?):\s*Book\s+(One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten)$/i;
+  const match6 = title.match(pattern6);
+  if (match6) {
+    const num = wordToNum[match6[2].toLowerCase()];
+    if (num) {
+      return {
+        cleanTitle: match6[1].trim(),
+        seriesName: match6[1].trim(),
+        seriesOrder: num,
+      };
+    }
+  }
+
+  // Pattern: "Title - A Series Name Novel" or "Title: A Series Name Story"
+  const pattern7 = /^(.+?)\s*[-–:]\s*A\s+(.+?)\s+(?:Novel|Story|Book|Tale)$/i;
+  const match7 = title.match(pattern7);
+  if (match7) {
+    return {
+      cleanTitle: match7[1].trim(),
+      seriesName: match7[2].trim(),
+      seriesOrder: null,
     };
   }
 
@@ -401,12 +502,17 @@ async function main(): Promise<void> {
     // Use the canonical name from Open Library if available, otherwise keep original
     const authorName = olAuthor?.name || author.name;
     const bio = olAuthor?.bio || undefined;
-    const photoUrl = olAuthor?.photoUrl || undefined;
 
+    // Validate author photo is a real image, not a placeholder
+    let photoUrl: string | undefined = undefined;
     if (olAuthor) {
       authorsEnriched++;
       if (olAuthor.photoUrl) {
-        authorsWithPhotos++;
+        const isValidPhoto = await validateCoverUrl(olAuthor.photoUrl);
+        if (isValidPhoto) {
+          photoUrl = olAuthor.photoUrl;
+          authorsWithPhotos++;
+        }
       }
     }
 
@@ -448,12 +554,22 @@ async function main(): Promise<void> {
     );
     const primaryAuthor = authorNames[0] || "Unknown";
 
-    process.stdout.write(
-      `\r   Processing book ${bookCount}/${booksToProcess.length}: ${book.title.substring(0, 40).padEnd(40)}...`
-    );
+    if (!VERBOSE) {
+      process.stdout.write(
+        `\r   Processing book ${bookCount}/${booksToProcess.length}: ${book.title.substring(0, 40).padEnd(40)}...`
+      );
+    }
 
     // Parse series from title
     const { cleanTitle, seriesName, seriesOrder } = parseSeriesFromTitle(book.title);
+
+    if (VERBOSE) {
+      console.log(`\n   [${bookCount}/${booksToProcess.length}] "${book.title}"`);
+      if (seriesName || seriesOrder) {
+        console.log(`       → Clean title: "${cleanTitle}"`);
+        console.log(`       → Series: "${seriesName || "(none)"}" #${seriesOrder || "?"}`);
+      }
+    }
 
     // Get or create series
     let seriesId: Id<"series"> | null = null;
@@ -477,14 +593,21 @@ async function main(): Promise<void> {
     await sleep(OPEN_LIBRARY_DELAY_MS);
     const olBook = await searchOpenLibrary(cleanTitle, primaryAuthor);
 
+    let coverUrl: string | undefined = undefined;
     if (olBook) {
       enrichedCount++;
       if (olBook.coverId) {
-        booksWithCovers++;
+        const potentialCoverUrl = getOpenLibraryCoverUrl(olBook.coverId);
+        if (potentialCoverUrl) {
+          // Validate the cover is a real image, not a placeholder
+          const isValid = await validateCoverUrl(potentialCoverUrl);
+          if (isValid) {
+            coverUrl = potentialCoverUrl;
+            booksWithCovers++;
+          }
+        }
       }
     }
-
-    const coverUrl = olBook?.coverId ? getOpenLibraryCoverUrl(olBook.coverId) : undefined;
 
     // Get author firebase IDs
     const authorFirebaseIds = book.authors.map((a) => a.id);
