@@ -39,3 +39,6 @@ next-env.d.ts
 
 # convex
 .convex/
+
+# firebase
+firebase-service-account.json

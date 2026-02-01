@@ -17,7 +17,10 @@
     "test:coverage": "vitest run --coverage",
     "build:worker": "opennextjs-cloudflare build",
     "preview": "opennextjs-cloudflare preview",
-    "cf-deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "cf-deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "migrate": "node scripts/migrate-from-firebase.mjs",
+    "migrate:dry-run": "node scripts/migrate-from-firebase.mjs --dry-run",
+    "migrate:test": "node scripts/migrate-from-firebase.mjs --dry-run --limit=5"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.965.0",
@@ -64,6 +67,7 @@
     "eslint-config-next": "^15.1.3",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
+    "firebase-admin": "^13.6.0",
     "happy-dom": "^20.4.0",
     "lefthook": "^2.0.16",
     "postcss": "^8",
