@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { Menu, BookOpen, Users, Home } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { Logo } from "@/components/Logo";
 
 export function Navigation() {
   const pathname = usePathname();
@@ -53,7 +54,10 @@ export function Navigation() {
               </SheetTrigger>
               <SheetContent side="left" className="w-64">
                 <SheetHeader>
-                  <SheetTitle className="text-left">ChapterCheck</SheetTitle>
+                  <SheetTitle className="text-left flex items-center gap-2">
+                    <Logo size={24} />
+                    ChapterCheck
+                  </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col gap-1 mt-6">
                   {navLinks.map((link) => {
@@ -81,7 +85,8 @@ export function Navigation() {
           </div>
 
           {/* Logo/Brand */}
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center gap-2">
+            <Logo size={28} />
             <span className="text-lg sm:text-xl font-bold">ChapterCheck</span>
           </Link>
 

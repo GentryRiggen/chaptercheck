@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { SignInForm } from "./SignInForm";
 import { OtpVerificationForm } from "./OtpVerificationForm";
+import { Logo } from "@/components/Logo";
 
 type Step = "email" | "otp";
 
@@ -94,6 +95,9 @@ export function SignInCard() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
+        <div className="flex justify-center mb-2">
+          <Logo size={48} showBackground />
+        </div>
         <CardTitle className="text-2xl">Welcome back</CardTitle>
         <CardDescription>
           {step === "email"
