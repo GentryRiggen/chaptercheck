@@ -121,35 +121,73 @@ export default function BooksPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {books?.map((book) => (
-              <Link
-                key={book._id}
-                href={`/books/${book._id}`}
-                className="group relative overflow-hidden rounded-xl bg-card/50 p-2 shadow-sm ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 hover:ring-primary/30 sm:p-3"
-              >
-                <div className="relative mb-2 overflow-hidden rounded-lg sm:mb-3">
-                  <BookCover
-                    coverImageR2Key={book.coverImageR2Key}
-                    title={book.title}
-                    size="card"
-                    className="transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                </div>
-                <div className="space-y-0.5 sm:space-y-1">
-                  <h2 className="line-clamp-2 text-xs font-semibold leading-tight text-foreground sm:text-sm">
-                    {book.title}
-                  </h2>
-                  {book.authors && book.authors.length > 0 && (
-                    <p className="line-clamp-1 text-[10px] text-muted-foreground sm:text-xs">
-                      {book.authors.map((a) => a.name).join(", ")}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
+          <>
+            {/* Mobile list layout */}
+            <div className="divide-y divide-border/50 rounded-lg bg-card/60 sm:hidden">
+              {books?.map((book) => (
+                <Link
+                  key={book._id}
+                  href={`/books/${book._id}`}
+                  className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/50"
+                >
+                  <BookCover coverImageR2Key={book.coverImageR2Key} title={book.title} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="line-clamp-1 text-sm font-semibold text-foreground">
+                      {book.title}
+                    </h2>
+                    {book.authors && book.authors.length > 0 && (
+                      <p className="line-clamp-1 text-xs text-muted-foreground">
+                        {book.authors.map((a) => a.name).join(", ")}
+                      </p>
+                    )}
+                    {book.series && (
+                      <p className="line-clamp-1 text-xs italic text-primary/80">
+                        {book.series.name}
+                        {book.seriesOrder !== undefined && ` #${book.seriesOrder}`}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop card grid */}
+            <div className="hidden gap-4 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {books?.map((book) => (
+                <Link
+                  key={book._id}
+                  href={`/books/${book._id}`}
+                  className="group relative overflow-hidden rounded-xl bg-card/50 p-3 shadow-sm ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 hover:ring-primary/30"
+                >
+                  <div className="relative mb-3 overflow-hidden rounded-lg">
+                    <BookCover
+                      coverImageR2Key={book.coverImageR2Key}
+                      title={book.title}
+                      size="card"
+                      className="transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">
+                      {book.title}
+                    </h2>
+                    {book.authors && book.authors.length > 0 && (
+                      <p className="line-clamp-1 text-xs text-muted-foreground">
+                        {book.authors.map((a) => a.name).join(", ")}
+                      </p>
+                    )}
+                    {book.series && (
+                      <p className="line-clamp-1 text-[10px] italic text-primary/80">
+                        {book.series.name}
+                        {book.seriesOrder !== undefined && ` #${book.seriesOrder}`}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Infinite scroll trigger (only when not searching) */}

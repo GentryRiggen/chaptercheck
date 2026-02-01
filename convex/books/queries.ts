@@ -36,7 +36,7 @@ export const getBook = query({
   },
 });
 
-// List all books with pagination and authors (for infinite scroll), sorted alphabetically
+// List all books with pagination, authors, and series (for infinite scroll), sorted alphabetically
 export const listBooks = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
@@ -47,8 +47,8 @@ export const listBooks = query({
       .order("asc")
       .paginate(args.paginationOpts);
 
-    // Enrich with authors
-    const booksWithAuthors = await Promise.all(
+    // Enrich with authors and series
+    const booksWithDetails = await Promise.all(
       results.page.map(async (book) => {
         const bookAuthors = await ctx.db
           .query("bookAuthors")
@@ -62,16 +62,19 @@ export const listBooks = query({
           })
         );
 
+        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
+
         return {
           ...book,
           authors: authors.filter((a) => a !== null),
+          series: series ? { _id: series._id, name: series.name } : null,
         };
       })
     );
 
     return {
       ...results,
-      page: booksWithAuthors,
+      page: booksWithDetails,
     };
   },
 });
@@ -92,8 +95,8 @@ export const searchBooks = query({
       .withSearchIndex("search_books", (q) => q.search("title", searchTerm))
       .take(50);
 
-    // Enrich with authors
-    const booksWithAuthors = await Promise.all(
+    // Enrich with authors and series
+    const booksWithDetails = await Promise.all(
       books.map(async (book) => {
         const bookAuthors = await ctx.db
           .query("bookAuthors")
@@ -107,14 +110,17 @@ export const searchBooks = query({
           })
         );
 
+        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
+
         return {
           ...book,
           authors: authors.filter((a) => a !== null),
+          series: series ? { _id: series._id, name: series.name } : null,
         };
       })
     );
 
-    return booksWithAuthors;
+    return booksWithDetails;
   },
 });
 

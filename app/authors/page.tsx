@@ -125,27 +125,56 @@ export default function AuthorsPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {authors?.map((author) => (
-              <Link
-                key={author._id}
-                href={`/authors/${author._id}`}
-                className="group relative flex flex-col items-center overflow-hidden rounded-xl bg-card/50 p-3 shadow-sm ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 hover:ring-primary/30 sm:p-4"
-              >
-                <div className="relative mb-2 sm:mb-3">
-                  <AuthorImage
-                    imageR2Key={author.imageR2Key}
-                    name={author.name}
-                    size="card"
-                    className="ring-2 ring-border/30 transition-all duration-300 group-hover:scale-105 group-hover:ring-primary/50"
-                  />
-                </div>
-                <h2 className="line-clamp-2 text-center text-xs font-semibold leading-tight text-foreground sm:text-sm">
-                  {author.name}
-                </h2>
-              </Link>
-            ))}
-          </div>
+          <>
+            {/* Mobile list layout */}
+            <div className="divide-y divide-border/50 rounded-lg bg-card/60 sm:hidden">
+              {authors?.map((author) => (
+                <Link
+                  key={author._id}
+                  href={`/authors/${author._id}`}
+                  className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/50"
+                >
+                  <AuthorImage imageR2Key={author.imageR2Key} name={author.name} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="line-clamp-1 text-sm font-semibold text-foreground">
+                      {author.name}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {author.bookCount} book{author.bookCount !== 1 ? "s" : ""}
+                      {author.seriesCount > 0 && ` · ${author.seriesCount} series`}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop card grid */}
+            <div className="hidden gap-4 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {authors?.map((author) => (
+                <Link
+                  key={author._id}
+                  href={`/authors/${author._id}`}
+                  className="group relative flex flex-col items-center overflow-hidden rounded-xl bg-card/50 p-4 shadow-sm ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 hover:ring-primary/30"
+                >
+                  <div className="relative mb-3">
+                    <AuthorImage
+                      imageR2Key={author.imageR2Key}
+                      name={author.name}
+                      size="card"
+                      className="ring-2 ring-border/30 transition-all duration-300 group-hover:scale-105 group-hover:ring-primary/50"
+                    />
+                  </div>
+                  <h2 className="line-clamp-2 text-center text-sm font-semibold leading-tight text-foreground">
+                    {author.name}
+                  </h2>
+                  <p className="mt-1 text-center text-xs text-muted-foreground">
+                    {author.bookCount} book{author.bookCount !== 1 ? "s" : ""}
+                    {author.seriesCount > 0 && ` · ${author.seriesCount} series`}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Infinite scroll trigger (only when not searching) */}

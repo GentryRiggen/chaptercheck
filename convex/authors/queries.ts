@@ -15,16 +15,46 @@ export const getAuthor = query({
   },
 });
 
-// List all authors with pagination (for infinite scroll), sorted alphabetically
+// List all authors with pagination and counts (for infinite scroll), sorted alphabetically
 export const listAuthors = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    return await ctx.db
+    const results = await ctx.db
       .query("authors")
       .withIndex("by_name")
       .order("asc")
       .paginate(args.paginationOpts);
+
+    // Enrich with book and series counts
+    const authorsWithCounts = await Promise.all(
+      results.page.map(async (author) => {
+        const bookAuthors = await ctx.db
+          .query("bookAuthors")
+          .withIndex("by_author", (q) => q.eq("authorId", author._id))
+          .collect();
+
+        // Count unique series
+        const seriesIds = new Set<string>();
+        for (const ba of bookAuthors) {
+          const book = await ctx.db.get(ba.bookId);
+          if (book?.seriesId) {
+            seriesIds.add(book.seriesId);
+          }
+        }
+
+        return {
+          ...author,
+          bookCount: bookAuthors.length,
+          seriesCount: seriesIds.size,
+        };
+      })
+    );
+
+    return {
+      ...results,
+      page: authorsWithCounts,
+    };
   },
 });
 
@@ -63,7 +93,32 @@ export const searchAuthors = query({
       .withSearchIndex("search_authors", (q) => q.search("name", searchTerm))
       .take(50);
 
-    return authors;
+    // Enrich with book and series counts
+    const authorsWithCounts = await Promise.all(
+      authors.map(async (author) => {
+        const bookAuthors = await ctx.db
+          .query("bookAuthors")
+          .withIndex("by_author", (q) => q.eq("authorId", author._id))
+          .collect();
+
+        // Count unique series
+        const seriesIds = new Set<string>();
+        for (const ba of bookAuthors) {
+          const book = await ctx.db.get(ba.bookId);
+          if (book?.seriesId) {
+            seriesIds.add(book.seriesId);
+          }
+        }
+
+        return {
+          ...author,
+          bookCount: bookAuthors.length,
+          seriesCount: seriesIds.size,
+        };
+      })
+    );
+
+    return authorsWithCounts;
   },
 });
 
