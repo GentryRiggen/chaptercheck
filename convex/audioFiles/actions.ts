@@ -1,7 +1,10 @@
-import { v } from "convex/values";
-import { action } from "../_generated/server";
-import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { v } from "convex/values";
+
+import { internal } from "../_generated/api";
+import { type Id } from "../_generated/dataModel";
+import { action } from "../_generated/server";
 import { getR2Client } from "../lib/r2Client";
 
 // Generate a presigned URL for uploading an audio file
@@ -11,11 +14,25 @@ export const generateUploadUrl = action({
     fileSize: v.number(),
     contentType: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    uploadUrl: string;
+    r2Key: string;
+    r2Bucket: string;
+    storageAccountId: Id<"storageAccounts">;
+  }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
     }
+
+    // Get or create storage account for this user
+    const storageAccount = await ctx.runMutation(
+      internal.storageAccounts.internal.getOrCreateStorageAccountInternal,
+      { clerkId: identity.subject }
+    );
 
     const r2Client = getR2Client();
     const bucketName = process.env.R2_BUCKET_NAME;
@@ -24,10 +41,10 @@ export const generateUploadUrl = action({
       throw new Error("R2_BUCKET_NAME not configured");
     }
 
-    // Generate unique key for the file
+    // Generate unique key for the file using the storage account's R2 path prefix
     const timestamp = Date.now();
     const sanitizedFileName = args.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const r2Key = `audiobooks/${timestamp}-${sanitizedFileName}`;
+    const r2Key = `${storageAccount.r2PathPrefix}/audiobooks/${timestamp}-${sanitizedFileName}`;
 
     const command = new PutObjectCommand({
       Bucket: bucketName,
@@ -41,7 +58,12 @@ export const generateUploadUrl = action({
       expiresIn: 900, // 15 minutes
     });
 
-    return { uploadUrl, r2Key, r2Bucket: bucketName };
+    return {
+      uploadUrl,
+      r2Key,
+      r2Bucket: bucketName,
+      storageAccountId: storageAccount._id,
+    };
   },
 });
 

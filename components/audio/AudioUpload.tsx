@@ -1,132 +1,371 @@
 "use client";
 
-import { X } from "lucide-react";
-import { useRef, useState } from "react";
+import { AlertCircle, CheckCircle2, FileAudio, Loader2, Upload, X } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { type Id } from "@/convex/_generated/dataModel";
 import { useAudioUpload } from "@/hooks/useAudioUpload";
+import { cn } from "@/lib/utils";
 
 interface AudioUploadProps {
   bookId: Id<"books">;
   onUploadComplete: () => void;
 }
 
+interface FileWithStatus {
+  file: File;
+  id: string;
+  status: "pending" | "uploading" | "complete" | "error";
+  progress: number;
+  error?: string;
+}
+
+const MAX_FILE_SIZE = 1.5 * 1024 * 1024 * 1024; // 1.5GB
+const VALID_TYPES = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a", "audio/x-m4a"];
+const VALID_EXTENSIONS = /\.(mp3|m4a|m4b)$/i;
+const MAX_CONCURRENT_UPLOADS = 3;
+
 export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<FileWithStatus[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { uploadAudio, uploading, progress, error } = useAudioUpload(bookId);
+  const { uploadAudio } = useAudioUpload(bookId);
+
+  const validateFile = (file: File): string | null => {
+    if (!VALID_TYPES.includes(file.type) && !file.name.match(VALID_EXTENSIONS)) {
+      return `${file.name}: Invalid file type. Please select MP3 or M4A files.`;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      return `${file.name}: File size must be less than 1.5GB.`;
+    }
+    return null;
+  };
+
+  const addFiles = useCallback(
+    (newFiles: FileList | File[]) => {
+      const filesToAdd: FileWithStatus[] = [];
+      const errors: string[] = [];
+
+      Array.from(newFiles).forEach((file) => {
+        const error = validateFile(file);
+        if (error) {
+          errors.push(error);
+        } else {
+          // Check for duplicates
+          const isDuplicate = files.some(
+            (f) => f.file.name === file.name && f.file.size === file.size
+          );
+          if (!isDuplicate) {
+            filesToAdd.push({
+              file,
+              id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+              status: "pending",
+              progress: 0,
+            });
+          }
+        }
+      });
+
+      if (errors.length > 0) {
+        errors.forEach((error) => toast.error(error));
+      }
+
+      if (filesToAdd.length > 0) {
+        setFiles((prev) => [...prev, ...filesToAdd]);
+      }
+    },
+    [files]
+  );
+
+  const removeFile = (id: string) => {
+    setFiles((prev) => prev.filter((f) => f.id !== id));
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      const validTypes = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a", "audio/x-m4a"];
-      if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|m4a|m4b)$/i)) {
-        toast.error("Please select a valid audio file (MP3 or M4A)");
-        return;
-      }
-
-      // Validate file size (max 500MB)
-      const maxSize = 500 * 1024 * 1024;
-      if (file.size > maxSize) {
-        toast.error("File size must be less than 500MB");
-        return;
-      }
-
-      setSelectedFile(file);
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(e.target.files);
+      // Reset input so the same file can be selected again
+      e.target.value = "";
     }
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile) return;
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
 
-    const success = await uploadAudio(selectedFile);
-    if (success) {
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        addFiles(e.dataTransfer.files);
       }
+    },
+    [addFiles]
+  );
+
+  const handleUploadAll = async () => {
+    const pendingFiles = files.filter((f) => f.status === "pending");
+    if (pendingFiles.length === 0) return;
+
+    setIsUploading(true);
+    let successCount = 0;
+
+    // Upload a single file and return whether it succeeded
+    const uploadSingleFile = async (fileWithStatus: FileWithStatus): Promise<boolean> => {
+      // Update status to uploading
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === fileWithStatus.id ? { ...f, status: "uploading" as const, progress: 0 } : f
+        )
+      );
+
+      try {
+        const success = await uploadAudioWithProgress(fileWithStatus.file, fileWithStatus.id);
+
+        if (success) {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileWithStatus.id ? { ...f, status: "complete" as const, progress: 100 } : f
+            )
+          );
+          return true;
+        } else {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileWithStatus.id
+                ? { ...f, status: "error" as const, error: "Upload failed" }
+                : f
+            )
+          );
+          return false;
+        }
+      } catch (err) {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileWithStatus.id
+              ? {
+                  ...f,
+                  status: "error" as const,
+                  error: err instanceof Error ? err.message : "Upload failed",
+                }
+              : f
+          )
+        );
+        return false;
+      }
+    };
+
+    // Process files with concurrency limit
+    const results = await processWithConcurrency(
+      pendingFiles,
+      uploadSingleFile,
+      MAX_CONCURRENT_UPLOADS
+    );
+    successCount = results.filter(Boolean).length;
+
+    setIsUploading(false);
+
+    if (successCount > 0) {
+      toast.success(`Successfully uploaded ${successCount} file${successCount > 1 ? "s" : ""}`);
       onUploadComplete();
     }
   };
 
-  const handleCancel = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  // Helper to process items with a concurrency limit
+  const processWithConcurrency = async <T, R>(
+    items: T[],
+    processor: (item: T) => Promise<R>,
+    concurrency: number
+  ): Promise<R[]> => {
+    const results: R[] = new Array(items.length);
+    let currentIndex = 0;
+
+    const worker = async () => {
+      while (currentIndex < items.length) {
+        const index = currentIndex++;
+        results[index] = await processor(items[index]);
+      }
+    };
+
+    // Start workers up to concurrency limit
+    const workers = Array(Math.min(concurrency, items.length))
+      .fill(null)
+      .map(() => worker());
+
+    await Promise.all(workers);
+    return results;
+  };
+
+  const uploadAudioWithProgress = async (file: File, fileId: string): Promise<boolean> => {
+    const onProgress = (progress: number) => {
+      setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, progress } : f)));
+    };
+
+    return await uploadAudio(file, { onProgress });
+  };
+
+  const clearCompleted = () => {
+    setFiles((prev) => prev.filter((f) => f.status !== "complete"));
+  };
+
+  const clearAll = () => {
+    if (!isUploading) {
+      setFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
   };
+
+  const pendingCount = files.filter((f) => f.status === "pending").length;
+  const uploadingCount = files.filter((f) => f.status === "uploading").length;
+  const completedCount = files.filter((f) => f.status === "complete").length;
+  const hasFiles = files.length > 0;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Upload Audio File</CardTitle>
+        <CardTitle>Upload Audio Files</CardTitle>
       </CardHeader>
-      <CardContent>
-        {!selectedFile ? (
-          <div>
-            <Input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/mpeg,audio/mp3,audio/mp4,audio/m4a,.mp3,.m4a,.m4b"
-              onChange={handleFileSelect}
-              disabled={uploading}
-            />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Supported formats: MP3, M4A (max 500MB)
-            </p>
-          </div>
-        ) : (
-          <div>
-            <div className="mb-4 rounded-lg bg-muted p-4">
-              <div className="mb-2 flex items-start justify-between">
-                <div>
-                  <p className="font-medium">{selectedFile.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatFileSize(selectedFile.size)}
-                  </p>
-                </div>
-                {!uploading && (
-                  <Button variant="ghost" size="sm" onClick={handleCancel} className="h-6 w-6 p-0">
-                    <X className="h-4 w-4" />
+      <CardContent className="space-y-4">
+        {/* Drop Zone */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => !isUploading && fileInputRef.current?.click()}
+          className={cn(
+            "relative cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors",
+            isDragOver
+              ? "border-primary bg-primary/5"
+              : "border-muted-foreground/25 hover:border-muted-foreground/50",
+            isUploading && "pointer-events-none opacity-50"
+          )}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="audio/mpeg,audio/mp3,audio/mp4,audio/m4a,.mp3,.m4a,.m4b"
+            onChange={handleFileSelect}
+            className="hidden"
+            disabled={isUploading}
+          />
+          <Upload className="mx-auto h-10 w-10 text-muted-foreground" />
+          <p className="mt-2 text-sm font-medium">
+            {isDragOver ? "Drop files here" : "Drag & drop audio files here"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">or click to browse</p>
+          <p className="mt-2 text-xs text-muted-foreground">MP3, M4A, M4B (max 1.5GB per file)</p>
+        </div>
+
+        {/* File List */}
+        {hasFiles && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">
+                {files.length} file{files.length > 1 ? "s" : ""} selected
+              </p>
+              <div className="flex gap-2">
+                {completedCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearCompleted} disabled={isUploading}>
+                    Clear completed
                   </Button>
                 )}
+                <Button variant="ghost" size="sm" onClick={clearAll} disabled={isUploading}>
+                  Clear all
+                </Button>
               </div>
-
-              {uploading && (
-                <div className="space-y-2">
-                  <Progress value={progress} />
-                  <p className="text-sm text-muted-foreground">
-                    Uploading... {Math.round(progress)}%
-                  </p>
-                </div>
-              )}
-
-              {error && <div className="mt-2 text-sm text-destructive">{error}</div>}
             </div>
 
-            <div className="flex gap-3">
-              <Button onClick={handleUpload} disabled={uploading} className="flex-1">
-                {uploading ? "Uploading..." : "Upload"}
-              </Button>
-              {!uploading && (
-                <Button variant="outline" onClick={handleCancel} className="flex-1">
-                  Cancel
-                </Button>
-              )}
+            <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border p-2">
+              {files.map((fileWithStatus) => (
+                <div
+                  key={fileWithStatus.id}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md p-2",
+                    fileWithStatus.status === "complete" && "bg-green-500/10",
+                    fileWithStatus.status === "error" && "bg-destructive/10"
+                  )}
+                >
+                  <div className="flex-shrink-0">
+                    {fileWithStatus.status === "complete" ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    ) : fileWithStatus.status === "error" ? (
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                    ) : fileWithStatus.status === "uploading" ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    ) : (
+                      <FileAudio className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{fileWithStatus.file.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        {formatFileSize(fileWithStatus.file.size)}
+                      </p>
+                      {fileWithStatus.status === "uploading" && (
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(fileWithStatus.progress)}%
+                        </span>
+                      )}
+                      {fileWithStatus.status === "error" && fileWithStatus.error && (
+                        <span className="text-xs text-destructive">{fileWithStatus.error}</span>
+                      )}
+                    </div>
+                    {fileWithStatus.status === "uploading" && (
+                      <Progress value={fileWithStatus.progress} className="mt-1 h-1" />
+                    )}
+                  </div>
+
+                  {fileWithStatus.status === "pending" && !isUploading && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(fileWithStatus.id)}
+                      className="h-6 w-6 flex-shrink-0 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
+        )}
+
+        {/* Upload Button */}
+        {(pendingCount > 0 || isUploading) && (
+          <Button onClick={handleUploadAll} disabled={isUploading} className="w-full">
+            {isUploading
+              ? `Uploading ${uploadingCount} of ${uploadingCount + pendingCount} remaining...`
+              : `Upload ${pendingCount} file${pendingCount > 1 ? "s" : ""}`}
+          </Button>
         )}
       </CardContent>
     </Card>

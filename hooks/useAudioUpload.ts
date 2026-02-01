@@ -1,7 +1,12 @@
+import { useAction, useMutation } from "convex/react";
 import { useState } from "react";
-import { useMutation, useAction } from "convex/react";
+
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { type Id } from "@/convex/_generated/dataModel";
+
+export interface UploadOptions {
+  onProgress?: (progress: number) => void;
+}
 
 export const useAudioUpload = (bookId: Id<"books">) => {
   const [uploading, setUploading] = useState(false);
@@ -11,14 +16,19 @@ export const useAudioUpload = (bookId: Id<"books">) => {
   const generateUploadUrl = useAction(api.audioFiles.actions.generateUploadUrl);
   const createAudioFile = useMutation(api.audioFiles.mutations.createAudioFile);
 
-  const uploadAudio = async (file: File) => {
+  const uploadAudio = async (file: File, options?: UploadOptions) => {
     setUploading(true);
     setProgress(0);
     setError(null);
 
+    const updateProgress = (value: number) => {
+      setProgress(value);
+      options?.onProgress?.(value);
+    };
+
     try {
-      // Step 1: Get presigned URL from Convex
-      const { uploadUrl, r2Key, r2Bucket } = await generateUploadUrl({
+      // Step 1: Get presigned URL from Convex (also creates storage account if needed)
+      const { uploadUrl, r2Key, r2Bucket, storageAccountId } = await generateUploadUrl({
         fileName: file.name,
         fileSize: file.size,
         contentType: file.type,
@@ -31,7 +41,7 @@ export const useAudioUpload = (bookId: Id<"books">) => {
         xhr.upload.addEventListener("progress", (e) => {
           if (e.lengthComputable) {
             const percentComplete = (e.loaded / e.total) * 100;
-            setProgress(percentComplete);
+            updateProgress(percentComplete);
           }
         });
 
@@ -66,10 +76,11 @@ export const useAudioUpload = (bookId: Id<"books">) => {
         format,
         r2Key,
         r2Bucket,
+        storageAccountId,
         duration: 0, // TODO: Extract actual duration from audio file
       });
 
-      setProgress(100);
+      updateProgress(100);
       setUploading(false);
       return true;
     } catch (err) {

@@ -23,6 +23,9 @@ import type * as lib_r2Client from "../lib/r2Client.js";
 import type * as migration_mutations from "../migration/mutations.js";
 import type * as series_mutations from "../series/mutations.js";
 import type * as series_queries from "../series/queries.js";
+import type * as storageAccounts_internal from "../storageAccounts/internal.js";
+import type * as storageAccounts_mutations from "../storageAccounts/mutations.js";
+import type * as storageAccounts_queries from "../storageAccounts/queries.js";
 import type * as users_helpers from "../users/helpers.js";
 
 import type {
@@ -47,6 +50,9 @@ declare const fullApi: ApiFromModules<{
   "migration/mutations": typeof migration_mutations;
   "series/mutations": typeof series_mutations;
   "series/queries": typeof series_queries;
+  "storageAccounts/internal": typeof storageAccounts_internal;
+  "storageAccounts/mutations": typeof storageAccounts_mutations;
+  "storageAccounts/queries": typeof storageAccounts_queries;
   "users/helpers": typeof users_helpers;
 }>;
 

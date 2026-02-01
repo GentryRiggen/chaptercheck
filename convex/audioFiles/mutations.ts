@@ -1,6 +1,11 @@
 import { v } from "convex/values";
+
 import { mutation } from "../_generated/server";
 import { requireAuthMutation } from "../lib/auth";
+import {
+  updateStorageStatsOnDelete,
+  updateStorageStatsOnInsert,
+} from "../storageAccounts/mutations";
 
 // Create audio file metadata after successful upload to R2
 export const createAudioFile = mutation({
@@ -12,11 +17,22 @@ export const createAudioFile = mutation({
     format: v.string(),
     r2Key: v.string(),
     r2Bucket: v.string(),
+    storageAccountId: v.id("storageAccounts"),
     chapterNumber: v.optional(v.number()),
     chapterTitle: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
+
+    // Verify the user has access to this storage account
+    if (user.storageAccountId !== args.storageAccountId) {
+      throw new Error("Invalid storage account");
+    }
+
+    const storageAccount = await ctx.db.get(args.storageAccountId);
+    if (!storageAccount) {
+      throw new Error("Storage account not found");
+    }
 
     const now = Date.now();
 
@@ -28,11 +44,15 @@ export const createAudioFile = mutation({
       format: args.format,
       r2Key: args.r2Key,
       r2Bucket: args.r2Bucket,
+      storageAccountId: args.storageAccountId,
       chapterNumber: args.chapterNumber,
       chapterTitle: args.chapterTitle,
       uploadedBy: user._id,
       uploadedAt: now,
     });
+
+    // Update storage account stats
+    await updateStorageStatsOnInsert(ctx, args.storageAccountId, args.fileSize);
 
     return audioFileId;
   },
@@ -42,7 +62,30 @@ export const createAudioFile = mutation({
 export const deleteAudioFile = mutation({
   args: { audioFileId: v.id("audioFiles") },
   handler: async (ctx, args) => {
-    await requireAuthMutation(ctx);
+    const { user } = await requireAuthMutation(ctx);
+
+    const audioFile = await ctx.db.get(args.audioFileId);
+    if (!audioFile) {
+      throw new Error("Audio file not found");
+    }
+
+    // Verify the user has access to this file
+    if (audioFile.storageAccountId) {
+      // Check user has access to the storage account
+      if (user.storageAccountId !== audioFile.storageAccountId) {
+        throw new Error("Not authorized to delete this file");
+      }
+    } else {
+      // Legacy files without storageAccountId - check uploadedBy
+      if (audioFile.uploadedBy !== user._id) {
+        throw new Error("Not authorized to delete this file");
+      }
+    }
+
+    // Update storage account stats if storageAccountId exists
+    if (audioFile.storageAccountId) {
+      await updateStorageStatsOnDelete(ctx, audioFile.storageAccountId, audioFile.fileSize);
+    }
 
     await ctx.db.delete(args.audioFileId);
     return { success: true };

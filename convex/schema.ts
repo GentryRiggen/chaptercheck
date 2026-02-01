@@ -2,6 +2,16 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Storage Accounts (can be shared by multiple users)
+  storageAccounts: defineTable({
+    name: v.optional(v.string()), // Optional display name for the account
+    r2PathPrefix: v.string(), // e.g., "users/{clerkId}" - unique prefix for R2 keys
+    totalBytesUsed: v.number(),
+    fileCount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
+
   // Users (synced from Clerk via webhook)
   users: defineTable({
     clerkId: v.string(), // Clerk user ID
@@ -9,6 +19,9 @@ export default defineSchema({
     name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))), // defaults to "user"
+    // Storage account (optional, created lazily on first upload)
+    // Multiple users can share the same storage account
+    storageAccountId: v.optional(v.id("storageAccounts")),
     // Migration-ready: Add firebaseUid for future migration
     firebaseUid: v.optional(v.string()),
     createdAt: v.number(),
@@ -16,6 +29,7 @@ export default defineSchema({
   })
     .index("by_clerkId", ["clerkId"])
     .index("by_firebaseUid", ["firebaseUid"])
+    .index("by_storageAccountId", ["storageAccountId"])
     .searchIndex("search_users", {
       searchField: "name",
       filterFields: ["email"],
@@ -102,6 +116,9 @@ export default defineSchema({
     // R2 storage info
     r2Key: v.string(), // S3-compatible object key
     r2Bucket: v.string(),
+    // Storage account (for per-user isolation)
+    // Optional during migration, will be required after backfill
+    storageAccountId: v.optional(v.id("storageAccounts")),
     // Migration-ready
     firebaseStoragePath: v.optional(v.string()),
     uploadedBy: v.id("users"),
@@ -113,5 +130,7 @@ export default defineSchema({
     .index("by_book", ["bookId"])
     .index("by_book_and_chapter", ["bookId", "chapterNumber"])
     .index("by_r2Key", ["r2Key"])
-    .index("by_uploadedBy", ["uploadedBy"]),
+    .index("by_uploadedBy", ["uploadedBy"])
+    .index("by_storageAccount", ["storageAccountId"])
+    .index("by_storageAccount_and_book", ["storageAccountId", "bookId"]),
 });
