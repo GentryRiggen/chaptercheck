@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import { requireAuth } from "../lib/auth";
+import { Id } from "../_generated/dataModel";
 
 // Get a single author by ID
 export const getAuthor = query({
@@ -84,6 +85,49 @@ export const getAuthorBooks = query({
     );
 
     return books.filter((book) => book !== null);
+  },
+});
+
+// Get series for an author (series containing books by this author)
+export const getAuthorSeries = query({
+  args: { authorId: v.id("authors") },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
+    // Get all book-author relationships for this author
+    const bookAuthors = await ctx.db
+      .query("bookAuthors")
+      .withIndex("by_author", (q) => q.eq("authorId", args.authorId))
+      .collect();
+
+    // Fetch all books and collect unique series IDs with counts
+    const seriesCounts = new Map<string, number>();
+
+    for (const ba of bookAuthors) {
+      const book = await ctx.db.get(ba.bookId);
+      if (!book || !book.seriesId) continue;
+
+      seriesCounts.set(
+        book.seriesId,
+        (seriesCounts.get(book.seriesId) || 0) + 1
+      );
+    }
+
+    // Fetch series details
+    const seriesWithCounts = await Promise.all(
+      Array.from(seriesCounts.entries()).map(async ([seriesId, count]) => {
+        const series = await ctx.db.get(seriesId as Id<"series">);
+        if (!series) return null;
+        return {
+          _id: series._id,
+          name: series.name,
+          description: series.description,
+          bookCountByAuthor: count,
+        };
+      })
+    );
+
+    return seriesWithCounts.filter((s) => s !== null);
   },
 });
 

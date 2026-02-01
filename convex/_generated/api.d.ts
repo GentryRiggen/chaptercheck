@@ -18,6 +18,7 @@ import type * as books_mutations from "../books/mutations.js";
 import type * as books_queries from "../books/queries.js";
 import type * as http from "../http.js";
 import type * as images_actions from "../images/actions.js";
+import type * as lib_auth from "../lib/auth.js";
 import type * as lib_r2Client from "../lib/r2Client.js";
 import type * as series_mutations from "../series/mutations.js";
 import type * as series_queries from "../series/queries.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   "books/queries": typeof books_queries;
   http: typeof http;
   "images/actions": typeof images_actions;
+  "lib/auth": typeof lib_auth;
   "lib/r2Client": typeof lib_r2Client;
   "series/mutations": typeof series_mutations;
   "series/queries": typeof series_queries;

@@ -85,7 +85,12 @@ export default function BookDetailPage({
           <div className="flex-1 min-w-0">
             {book.series && (
               <p className="text-sm text-muted-foreground italic mb-1">
-                {book.series.name}
+                <Link
+                  href={`/series/${book.series._id}?fromBook=${bookId}`}
+                  className="text-primary hover:underline"
+                >
+                  {book.series.name}
+                </Link>
                 {book.seriesOrder !== undefined && ` #${book.seriesOrder}`}
               </p>
             )}

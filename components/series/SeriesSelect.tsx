@@ -2,20 +2,13 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Loader2 } from "lucide-react";
 
 interface SeriesSelectProps {
   value?: {
@@ -29,24 +22,49 @@ interface SeriesSelectProps {
   error?: string;
 }
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function SeriesSelect({ value, onChange, error }: SeriesSelectProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newSeriesName, setNewSeriesName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const searchResults = useQuery(api.series.queries.searchSeries, {
-    searchTerm: searchTerm,
-  });
-  const allSeries = useQuery(api.series.queries.listSeries);
+  const debouncedSearch = useDebounce(searchTerm, 200);
+
+  // Only search when there's a search term
+  const searchResults = useQuery(
+    api.series.queries.searchSeries,
+    debouncedSearch.trim().length > 0 ? { searchTerm: debouncedSearch } : "skip"
+  );
+
+  // Fetch the selected series by ID
+  const selectedSeries = useQuery(
+    api.series.queries.getSeries,
+    value?.seriesId ? { seriesId: value.seriesId } : "skip"
+  );
+
   const createSeries = useMutation(api.series.mutations.createSeries);
 
-  const selectedSeries =
-    value?.seriesId && allSeries
-      ? allSeries.find((s) => s._id === value.seriesId)
-      : null;
+  const isSearching = debouncedSearch.trim().length > 0;
+  const isLoadingResults = isSearching && searchResults === undefined;
 
-  const handleSelectSeries = (seriesId: Id<"series">) => {
+  const handleSelectSeries = (seriesId: Id<"series">, seriesName: string) => {
     onChange({
       seriesId,
       seriesOrder: value?.seriesOrder,
@@ -93,16 +111,12 @@ export function SeriesSelect({ value, onChange, error }: SeriesSelectProps) {
     });
   };
 
-  const displayResults = searchTerm
-    ? searchResults
-    : allSeries?.slice(0, 10) || [];
-
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Series (Optional)</Label>
 
-        {selectedSeries ? (
+        {value?.seriesId && selectedSeries ? (
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <Badge variant="secondary" className="text-sm py-2 px-3">
@@ -118,9 +132,15 @@ export function SeriesSelect({ value, onChange, error }: SeriesSelectProps) {
               Remove
             </Button>
           </div>
+        ) : value?.seriesId && selectedSeries === undefined ? (
+          <div className="flex items-center gap-2 h-10">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Loading...</span>
+          </div>
         ) : (
           <div className="relative">
             <Input
+              ref={inputRef}
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -128,7 +148,7 @@ export function SeriesSelect({ value, onChange, error }: SeriesSelectProps) {
                 setIsCreating(false);
               }}
               onFocus={() => setShowDropdown(true)}
-              placeholder="Search or create series..."
+              placeholder="Search for a series..."
             />
 
             {showDropdown && (
@@ -137,7 +157,7 @@ export function SeriesSelect({ value, onChange, error }: SeriesSelectProps) {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowDropdown(false)}
                 />
-                <div className="absolute z-20 w-full mt-1 bg-background border rounded-md shadow-lg max-h-64 overflow-hidden">
+                <div className="absolute z-20 w-full mt-1 bg-background border rounded-md shadow-lg max-h-64 overflow-auto">
                   {isCreating ? (
                     <div className="p-3 space-y-3">
                       <Input
@@ -175,44 +195,53 @@ export function SeriesSelect({ value, onChange, error }: SeriesSelectProps) {
                       </div>
                     </div>
                   ) : (
-                    <Command>
-                      <CommandList>
-                        <CommandGroup>
-                          <CommandItem onSelect={handleStartCreating}>
-                            <span className="text-primary font-medium">
-                              + Create new series
-                              {searchTerm && ` "${searchTerm}"`}
-                            </span>
-                          </CommandItem>
-                        </CommandGroup>
+                    <div className="py-1">
+                      {/* Create new option */}
+                      <button
+                        type="button"
+                        className="w-full px-3 py-2 text-left hover:bg-muted transition-colors"
+                        onClick={handleStartCreating}
+                      >
+                        <span className="text-primary font-medium">
+                          + Create new series
+                          {searchTerm && ` "${searchTerm}"`}
+                        </span>
+                      </button>
 
-                        {displayResults && displayResults.length > 0 && (
-                          <CommandGroup>
-                            {displayResults.map((series) => (
-                              <CommandItem
-                                key={series._id}
-                                onSelect={() => handleSelectSeries(series._id)}
-                              >
-                                <div>
-                                  <div className="font-medium">
-                                    {series.name}
-                                  </div>
-                                  {series.description && (
-                                    <div className="text-sm text-muted-foreground mt-1">
-                                      {series.description}
-                                    </div>
-                                  )}
+                      {/* Search prompt or results */}
+                      {!isSearching ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          Start typing to search for series...
+                        </div>
+                      ) : isLoadingResults ? (
+                        <div className="px-3 py-2 flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Searching...</span>
+                        </div>
+                      ) : searchResults && searchResults.length > 0 ? (
+                        <div className="border-t">
+                          {searchResults.map((series) => (
+                            <button
+                              key={series._id}
+                              type="button"
+                              className="w-full px-3 py-2 text-left hover:bg-muted transition-colors"
+                              onClick={() => handleSelectSeries(series._id, series.name)}
+                            >
+                              <div className="font-medium">{series.name}</div>
+                              {series.description && (
+                                <div className="text-sm text-muted-foreground line-clamp-1">
+                                  {series.description}
                                 </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        )}
-
-                        {(!displayResults || displayResults.length === 0) && (
-                          <CommandEmpty>No series found</CommandEmpty>
-                        )}
-                      </CommandList>
-                    </Command>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          No series found for &quot;{debouncedSearch}&quot;
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </>
