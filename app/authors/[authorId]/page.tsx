@@ -10,8 +10,9 @@ import { AuthorImage } from "@/components/authors/AuthorImage";
 import { AuthorEditDialog } from "@/components/authors/AuthorEditDialog";
 import { AuthorDeleteDialog } from "@/components/authors/AuthorDeleteDialog";
 import { BookCover } from "@/components/books/BookCover";
+import { BookDialog } from "@/components/books/BookDialog";
 import { Button } from "@/components/ui/button";
-import { Library } from "lucide-react";
+import { Library, Plus } from "lucide-react";
 
 export default function AuthorDetailPage({
   params,
@@ -22,6 +23,7 @@ export default function AuthorDetailPage({
   const [authorId, setAuthorId] = useState<Id<"authors"> | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bookDialogOpen, setBookDialogOpen] = useState(false);
 
   useEffect(() => {
     params.then((p) => setAuthorId(p.authorId));
@@ -103,7 +105,14 @@ export default function AuthorDetailPage({
             ) : null}
 
             {/* Action buttons */}
-            <div className="flex gap-2 mt-3">
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Button
+                size="sm"
+                onClick={() => setBookDialogOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Book
+              </Button>
               <Button
                 size="sm"
                 variant="secondary"
@@ -217,6 +226,12 @@ export default function AuthorDetailPage({
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onDeleted={() => router.push("/authors")}
+      />
+
+      <BookDialog
+        open={bookDialogOpen}
+        onOpenChange={setBookDialogOpen}
+        initialAuthorId={authorId}
       />
     </div>
   );

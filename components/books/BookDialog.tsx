@@ -15,9 +15,10 @@ import type { BookFormValues } from "@/lib/validations/book";
 interface BookDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialAuthorId?: Id<"authors">;
 }
 
-export function BookDialog({ open, onOpenChange }: BookDialogProps) {
+export function BookDialog({ open, onOpenChange, initialAuthorId }: BookDialogProps) {
   const createBook = useMutation(api.books.mutations.createBook);
 
   const handleSubmit = async (values: BookFormValues) => {
@@ -45,6 +46,7 @@ export function BookDialog({ open, onOpenChange }: BookDialogProps) {
           <DialogTitle>Add New Book</DialogTitle>
         </DialogHeader>
         <BookForm
+          initialValues={initialAuthorId ? { authorIds: [initialAuthorId] } : undefined}
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}
           submitLabel="Create Book"
