@@ -1,31 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useUser, useClerk } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useClerk,useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  accountSettingsSchema,
-  type AccountSettingsFormValues,
-} from "@/lib/validations/auth";
+import { ArrowLeft,Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect,useState } from "react";
+import { useForm } from "react-hook-form";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -34,8 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { type AccountSettingsFormValues,accountSettingsSchema } from "@/lib/validations/auth";
 
 export default function AccountPage() {
   const { user, isLoaded } = useUser();
@@ -72,7 +64,7 @@ export default function AccountPage() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -116,8 +108,7 @@ export default function AccountPage() {
       // Extract error message from Clerk error
       const clerkError = err as { errors?: Array<{ message?: string }> };
       const message =
-        clerkError.errors?.[0]?.message ||
-        (err instanceof Error ? err.message : null);
+        clerkError.errors?.[0]?.message || (err instanceof Error ? err.message : null);
 
       if (message?.toLowerCase().includes("taken")) {
         setEmailError("This email address is already in use.");
@@ -138,9 +129,7 @@ export default function AccountPage() {
     setEmailError(undefined);
 
     try {
-      const emailAddress = user.emailAddresses.find(
-        (e) => e.emailAddress === newEmail
-      );
+      const emailAddress = user.emailAddresses.find((e) => e.emailAddress === newEmail);
 
       if (!emailAddress) {
         setEmailError("Email address not found. Please try again.");
@@ -152,9 +141,7 @@ export default function AccountPage() {
       await user.update({ primaryEmailAddressId: emailAddress.id });
 
       // Try to clean up old email addresses (may fail if linked to OAuth)
-      const oldEmails = user.emailAddresses.filter(
-        (e) => e.id !== emailAddress.id
-      );
+      const oldEmails = user.emailAddresses.filter((e) => e.id !== emailAddress.id);
       for (const oldEmail of oldEmails) {
         try {
           await oldEmail.destroy();
@@ -171,7 +158,11 @@ export default function AccountPage() {
       console.error("Failed to verify email:", err);
       // Check if it's a verification error or something else
       const errorMessage = err instanceof Error ? err.message : "";
-      if (errorMessage.includes("incorrect") || errorMessage.includes("expired") || errorMessage.includes("code")) {
+      if (
+        errorMessage.includes("incorrect") ||
+        errorMessage.includes("expired") ||
+        errorMessage.includes("code")
+      ) {
         setEmailError("Invalid or expired code. Please try again.");
       } else {
         setEmailError("Failed to update email. Please try again.");
@@ -195,7 +186,7 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6 lg:p-8">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/">
@@ -208,16 +199,11 @@ export default function AccountPage() {
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
-            <CardDescription>
-              Update your personal information
-            </CardDescription>
+            <CardDescription>Update your personal information</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(handleProfileSubmit)}
-                className="space-y-4"
-              >
+              <form onSubmit={form.handleSubmit(handleProfileSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="firstName"
@@ -256,9 +242,7 @@ export default function AccountPage() {
                     )}
                   </Button>
                   {profileSuccess && (
-                    <span className="text-sm text-green-600">
-                      Profile updated!
-                    </span>
+                    <span className="text-sm text-green-600">Profile updated!</span>
                   )}
                 </div>
               </form>
@@ -274,9 +258,7 @@ export default function AccountPage() {
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground">Current email</p>
-              <p className="font-medium">
-                {user.primaryEmailAddress?.emailAddress}
-              </p>
+              <p className="font-medium">{user.primaryEmailAddress?.emailAddress}</p>
             </div>
             <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
               Change email
@@ -300,9 +282,7 @@ export default function AccountPage() {
       <Dialog open={emailDialogOpen} onOpenChange={closeEmailDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {emailStep === "input" ? "Change email" : "Verify email"}
-            </DialogTitle>
+            <DialogTitle>{emailStep === "input" ? "Change email" : "Verify email"}</DialogTitle>
             <DialogDescription>
               {emailStep === "input"
                 ? "Enter your new email address"
@@ -325,17 +305,12 @@ export default function AccountPage() {
                   disabled={isUpdatingEmail}
                 />
               </div>
-              {emailError && (
-                <p className="text-sm text-destructive">{emailError}</p>
-              )}
+              {emailError && <p className="text-sm text-destructive">{emailError}</p>}
             </div>
           ) : (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label
-                  htmlFor="verification-code"
-                  className="text-sm font-medium"
-                >
+                <label htmlFor="verification-code" className="text-sm font-medium">
                   Verification code
                 </label>
                 <Input
@@ -348,9 +323,7 @@ export default function AccountPage() {
                   disabled={isUpdatingEmail}
                 />
               </div>
-              {emailError && (
-                <p className="text-sm text-destructive">{emailError}</p>
-              )}
+              {emailError && <p className="text-sm text-destructive">{emailError}</p>}
             </div>
           )}
 

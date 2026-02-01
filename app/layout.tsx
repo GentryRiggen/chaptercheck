@@ -1,8 +1,11 @@
-import type { Metadata } from "next";
 import "./globals.css";
-import { Providers } from "./providers";
-import { Navigation } from "@/components/layout/Navigation";
+
+import type { Metadata } from "next";
+
 import { MeshBackground } from "@/components/layout/MeshBackground";
+import { Navigation } from "@/components/layout/Navigation";
+
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "ChapterCheck",

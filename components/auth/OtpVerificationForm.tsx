@@ -1,10 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { otpSchema, type OtpFormValues } from "@/lib/validations/auth";
+import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -13,7 +13,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { type OtpFormValues,otpSchema } from "@/lib/validations/auth";
 
 interface OtpVerificationFormProps {
   email: string;
@@ -44,8 +45,7 @@ export function OtpVerificationForm({
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
-        We sent a verification code to{" "}
-        <span className="font-medium text-foreground">{email}</span>
+        We sent a verification code to <span className="font-medium text-foreground">{email}</span>
       </div>
 
       <Form {...form}>
@@ -71,9 +71,7 @@ export function OtpVerificationForm({
             )}
           />
 
-          {error && (
-            <p className="text-sm font-medium text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
           <div className="flex flex-col gap-2">
             <Button type="submit" className="w-full" disabled={isLoading}>

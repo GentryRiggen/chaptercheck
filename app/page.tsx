@@ -2,25 +2,26 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { ArrowRight, BarChart3,BookOpen, Library, Star, Users } from "lucide-react";
 import Link from "next/link";
-import { BookCover } from "@/components/books/BookCover";
+
 import { AuthorImage } from "@/components/authors/AuthorImage";
+import { BookCover } from "@/components/books/BookCover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, BookOpen, Users, Library, Star, BarChart3 } from "lucide-react";
+import { api } from "@/convex/_generated/api";
 
 function RecentBooks() {
   const books = useQuery(api.books.queries.getRecentBooks, { limit: 4 });
 
   if (books === undefined) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="animate-pulse">
-            <div className="bg-muted aspect-[2/3] rounded-lg mb-2" />
-            <div className="h-4 bg-muted rounded w-3/4 mb-1" />
-            <div className="h-3 bg-muted rounded w-1/2" />
+            <div className="mb-2 aspect-[2/3] rounded-lg bg-muted" />
+            <div className="mb-1 h-4 w-3/4 rounded bg-muted" />
+            <div className="h-3 w-1/2 rounded bg-muted" />
           </div>
         ))}
       </div>
@@ -31,8 +32,8 @@ function RecentBooks() {
     return (
       <Card>
         <CardContent className="py-8 text-center">
-          <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-4">No books yet</p>
+          <BookOpen className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <p className="mb-4 text-muted-foreground">No books yet</p>
           <Link href="/books">
             <Button>Add your first book</Button>
           </Link>
@@ -42,26 +43,22 @@ function RecentBooks() {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
       {books.map((book) => (
-        <Link
-          key={book._id}
-          href={`/books/${book._id}`}
-          className="group"
-        >
-          <div className="overflow-hidden rounded-lg shadow-md group-hover:shadow-xl transition-shadow">
+        <Link key={book._id} href={`/books/${book._id}`} className="group">
+          <div className="overflow-hidden rounded-lg shadow-md transition-shadow group-hover:shadow-xl">
             <BookCover
               coverImageR2Key={book.coverImageR2Key}
               title={book.title}
               size="lg"
-              className="w-full aspect-[2/3]"
+              className="aspect-[2/3] w-full"
             />
           </div>
-          <h3 className="font-medium mt-2 line-clamp-1 group-hover:text-primary transition-colors">
+          <h3 className="mt-2 line-clamp-1 font-medium transition-colors group-hover:text-primary">
             {book.title}
           </h3>
           {book.authors && book.authors.length > 0 && (
-            <p className="text-sm text-muted-foreground line-clamp-1">
+            <p className="line-clamp-1 text-sm text-muted-foreground">
               {book.authors.map((a) => a.name).join(", ")}
             </p>
           )}
@@ -76,11 +73,11 @@ function RecentAuthors() {
 
   if (authors === undefined) {
     return (
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-3 gap-4 md:grid-cols-6">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="animate-pulse text-center">
-            <div className="bg-muted w-16 h-16 rounded-full mx-auto mb-2" />
-            <div className="h-3 bg-muted rounded w-3/4 mx-auto" />
+            <div className="mx-auto mb-2 h-16 w-16 rounded-full bg-muted" />
+            <div className="mx-auto h-3 w-3/4 rounded bg-muted" />
           </div>
         ))}
       </div>
@@ -91,8 +88,8 @@ function RecentAuthors() {
     return (
       <Card>
         <CardContent className="py-8 text-center">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-4">No authors yet</p>
+          <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <p className="mb-4 text-muted-foreground">No authors yet</p>
           <Link href="/authors">
             <Button>Add your first author</Button>
           </Link>
@@ -102,22 +99,18 @@ function RecentAuthors() {
   }
 
   return (
-    <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+    <div className="grid grid-cols-3 gap-4 md:grid-cols-6">
       {authors.map((author) => (
-        <Link
-          key={author._id}
-          href={`/authors/${author._id}`}
-          className="group text-center"
-        >
-          <div className="mx-auto w-16 h-16 md:w-20 md:h-20">
+        <Link key={author._id} href={`/authors/${author._id}`} className="group text-center">
+          <div className="mx-auto h-16 w-16 md:h-20 md:w-20">
             <AuthorImage
               imageR2Key={author.imageR2Key}
               name={author.name}
               size="lg"
-              className="w-full h-full group-hover:ring-2 ring-primary transition-all"
+              className="h-full w-full ring-primary transition-all group-hover:ring-2"
             />
           </div>
-          <p className="text-sm font-medium mt-2 line-clamp-1 group-hover:text-primary transition-colors">
+          <p className="mt-2 line-clamp-1 text-sm font-medium transition-colors group-hover:text-primary">
             {author.name}
           </p>
         </Link>
@@ -129,13 +122,14 @@ function RecentAuthors() {
 function LandingPage() {
   return (
     <div className="min-h-screen">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <section className="py-20 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+          <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-6xl">
             Track Your Reading Journey
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Organize your book collection, track your reading progress, and discover your next favorite read.
+          <p className="mx-auto mb-8 max-w-2xl text-xl text-muted-foreground">
+            Organize your book collection, track your reading progress, and discover your next
+            favorite read.
           </p>
           <Link href="/sign-in">
             <Button size="lg" className="gap-2">
@@ -144,12 +138,12 @@ function LandingPage() {
           </Link>
         </section>
 
-        <section className="py-16 border-t">
-          <div className="grid md:grid-cols-3 gap-8">
+        <section className="border-t py-16">
+          <div className="grid gap-8 md:grid-cols-3">
             <Card>
               <CardContent className="pt-6 text-center">
-                <Library className="h-12 w-12 mx-auto text-primary mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Organize Your Library</h3>
+                <Library className="mx-auto mb-4 h-12 w-12 text-primary" />
+                <h3 className="mb-2 text-lg font-semibold">Organize Your Library</h3>
                 <p className="text-muted-foreground">
                   Catalog your books with cover images, authors, and detailed information.
                 </p>
@@ -157,8 +151,8 @@ function LandingPage() {
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
-                <Star className="h-12 w-12 mx-auto text-primary mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Rate & Review</h3>
+                <Star className="mx-auto mb-4 h-12 w-12 text-primary" />
+                <h3 className="mb-2 text-lg font-semibold">Rate & Review</h3>
                 <p className="text-muted-foreground">
                   Keep track of your thoughts with ratings and personal reviews.
                 </p>
@@ -166,8 +160,8 @@ function LandingPage() {
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
-                <BarChart3 className="h-12 w-12 mx-auto text-primary mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Track Progress</h3>
+                <BarChart3 className="mx-auto mb-4 h-12 w-12 text-primary" />
+                <h3 className="mb-2 text-lg font-semibold">Track Progress</h3>
                 <p className="text-muted-foreground">
                   Monitor your reading habits and set goals to read more.
                 </p>
@@ -183,10 +177,10 @@ function LandingPage() {
 function Dashboard() {
   return (
     <div className="min-h-screen">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="space-y-12">
           <section>
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold">Recent Books</h2>
               <Link href="/books">
                 <Button variant="ghost" className="gap-2">
@@ -198,7 +192,7 @@ function Dashboard() {
           </section>
 
           <section>
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold">Recent Authors</h2>
               <Link href="/authors">
                 <Button variant="ghost" className="gap-2">
@@ -219,8 +213,8 @@ export default function Home() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
       </div>
     );
   }

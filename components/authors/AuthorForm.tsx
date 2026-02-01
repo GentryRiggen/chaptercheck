@@ -1,8 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { authorSchema, type AuthorFormValues } from "@/lib/validations/author";
+import { useForm } from "react-hook-form";
+
+import { ImageUpload } from "@/components/images/ImageUpload";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -13,8 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { ImageUpload } from "@/components/images/ImageUpload";
+import { type AuthorFormValues,authorSchema } from "@/lib/validations/author";
 
 interface AuthorFormProps {
   initialValues?: Partial<AuthorFormValues>;
@@ -95,11 +96,7 @@ export function AuthorForm({
             <FormItem>
               <FormLabel>Bio</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Author biography (optional)"
-                  rows={4}
-                  {...field}
-                />
+                <Textarea placeholder="Author biography (optional)" rows={4} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -107,20 +104,11 @@ export function AuthorForm({
         />
 
         <div className="flex gap-4">
-          <Button
-            type="submit"
-            className="flex-1"
-            disabled={form.formState.isSubmitting}
-          >
+          <Button type="submit" className="flex-1" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Saving..." : submitLabel}
           </Button>
           {onCancel && (
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex-1"
-              onClick={onCancel}
-            >
+            <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
               Cancel
             </Button>
           )}

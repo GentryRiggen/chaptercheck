@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useImageUpload } from "@/hooks/useImageUpload";
-import { Progress } from "@/components/ui/progress";
+import { User, X } from "lucide-react";
+import { useCallback,useState } from "react";
+
 import { Button } from "@/components/ui/button";
-import { Upload, X, User } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { useImageUpload } from "@/hooks/useImageUpload";
 
 interface ImageUploadProps {
   path: string;
@@ -13,12 +14,7 @@ interface ImageUploadProps {
   onChange: (r2Key: string | undefined) => void;
 }
 
-export function ImageUpload({
-  path,
-  value,
-  previewUrl,
-  onChange,
-}: ImageUploadProps) {
+export function ImageUpload({ path, previewUrl, onChange }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(previewUrl || null);
   const { uploadImage, uploading, progress, error } = useImageUpload({ path });
 
@@ -51,20 +47,20 @@ export function ImageUpload({
 
   return (
     <div className="space-y-3">
-      {(preview || previewUrl) ? (
+      {preview || previewUrl ? (
         <div className="relative inline-block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={preview || previewUrl || ""}
             alt="Preview"
-            className="w-32 h-32 object-cover rounded-lg border"
+            className="h-32 w-32 rounded-lg border object-cover"
           />
           {!uploading && (
             <Button
               type="button"
               variant="destructive"
               size="icon"
-              className="absolute -top-2 -right-2 h-6 w-6"
+              className="absolute -right-2 -top-2 h-6 w-6"
               onClick={handleRemove}
             >
               <X className="h-4 w-4" />
@@ -72,9 +68,9 @@ export function ImageUpload({
           )}
         </div>
       ) : (
-        <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted transition-colors">
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <User className="w-8 h-8 mb-2 text-muted-foreground" />
+        <label className="flex h-32 w-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors hover:bg-muted">
+          <div className="flex flex-col items-center justify-center pb-6 pt-5">
+            <User className="mb-2 h-8 w-8 text-muted-foreground" />
             <p className="text-xs text-muted-foreground">Upload photo</p>
           </div>
           <input
@@ -90,9 +86,7 @@ export function ImageUpload({
       {uploading && (
         <div className="w-32 space-y-1">
           <Progress value={progress} />
-          <p className="text-xs text-muted-foreground text-center">
-            {Math.round(progress)}%
-          </p>
+          <p className="text-center text-xs text-muted-foreground">{Math.round(progress)}%</p>
         </div>
       )}
 
@@ -100,9 +94,7 @@ export function ImageUpload({
 
       {(preview || previewUrl) && !uploading && (
         <label className="cursor-pointer">
-          <span className="text-sm text-blue-600 hover:underline">
-            Change photo
-          </span>
+          <span className="text-sm text-blue-600 hover:underline">Change photo</span>
           <input
             type="file"
             className="hidden"

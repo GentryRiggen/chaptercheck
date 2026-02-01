@@ -1,7 +1,8 @@
 "use client";
 
-import { useImageUrl } from "@/hooks/useImageUrl";
 import { BookOpen } from "lucide-react";
+
+import { useImageUrl } from "@/hooks/useImageUrl";
 import { cn } from "@/lib/utils";
 
 interface BookCoverProps {
@@ -25,22 +26,13 @@ const iconSizes = {
   lg: "w-16 h-16",
 };
 
-export function BookCover({
-  coverImageR2Key,
-  title,
-  size = "md",
-  className,
-}: BookCoverProps) {
+export function BookCover({ coverImageR2Key, title, size = "md", className }: BookCoverProps) {
   const { imageUrl, loading } = useImageUrl(coverImageR2Key);
 
   if (loading) {
     return (
       <div
-        className={cn(
-          "rounded bg-muted animate-pulse flex-shrink-0",
-          sizeClasses[size],
-          className
-        )}
+        className={cn("flex-shrink-0 animate-pulse rounded bg-muted", sizeClasses[size], className)}
       />
     );
   }
@@ -49,7 +41,7 @@ export function BookCover({
     return (
       <div
         className={cn(
-          "rounded bg-muted flex items-center justify-center flex-shrink-0",
+          "flex flex-shrink-0 items-center justify-center rounded bg-muted",
           sizeClasses[size],
           className
         )}
@@ -64,7 +56,7 @@ export function BookCover({
     <img
       src={imageUrl}
       alt={title}
-      className={cn("rounded object-cover flex-shrink-0", sizeClasses[size], className)}
+      className={cn("flex-shrink-0 rounded object-cover", sizeClasses[size], className)}
     />
   );
 }

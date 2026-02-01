@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
 import { useTheme } from "next-themes";
+import { useCallback,useEffect, useRef, useState } from "react";
+
 import { getMeshTheme } from "@/lib/theme";
 
 interface Ripple {
@@ -102,10 +103,7 @@ export function MeshBackground() {
       />
 
       {/* Animated mesh grid */}
-      <svg
-        className="absolute inset-0 w-full h-full"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+      <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern
             id="grid-pattern"
@@ -114,12 +112,7 @@ export function MeshBackground() {
             patternUnits="userSpaceOnUse"
             patternTransform={`translate(${mousePos.x * 10 - 5}, ${mousePos.y * 10 - 5})`}
           >
-            <circle
-              cx="25"
-              cy="25"
-              r="1"
-              fill={`rgba(${primary.rgbString}, ${opacity.gridDot})`}
-            />
+            <circle cx="25" cy="25" r="1" fill={`rgba(${primary.rgbString}, ${opacity.gridDot})`} />
             <path
               d="M 50 0 L 0 0 0 50"
               fill="none"
@@ -135,12 +128,7 @@ export function MeshBackground() {
             <rect width="100%" height="100%" fill="url(#grid-fade)" />
           </mask>
         </defs>
-        <rect
-          width="100%"
-          height="100%"
-          fill="url(#grid-pattern)"
-          mask="url(#grid-mask)"
-        />
+        <rect width="100%" height="100%" fill="url(#grid-pattern)" mask="url(#grid-mask)" />
       </svg>
 
       {/* Floating orbs that react to mouse */}
@@ -151,7 +139,7 @@ export function MeshBackground() {
         return (
           <div
             key={i}
-            className="absolute rounded-full transition-transform duration-700 ease-out animate-float"
+            className="absolute animate-float rounded-full transition-transform duration-700 ease-out"
             style={{
               width: orb.size,
               height: orb.size,
@@ -170,7 +158,7 @@ export function MeshBackground() {
       {ripples.map((ripple) => (
         <div
           key={ripple.id}
-          className="absolute pointer-events-none animate-ripple"
+          className="pointer-events-none absolute animate-ripple"
           style={{
             left: `${ripple.x}%`,
             top: `${ripple.y}%`,
@@ -191,14 +179,14 @@ export function MeshBackground() {
 
       {/* Corner accent glows */}
       <div
-        className="absolute top-0 left-0 w-96 h-96"
+        className="absolute left-0 top-0 h-96 w-96"
         style={{
           opacity: opacity.cornerGlow,
           background: `radial-gradient(circle at 0% 0%, rgba(${primary.rgbString}, ${opacity.cornerGlowInner}) 0%, transparent 60%)`,
         }}
       />
       <div
-        className="absolute bottom-0 right-0 w-96 h-96"
+        className="absolute bottom-0 right-0 h-96 w-96"
         style={{
           opacity: opacity.cornerGlow,
           background: `radial-gradient(circle at 100% 100%, rgba(${secondary.rgbString}, ${opacity.cornerGlowInner}) 0%, transparent 60%)`,

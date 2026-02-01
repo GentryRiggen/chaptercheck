@@ -1,17 +1,14 @@
 "use client";
 
 import { useMutation } from "convex/react";
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { BookForm } from "./BookForm";
-import type { BookFormValues } from "@/lib/validations/book";
+import { type Id } from "@/convex/_generated/dataModel";
 import { useImageUrl } from "@/hooks/useImageUrl";
+import type { BookFormValues } from "@/lib/validations/book";
+
+import { BookForm } from "./BookForm";
 
 interface Book {
   _id: Id<"books">;
@@ -33,11 +30,7 @@ interface BookEditDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function BookEditDialog({
-  book,
-  open,
-  onOpenChange,
-}: BookEditDialogProps) {
+export function BookEditDialog({ book, open, onOpenChange }: BookEditDialogProps) {
   const updateBook = useMutation(api.books.mutations.updateBook);
   const { imageUrl } = useImageUrl(book.coverImageR2Key);
 
@@ -60,7 +53,7 @@ export function BookEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit Book</DialogTitle>
         </DialogHeader>

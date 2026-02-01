@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
+import { useMemo,useState } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -13,15 +15,11 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { api } from "@/convex/_generated/api";
+import { type Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
+
 import { AuthorDialog } from "./AuthorDialog";
 
 interface AuthorMultiSelectProps {
@@ -46,9 +44,7 @@ export function AuthorMultiSelect({ value, onChange }: AuthorMultiSelectProps) {
     if (!authors) return [];
     if (!search.trim()) return authors;
     const searchLower = search.toLowerCase();
-    return authors.filter((author) =>
-      author.name.toLowerCase().includes(searchLower)
-    );
+    return authors.filter((author) => author.name.toLowerCase().includes(searchLower));
   }, [authors, search]);
 
   const handleSelect = (authorId: string) => {
@@ -106,9 +102,7 @@ export function AuthorMultiSelect({ value, onChange }: AuthorMultiSelectProps) {
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          value.includes(author._id)
-                            ? "opacity-100"
-                            : "opacity-0"
+                          value.includes(author._id) ? "opacity-100" : "opacity-0"
                         )}
                       />
                       {author.name}
@@ -137,11 +131,7 @@ export function AuthorMultiSelect({ value, onChange }: AuthorMultiSelectProps) {
       {selectedAuthors.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {selectedAuthors.map((author) => (
-            <Badge
-              key={author._id}
-              variant="secondary"
-              className="flex items-center gap-1"
-            >
+            <Badge key={author._id} variant="secondary" className="flex items-center gap-1">
               {author.name}
               <button
                 type="button"

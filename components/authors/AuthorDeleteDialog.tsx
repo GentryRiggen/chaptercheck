@@ -1,19 +1,21 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { useMutation, useQuery } from "convex/react";
+import { AlertTriangle, BookOpen, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, Trash2, BookOpen } from "lucide-react";
-import { useState } from "react";
+import { api } from "@/convex/_generated/api";
+import { type Id } from "@/convex/_generated/dataModel";
 
 interface AuthorDeleteDialogProps {
   authorId: Id<"authors">;
@@ -44,7 +46,7 @@ export function AuthorDeleteDialog({
       onOpenChange(false);
       onDeleted();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete author");
+      toast.error(err instanceof Error ? err.message : "Failed to delete author");
       setDeleting(false);
     }
   };
@@ -67,32 +69,27 @@ export function AuthorDeleteDialog({
         </DialogHeader>
 
         {preview === undefined ? (
-          <div className="py-4 text-center text-muted-foreground">
-            Loading...
-          </div>
+          <div className="py-4 text-center text-muted-foreground">Loading...</div>
         ) : (
           <div className="space-y-4">
             {!hasBooks && (
-              <p className="text-sm text-muted-foreground">
-                This author has no associated books.
-              </p>
+              <p className="text-sm text-muted-foreground">This author has no associated books.</p>
             )}
 
             {hasBooksToDelete && (
               <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="mb-2 flex items-center gap-2">
                   <Trash2 className="h-4 w-4 text-destructive" />
                   <span className="font-medium text-destructive">
                     {preview.booksToDelete.length} book
-                    {preview.booksToDelete.length !== 1 ? "s" : ""} will be
-                    deleted
+                    {preview.booksToDelete.length !== 1 ? "s" : ""} will be deleted
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  These books have no other authors and will be permanently
-                  deleted along with their audio files:
+                <p className="mb-2 text-xs text-muted-foreground">
+                  These books have no other authors and will be permanently deleted along with their
+                  audio files:
                 </p>
-                <ul className="text-sm space-y-1">
+                <ul className="space-y-1 text-sm">
                   {preview.booksToDelete.map((book) => (
                     <li key={book._id} className="flex items-center gap-2">
                       <BookOpen className="h-3 w-3 text-muted-foreground" />
@@ -105,24 +102,24 @@ export function AuthorDeleteDialog({
 
             {hasBooksToKeep && (
               <div className="rounded-lg border border-green-500/50 bg-green-50 p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="mb-2 flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-green-600" />
                   <span className="font-medium text-green-700">
                     {preview.booksToKeep.length} book
                     {preview.booksToKeep.length !== 1 ? "s" : ""} will be kept
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mb-2">
+                <p className="mb-2 text-xs text-muted-foreground">
                   These books have other authors and will remain in the library:
                 </p>
-                <ul className="text-sm space-y-1">
+                <ul className="space-y-1 text-sm">
                   {preview.booksToKeep.map((book) => (
                     <li key={book._id}>
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-3 w-3 text-muted-foreground" />
                         {book.title}
                       </div>
-                      <span className="text-xs text-muted-foreground ml-5">
+                      <span className="ml-5 text-xs text-muted-foreground">
                         by {book.otherAuthors.join(", ")}
                       </span>
                     </li>
@@ -134,11 +131,7 @@ export function AuthorDeleteDialog({
         )}
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={deleting}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleting}>
             Cancel
           </Button>
           <Button

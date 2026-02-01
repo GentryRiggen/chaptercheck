@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { useSearchParams } from "next/navigation";
-import { api } from "@/convex/_generated/api";
+import { useMutation,useQuery } from "convex/react";
+import { ArrowDown, ArrowUp, GripVertical,Library } from "lucide-react";
 import Link from "next/link";
-import { Id } from "@/convex/_generated/dataModel";
+import { useSearchParams } from "next/navigation";
+import { useEffect,useState } from "react";
+
 import { BookCover } from "@/components/books/BookCover";
 import { Button } from "@/components/ui/button";
-import { Library, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import { type Id } from "@/convex/_generated/dataModel";
 
 export default function SeriesDetailPage({
   params,
@@ -26,10 +27,7 @@ export default function SeriesDetailPage({
     params.then((p) => setSeriesId(p.seriesId));
   }, [params]);
 
-  const series = useQuery(
-    api.series.queries.getSeries,
-    seriesId ? { seriesId } : "skip"
-  );
+  const series = useQuery(api.series.queries.getSeries, seriesId ? { seriesId } : "skip");
   const books = useQuery(
     api.series.queries.getBooksInSeriesWithAuthors,
     seriesId ? { seriesId } : "skip"
@@ -57,7 +55,7 @@ export default function SeriesDetailPage({
 
   if (series === undefined || seriesId === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     );
@@ -65,9 +63,9 @@ export default function SeriesDetailPage({
 
   if (series === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Series not found</p>
+          <p className="mb-4 text-muted-foreground">Series not found</p>
           <Link
             href={fromBook ? `/books/${fromBook}` : "/books"}
             className="text-primary hover:underline"
@@ -81,33 +79,33 @@ export default function SeriesDetailPage({
 
   return (
     <div className="min-h-screen">
-      <main className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <main className="mx-auto max-w-4xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         {/* Back link */}
         <Link
           href={fromBook ? `/books/${fromBook}` : "/books"}
-          className="text-sm text-primary hover:underline mb-4 inline-block"
+          className="mb-4 inline-block text-sm text-primary hover:underline"
         >
           &larr; {fromBook ? "Back to Book" : "Back to Books"}
         </Link>
 
         {/* Hero section */}
-        <div className="flex gap-4 sm:gap-6 mb-6">
+        <div className="mb-6 flex gap-4 sm:gap-6">
           {/* Series icon */}
           <div className="flex-shrink-0">
-            <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Library className="h-10 w-10 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-primary/10 sm:h-28 sm:w-28 md:h-32 md:w-32">
+              <Library className="h-10 w-10 text-primary sm:h-14 sm:w-14 md:h-16 md:w-16" />
             </div>
           </div>
 
           {/* Series info */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-bold leading-tight sm:text-2xl md:text-3xl">
               {series.name}
             </h1>
 
             {books && books.length > 0 && (
               <>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {books.length} book{books.length !== 1 ? "s" : ""}
                 </p>
                 {(() => {
@@ -121,7 +119,7 @@ export default function SeriesDetailPage({
                   );
                   if (uniqueAuthors.length === 0) return null;
                   return (
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       by{" "}
                       {uniqueAuthors.map((author, index) => (
                         <span key={author._id}>
@@ -145,10 +143,10 @@ export default function SeriesDetailPage({
         {/* Description */}
         {series.description && (
           <div className="mb-6">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               About
             </h2>
-            <p className="text-sm sm:text-base whitespace-pre-wrap leading-relaxed">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed sm:text-base">
               {series.description}
             </p>
           </div>
@@ -156,8 +154,8 @@ export default function SeriesDetailPage({
 
         {/* Books */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Books in Series
             </h2>
             {books && books.length > 1 && (
@@ -166,7 +164,7 @@ export default function SeriesDetailPage({
                 size="sm"
                 onClick={() => setIsReordering(!isReordering)}
               >
-                <GripVertical className="h-4 w-4 mr-1" />
+                <GripVertical className="mr-1 h-4 w-4" />
                 {isReordering ? "Done" : "Reorder"}
               </Button>
             )}
@@ -176,19 +174,16 @@ export default function SeriesDetailPage({
           ) : books.length === 0 ? (
             <p className="text-sm text-muted-foreground">No books in this series yet</p>
           ) : (
-            <div className="bg-card/60 rounded-lg divide-y divide-border/50">
+            <div className="divide-y divide-border/50 rounded-lg bg-card/60">
               {books.map((book, index) => (
-                <div
-                  key={book._id}
-                  className="flex items-center gap-2 px-3 py-3"
-                >
+                <div key={book._id} className="flex items-center gap-2 px-3 py-3">
                   {isReordering && (
                     <div className="flex flex-col gap-1">
                       <button
                         type="button"
                         onClick={() => handleMoveUp(index)}
                         disabled={index === 0}
-                        className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="rounded p-1 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label="Move up"
                       >
                         <ArrowUp className="h-4 w-4" />
@@ -197,7 +192,7 @@ export default function SeriesDetailPage({
                         type="button"
                         onClick={() => handleMoveDown(index)}
                         disabled={index === books.length - 1}
-                        className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="rounded p-1 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label="Move down"
                       >
                         <ArrowDown className="h-4 w-4" />
@@ -206,37 +201,34 @@ export default function SeriesDetailPage({
                   )}
                   <Link
                     href={`/books/${book._id}`}
-                    className="flex items-start gap-3 flex-1 hover:bg-muted/50 -my-3 -mr-3 py-3 pr-3 transition-colors rounded-r-lg"
+                    className="-my-3 -mr-3 flex flex-1 items-start gap-3 rounded-r-lg py-3 pr-3 transition-colors hover:bg-muted/50"
                   >
                     <BookCover
                       coverImageR2Key={book.coverImageR2Key}
                       title={book.title}
                       size="sm"
                     />
-                    <div className="flex-1 min-w-0 py-0.5">
+                    <div className="min-w-0 flex-1 py-0.5">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
                           #{index + 1}
                         </span>
-                        <h3 className="font-medium text-sm">{book.title}</h3>
+                        <h3 className="text-sm font-medium">{book.title}</h3>
                       </div>
                       {book.subtitle && (
-                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                           {book.subtitle}
                         </p>
                       )}
                       {book.authors && book.authors.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           by{" "}
                           {book.authors.map((author, authorIndex) => (
                             <span key={author._id}>
                               {authorIndex > 0 && ", "}
                               {author.name}
                               {author.role && author.role !== "author" && (
-                                <span className="text-muted-foreground/70">
-                                  {" "}
-                                  ({author.role})
-                                </span>
+                                <span className="text-muted-foreground/70"> ({author.role})</span>
                               )}
                             </span>
                           ))}

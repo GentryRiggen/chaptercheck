@@ -1,18 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useSignIn } from "@clerk/nextjs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { SignInForm } from "./SignInForm";
-import { OtpVerificationForm } from "./OtpVerificationForm";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+
 import { Logo } from "@/components/Logo";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { OtpVerificationForm } from "./OtpVerificationForm";
+import { SignInForm } from "./SignInForm";
 
 type Step = "email" | "otp";
 
@@ -95,7 +91,7 @@ export function SignInCard() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <div className="flex justify-center mb-2">
+        <div className="mb-2 flex justify-center">
           <Logo size={48} showBackground />
         </div>
         <CardTitle className="text-2xl">Welcome back</CardTitle>

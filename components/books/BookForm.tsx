@@ -1,9 +1,12 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Id } from "@/convex/_generated/dataModel";
-import { bookSchema, type BookFormValues } from "@/lib/validations/book";
+import { useForm } from "react-hook-form";
+
+import { AuthorMultiSelect } from "@/components/authors/AuthorMultiSelect";
+import { ImageUpload } from "@/components/images/ImageUpload";
+import { SeriesSelect } from "@/components/series/SeriesSelect";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -14,10 +17,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { ImageUpload } from "@/components/images/ImageUpload";
-import { SeriesSelect } from "@/components/series/SeriesSelect";
-import { AuthorMultiSelect } from "@/components/authors/AuthorMultiSelect";
+import { type Id } from "@/convex/_generated/dataModel";
+import { type BookFormValues,bookSchema } from "@/lib/validations/book";
 
 interface BookFormProps {
   initialValues?: Partial<BookFormValues>;
@@ -126,11 +127,7 @@ export function BookForm({
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Book description (optional)"
-                  rows={3}
-                  {...field}
-                />
+                <Textarea placeholder="Book description (optional)" rows={3} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -164,9 +161,7 @@ export function BookForm({
                     placeholder="Year"
                     value={field.value ?? ""}
                     onChange={(e) =>
-                      field.onChange(
-                        e.target.value ? parseInt(e.target.value) : null
-                      )
+                      field.onChange(e.target.value ? parseInt(e.target.value) : null)
                     }
                   />
                 </FormControl>
@@ -197,10 +192,7 @@ export function BookForm({
             <FormItem>
               <FormLabel>Authors</FormLabel>
               <FormControl>
-                <AuthorMultiSelect
-                  value={field.value || []}
-                  onChange={field.onChange}
-                />
+                <AuthorMultiSelect value={field.value || []} onChange={field.onChange} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -222,20 +214,11 @@ export function BookForm({
         />
 
         <div className="flex gap-4 pt-2">
-          <Button
-            type="submit"
-            className="flex-1"
-            disabled={form.formState.isSubmitting}
-          >
+          <Button type="submit" className="flex-1" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Saving..." : submitLabel}
           </Button>
           {onCancel && (
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex-1"
-              onClick={onCancel}
-            >
+            <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
               Cancel
             </Button>
           )}

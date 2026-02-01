@@ -1,21 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { BookOpen, Home,Menu, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserMenu } from "./UserMenu";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Menu, BookOpen, Users, Home } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
+import { useState } from "react";
+
 import { Logo } from "@/components/Logo";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+
+import { ThemeToggle } from "./ThemeToggle";
+import { UserMenu } from "./UserMenu";
 
 export function Navigation() {
   const pathname = usePathname();
@@ -40,9 +36,9 @@ export function Navigation() {
   };
 
   return (
-    <nav className="border-b bg-background sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center h-14 sm:h-16">
+    <nav className="sticky top-0 z-50 border-b bg-background">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-14 items-center sm:h-16">
           {/* Mobile Menu Button */}
           <div className="sm:hidden">
             <Sheet open={open} onOpenChange={setOpen}>
@@ -54,12 +50,12 @@ export function Navigation() {
               </SheetTrigger>
               <SheetContent side="left" className="w-64">
                 <SheetHeader>
-                  <SheetTitle className="text-left flex items-center gap-2">
+                  <SheetTitle className="flex items-center gap-2 text-left">
                     <Logo size={24} />
                     ChapterCheck
                   </SheetTitle>
                 </SheetHeader>
-                <div className="flex flex-col gap-1 mt-6">
+                <div className="mt-6 flex flex-col gap-1">
                   {navLinks.map((link) => {
                     const Icon = link.icon;
                     return (
@@ -68,10 +64,10 @@ export function Navigation() {
                         href={link.href}
                         onClick={() => setOpen(false)}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                           isActive(link.href)
                             ? "bg-secondary text-secondary-foreground"
-                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                            : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -87,11 +83,11 @@ export function Navigation() {
           {/* Logo/Brand */}
           <Link href="/" className="flex items-center gap-2">
             <Logo size={28} />
-            <span className="text-lg sm:text-xl font-bold">ChapterCheck</span>
+            <span className="text-lg font-bold sm:text-xl">ChapterCheck</span>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden sm:flex items-center ml-8 gap-1">
+          <div className="ml-8 hidden items-center gap-1 sm:flex">
             {navLinks.slice(1).map((link) => {
               const Icon = link.icon;
               return (
@@ -99,10 +95,10 @@ export function Navigation() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     isActive(link.href)
                       ? "bg-secondary text-secondary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                   )}
                 >
                   <Icon className="h-4 w-4" />

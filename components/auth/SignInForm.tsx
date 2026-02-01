@@ -1,10 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { emailSchema, type EmailFormValues } from "@/lib/validations/auth";
+import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -13,7 +13,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { type EmailFormValues,emailSchema } from "@/lib/validations/auth";
 
 interface SignInFormProps {
   onSubmit: (email: string) => Promise<void>;

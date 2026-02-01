@@ -1,7 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useClerk, useUser } from "@clerk/nextjs";
+import { LogOut,Settings } from "lucide-react";
+import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,17 +13,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Settings, LogOut } from "lucide-react";
 
-function UserAvatar({ firstName, lastName }: { firstName?: string | null; lastName?: string | null }) {
-  const initials = [firstName?.[0], lastName?.[0]]
-    .filter(Boolean)
-    .join("")
-    .toUpperCase() || "?";
+function UserAvatar({
+  firstName,
+  lastName,
+}: {
+  firstName?: string | null;
+  lastName?: string | null;
+}) {
+  const initials = [firstName?.[0], lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
 
   return (
-    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground text-sm font-medium">
+    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-sm font-medium text-primary-foreground">
       {initials}
     </div>
   );
@@ -31,9 +35,7 @@ export function UserMenu() {
   const { signOut } = useClerk();
 
   if (!isLoaded) {
-    return (
-      <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-    );
+    return <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />;
   }
 
   if (!user) {
@@ -48,10 +50,7 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
-          <UserAvatar
-            firstName={user.firstName}
-            lastName={user.lastName}
-          />
+          <UserAvatar firstName={user.firstName} lastName={user.lastName} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

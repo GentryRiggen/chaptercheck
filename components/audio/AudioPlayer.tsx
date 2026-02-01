@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Doc } from "@/convex/_generated/dataModel";
+import { Pause, Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Play, Pause } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import { type Doc } from "@/convex/_generated/dataModel";
 
 interface AudioPlayerProps {
   audioFile: Doc<"audioFiles">;
@@ -82,15 +84,12 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this audio file?")) {
-      return;
-    }
-
     try {
       await deleteAudioFile({ audioFileId: audioFile._id });
+      toast.success("Audio file deleted");
       onDelete?.();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete audio file");
+      toast.error(err instanceof Error ? err.message : "Failed to delete audio file");
     }
   };
 
@@ -116,7 +115,7 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
 
   if (!audioUrl) {
     return (
-      <Card className="p-4 bg-destructive/10">
+      <Card className="bg-destructive/10 p-4">
         <p className="text-destructive">Failed to load audio file</p>
       </Card>
     );
@@ -126,7 +125,7 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
     <Card className="p-4">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
-      <div className="flex items-start justify-between mb-3">
+      <div className="mb-3 flex items-start justify-between">
         <div className="flex-1">
           <h4 className="font-medium">{audioFile.fileName}</h4>
           <p className="text-sm text-muted-foreground">
@@ -147,16 +146,8 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
 
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <Button
-            size="icon"
-            onClick={togglePlayPause}
-            className="flex-shrink-0 rounded-full"
-          >
-            {isPlaying ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
+          <Button size="icon" onClick={togglePlayPause} className="flex-shrink-0 rounded-full">
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>
 
           <div className="flex-1">
@@ -166,9 +157,9 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
               max={duration || 0}
               value={currentTime}
               onChange={handleSeek}
-              className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+              className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-secondary accent-primary"
             />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <div className="mt-1 flex justify-between text-xs text-muted-foreground">
               <span>{formatTime(currentTime)}</span>
               <span>{formatTime(duration)}</span>
             </div>

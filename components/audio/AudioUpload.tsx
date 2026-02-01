@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useAudioUpload } from "@/hooks/useAudioUpload";
-import { Id } from "@/convex/_generated/dataModel";
+import { X } from "lucide-react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { X } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { type Id } from "@/convex/_generated/dataModel";
+import { useAudioUpload } from "@/hooks/useAudioUpload";
 
 interface AudioUploadProps {
   bookId: Id<"books">;
@@ -25,14 +27,14 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
       // Validate file type
       const validTypes = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a", "audio/x-m4a"];
       if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|m4a|m4b)$/i)) {
-        alert("Please select a valid audio file (MP3 or M4A)");
+        toast.error("Please select a valid audio file (MP3 or M4A)");
         return;
       }
 
       // Validate file size (max 500MB)
       const maxSize = 500 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert("File size must be less than 500MB");
+        toast.error("File size must be less than 500MB");
         return;
       }
 
@@ -81,14 +83,14 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
               onChange={handleFileSelect}
               disabled={uploading}
             />
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="mt-2 text-sm text-muted-foreground">
               Supported formats: MP3, M4A (max 500MB)
             </p>
           </div>
         ) : (
           <div>
-            <div className="bg-muted rounded-lg p-4 mb-4">
-              <div className="flex justify-between items-start mb-2">
+            <div className="mb-4 rounded-lg bg-muted p-4">
+              <div className="mb-2 flex items-start justify-between">
                 <div>
                   <p className="font-medium">{selectedFile.name}</p>
                   <p className="text-sm text-muted-foreground">
@@ -96,12 +98,7 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
                   </p>
                 </div>
                 {!uploading && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancel}
-                    className="h-6 w-6 p-0"
-                  >
+                  <Button variant="ghost" size="sm" onClick={handleCancel} className="h-6 w-6 p-0">
                     <X className="h-4 w-4" />
                   </Button>
                 )}
@@ -116,25 +113,15 @@ export function AudioUpload({ bookId, onUploadComplete }: AudioUploadProps) {
                 </div>
               )}
 
-              {error && (
-                <div className="mt-2 text-sm text-destructive">{error}</div>
-              )}
+              {error && <div className="mt-2 text-sm text-destructive">{error}</div>}
             </div>
 
             <div className="flex gap-3">
-              <Button
-                onClick={handleUpload}
-                disabled={uploading}
-                className="flex-1"
-              >
+              <Button onClick={handleUpload} disabled={uploading} className="flex-1">
                 {uploading ? "Uploading..." : "Upload"}
               </Button>
               {!uploading && (
-                <Button
-                  variant="outline"
-                  onClick={handleCancel}
-                  className="flex-1"
-                >
+                <Button variant="outline" onClick={handleCancel} className="flex-1">
                   Cancel
                 </Button>
               )}

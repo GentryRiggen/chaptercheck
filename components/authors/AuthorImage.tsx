@@ -1,7 +1,8 @@
 "use client";
 
-import { useImageUrl } from "@/hooks/useImageUrl";
 import { User } from "lucide-react";
+
+import { useImageUrl } from "@/hooks/useImageUrl";
 import { cn } from "@/lib/utils";
 
 interface AuthorImageProps {
@@ -25,23 +26,12 @@ const iconSizes = {
   lg: "w-12 h-12",
 };
 
-export function AuthorImage({
-  imageR2Key,
-  name,
-  size = "md",
-  className,
-}: AuthorImageProps) {
+export function AuthorImage({ imageR2Key, name, size = "md", className }: AuthorImageProps) {
   const { imageUrl, loading } = useImageUrl(imageR2Key);
 
   if (loading) {
     return (
-      <div
-        className={cn(
-          "rounded-full bg-muted animate-pulse",
-          sizeClasses[size],
-          className
-        )}
-      />
+      <div className={cn("animate-pulse rounded-full bg-muted", sizeClasses[size], className)} />
     );
   }
 
@@ -49,7 +39,7 @@ export function AuthorImage({
     return (
       <div
         className={cn(
-          "rounded-full bg-muted flex items-center justify-center",
+          "flex items-center justify-center rounded-full bg-muted",
           sizeClasses[size],
           className
         )}

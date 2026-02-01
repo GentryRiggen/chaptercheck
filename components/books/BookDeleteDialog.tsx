@@ -1,19 +1,21 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { useMutation, useQuery } from "convex/react";
+import { AlertTriangle, Music, Users } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, Music, Users } from "lucide-react";
-import { useState } from "react";
+import { api } from "@/convex/_generated/api";
+import { type Id } from "@/convex/_generated/dataModel";
 
 interface BookDeleteDialogProps {
   bookId: Id<"books">;
@@ -31,10 +33,7 @@ export function BookDeleteDialog({
   onDeleted,
 }: BookDeleteDialogProps) {
   const [deleting, setDeleting] = useState(false);
-  const preview = useQuery(
-    api.books.queries.getBookDeletionPreview,
-    open ? { bookId } : "skip"
-  );
+  const preview = useQuery(api.books.queries.getBookDeletionPreview, open ? { bookId } : "skip");
   const deleteBook = useMutation(api.books.mutations.deleteBook);
 
   const handleDelete = async () => {
@@ -44,7 +43,7 @@ export function BookDeleteDialog({
       onOpenChange(false);
       onDeleted();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete book");
+      toast.error(err instanceof Error ? err.message : "Failed to delete book");
       setDeleting(false);
     }
   };
@@ -63,13 +62,9 @@ export function BookDeleteDialog({
         </DialogHeader>
 
         {preview === undefined ? (
-          <div className="py-4 text-center text-muted-foreground">
-            Loading...
-          </div>
+          <div className="py-4 text-center text-muted-foreground">Loading...</div>
         ) : preview === null ? (
-          <div className="py-4 text-center text-muted-foreground">
-            Book not found
-          </div>
+          <div className="py-4 text-center text-muted-foreground">Book not found</div>
         ) : (
           <div className="space-y-3">
             {preview.authors.length > 0 && (
@@ -83,7 +78,7 @@ export function BookDeleteDialog({
               <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Music className="h-4 w-4 text-destructive" />
-                  <span className="text-destructive font-medium">
+                  <span className="font-medium text-destructive">
                     {preview.audioFilesCount} audio file
                     {preview.audioFilesCount !== 1 ? "s" : ""} will be deleted
                   </span>
@@ -91,18 +86,12 @@ export function BookDeleteDialog({
               </div>
             )}
 
-            <p className="text-sm text-muted-foreground">
-              This action cannot be undone.
-            </p>
+            <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
           </div>
         )}
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={deleting}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleting}>
             Cancel
           </Button>
           <Button

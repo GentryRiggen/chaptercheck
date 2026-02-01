@@ -1,17 +1,14 @@
 "use client";
 
 import { useMutation } from "convex/react";
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { AuthorForm } from "./AuthorForm";
-import type { AuthorFormValues } from "@/lib/validations/author";
+import { type Id } from "@/convex/_generated/dataModel";
 import { useImageUrl } from "@/hooks/useImageUrl";
+import type { AuthorFormValues } from "@/lib/validations/author";
+
+import { AuthorForm } from "./AuthorForm";
 
 interface Author {
   _id: Id<"authors">;
@@ -26,11 +23,7 @@ interface AuthorEditDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function AuthorEditDialog({
-  author,
-  open,
-  onOpenChange,
-}: AuthorEditDialogProps) {
+export function AuthorEditDialog({ author, open, onOpenChange }: AuthorEditDialogProps) {
   const updateAuthor = useMutation(api.authors.mutations.updateAuthor);
   const { imageUrl } = useImageUrl(author.imageR2Key);
 

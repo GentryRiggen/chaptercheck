@@ -48,16 +48,29 @@ export function Logo({ size = 32, className, showBackground = false }: LogoProps
           opacity="0.7"
         />
         {/* Spine - uses theme-aware color */}
-        <path
-          d="M-20,-100 L-20,80 L20,80 L20,-100 Q0,-90 -20,-100"
-          className="fill-background"
-        />
+        <path d="M-20,-100 L-20,80 L20,80 L20,-100 Q0,-90 -20,-100" className="fill-background" />
         {/* Page lines left - only show with background */}
         {showBackground && (
           <>
             <line x1="-110" y1="0" x2="-40" y2="5" stroke="#0a0a0a" strokeWidth="3" opacity="0.3" />
-            <line x1="-110" y1="25" x2="-40" y2="30" stroke="#0a0a0a" strokeWidth="3" opacity="0.3" />
-            <line x1="-110" y1="50" x2="-40" y2="55" stroke="#0a0a0a" strokeWidth="3" opacity="0.3" />
+            <line
+              x1="-110"
+              y1="25"
+              x2="-40"
+              y2="30"
+              stroke="#0a0a0a"
+              strokeWidth="3"
+              opacity="0.3"
+            />
+            <line
+              x1="-110"
+              y1="50"
+              x2="-40"
+              y2="55"
+              stroke="#0a0a0a"
+              strokeWidth="3"
+              opacity="0.3"
+            />
           </>
         )}
       </g>

@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+.yarn/
+
+# Build outputs
+.next/
+.open-next/
+out/
+dist/
+
+# Convex generated
+convex/_generated/
+
+# Cache and logs
+*.log
+.cache/
+
+# Environment files
+.env*
+
+# Lock files
+yarn.lock
+package-lock.json
