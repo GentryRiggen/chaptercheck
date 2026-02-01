@@ -359,9 +359,12 @@ async function main(): Promise<void> {
     });
   }
 
-  // Get unique authors
+  // Apply limit to books first (so we only process authors for those books)
+  const booksToProcess = LIMIT > 0 ? firebaseBooks.slice(0, LIMIT) : firebaseBooks;
+
+  // Get unique authors only from books we'll process
   const authorMap = new Map<string, FirebaseAuthor & { name: string }>();
-  for (const book of firebaseBooks) {
+  for (const book of booksToProcess) {
     for (const author of book.authors) {
       if (!authorMap.has(author.id)) {
         const name = [author.firstName, author.middleInitial, author.lastName]
@@ -373,7 +376,7 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`   Found ${authorMap.size} unique authors`);
+  console.log(`   Found ${authorMap.size} unique authors (for ${booksToProcess.length} books)`);
 
   // ==========================================
   // STEP 2: Migrate Authors (with enrichment)
@@ -437,8 +440,6 @@ async function main(): Promise<void> {
   let enrichedCount = 0;
   let seriesCount = 0;
   let booksWithCovers = 0;
-
-  const booksToProcess = LIMIT > 0 ? firebaseBooks.slice(0, LIMIT) : firebaseBooks;
 
   for (const book of booksToProcess) {
     bookCount++;
