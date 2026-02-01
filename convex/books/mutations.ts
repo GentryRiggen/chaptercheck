@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "../_generated/server";
+import { requireAuthMutation } from "../lib/auth";
 
 // Create a new book
 export const createBook = mutation({
@@ -16,10 +17,7 @@ export const createBook = mutation({
     authorIds: v.optional(v.array(v.id("authors"))),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireAuthMutation(ctx);
 
     const { authorIds, ...bookData } = args;
     const now = Date.now();
@@ -64,10 +62,7 @@ export const updateBook = mutation({
     authorIds: v.optional(v.array(v.id("authors"))),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireAuthMutation(ctx);
 
     const { bookId, authorIds, ...updates } = args;
 
@@ -108,10 +103,7 @@ export const updateBook = mutation({
 export const deleteBook = mutation({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireAuthMutation(ctx);
 
     // Delete all book-author relationships
     const bookAuthors = await ctx.db
@@ -144,10 +136,7 @@ export const addAuthorToBook = mutation({
     role: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireAuthMutation(ctx);
 
     // Check if relationship already exists
     const existing = await ctx.db
@@ -178,10 +167,7 @@ export const removeAuthorFromBook = mutation({
     authorId: v.id("authors"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireAuthMutation(ctx);
 
     const bookAuthor = await ctx.db
       .query("bookAuthors")

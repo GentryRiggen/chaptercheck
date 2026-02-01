@@ -1,10 +1,12 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { requireAuth } from "../lib/auth";
 
 // Get a single series by ID
 export const getSeries = query({
   args: { seriesId: v.id("series") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db.get(args.seriesId);
   },
 });
@@ -13,6 +15,7 @@ export const getSeries = query({
 export const searchSeries = query({
   args: { searchTerm: v.string() },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     if (!args.searchTerm || args.searchTerm.trim().length === 0) {
       return [];
     }
@@ -30,6 +33,7 @@ export const searchSeries = query({
 export const listSeries = query({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     return await ctx.db
       .query("series")
       .order("desc")
@@ -41,6 +45,7 @@ export const listSeries = query({
 export const getBooksInSeries = query({
   args: { seriesId: v.id("series") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const booksInSeries = await ctx.db
       .query("books")
       .withIndex("by_series_and_order", (q) => q.eq("seriesId", args.seriesId))

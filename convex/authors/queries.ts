@@ -1,11 +1,13 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import { requireAuth } from "../lib/auth";
 
 // Get a single author by ID
 export const getAuthor = query({
   args: { authorId: v.id("authors") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const author = await ctx.db.get(args.authorId);
     return author;
   },
@@ -15,6 +17,7 @@ export const getAuthor = query({
 export const listAuthors = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db
       .query("authors")
       .order("desc")
@@ -26,6 +29,7 @@ export const listAuthors = query({
 export const getRecentAuthors = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const limit = args.limit ?? 6;
     return await ctx.db.query("authors").order("desc").take(limit);
   },
@@ -35,6 +39,7 @@ export const getRecentAuthors = query({
 export const getAllAuthors = query({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     return await ctx.db.query("authors").order("asc").collect();
   },
 });
@@ -43,6 +48,7 @@ export const getAllAuthors = query({
 export const searchAuthors = query({
   args: { search: v.string() },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const searchTerm = args.search.trim();
 
     if (searchTerm.length === 0) {
@@ -62,6 +68,7 @@ export const searchAuthors = query({
 export const getAuthorBooks = query({
   args: { authorId: v.id("authors") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Get all book-author relationships for this author
     const bookAuthors = await ctx.db
       .query("bookAuthors")
@@ -84,6 +91,7 @@ export const getAuthorBooks = query({
 export const getAuthorDeletionPreview = query({
   args: { authorId: v.id("authors") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Get all book-author relationships for this author
     const bookAuthors = await ctx.db
       .query("bookAuthors")

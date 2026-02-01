@@ -1,11 +1,13 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import { requireAuth } from "../lib/auth";
 
 // Get a single book by ID with authors and series
 export const getBook = query({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const book = await ctx.db.get(args.bookId);
     if (!book) return null;
 
@@ -37,6 +39,7 @@ export const getBook = query({
 export const listBooks = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const results = await ctx.db
       .query("books")
       .order("desc")
@@ -75,6 +78,7 @@ export const listBooks = query({
 export const searchBooks = query({
   args: { search: v.string() },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const searchTerm = args.search.trim();
 
     if (searchTerm.length === 0) {
@@ -116,6 +120,7 @@ export const searchBooks = query({
 export const getRecentBooks = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const limit = args.limit ?? 6;
     const books = await ctx.db.query("books").order("desc").take(limit);
 
@@ -149,6 +154,7 @@ export const getRecentBooks = query({
 export const getBookDeletionPreview = query({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const book = await ctx.db.get(args.bookId);
     if (!book) return null;
 

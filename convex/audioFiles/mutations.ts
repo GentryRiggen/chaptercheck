@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "../_generated/server";
-import { getOrCreateUser } from "../users/helpers";
+import { requireAuthMutation } from "../lib/auth";
 
 // Create audio file metadata after successful upload to R2
 export const createAudioFile = mutation({
@@ -16,8 +16,7 @@ export const createAudioFile = mutation({
     chapterTitle: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Get or create the user (auto-creates if doesn't exist)
-    const user = await getOrCreateUser(ctx);
+    const { user } = await requireAuthMutation(ctx);
 
     const now = Date.now();
 
@@ -43,10 +42,7 @@ export const createAudioFile = mutation({
 export const deleteAudioFile = mutation({
   args: { audioFileId: v.id("audioFiles") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireAuthMutation(ctx);
 
     await ctx.db.delete(args.audioFileId);
     return { success: true };

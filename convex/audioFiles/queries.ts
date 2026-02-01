@@ -1,10 +1,12 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { requireAuth } from "../lib/auth";
 
 // Get a single audio file by ID
 export const getAudioFile = query({
   args: { audioFileId: v.id("audioFiles") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const audioFile = await ctx.db.get(args.audioFileId);
     return audioFile;
   },
@@ -14,6 +16,7 @@ export const getAudioFile = query({
 export const getAudioFilesForBook = query({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const audioFiles = await ctx.db
       .query("audioFiles")
       .withIndex("by_book", (q) => q.eq("bookId", args.bookId))

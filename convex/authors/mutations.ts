@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "../_generated/server";
+import { requireAuthMutation } from "../lib/auth";
 
 // Create a new author
 export const createAuthor = mutation({
@@ -9,10 +10,7 @@ export const createAuthor = mutation({
     imageR2Key: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireAuthMutation(ctx);
 
     const now = Date.now();
 
@@ -37,10 +35,7 @@ export const updateAuthor = mutation({
     imageR2Key: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireAuthMutation(ctx);
 
     const { authorId, ...updates } = args;
 
@@ -57,10 +52,7 @@ export const updateAuthor = mutation({
 export const deleteAuthor = mutation({
   args: { authorId: v.id("authors") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireAuthMutation(ctx);
 
     // Get all book-author relationships for this author
     const bookAuthors = await ctx.db

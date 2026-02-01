@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "../_generated/server";
-import { getOrCreateUser } from "../users/helpers";
+import { requireAuthMutation } from "../lib/auth";
 
 // Create a new series
 export const createSeries = mutation({
@@ -9,8 +9,7 @@ export const createSeries = mutation({
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Ensure user is authenticated
-    await getOrCreateUser(ctx);
+    await requireAuthMutation(ctx);
 
     const now = Date.now();
 
@@ -33,8 +32,7 @@ export const updateSeries = mutation({
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Ensure user is authenticated
-    await getOrCreateUser(ctx);
+    await requireAuthMutation(ctx);
 
     const updates: {
       name?: string;
@@ -62,8 +60,7 @@ export const updateSeries = mutation({
 export const deleteSeries = mutation({
   args: { seriesId: v.id("series") },
   handler: async (ctx, args) => {
-    // Ensure user is authenticated
-    await getOrCreateUser(ctx);
+    await requireAuthMutation(ctx);
 
     // Check if any books are still in this series
     const booksInSeries = await ctx.db
