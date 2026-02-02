@@ -5,7 +5,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { type Id } from "../_generated/dataModel";
 import { action } from "../_generated/server";
-import { getR2Client } from "../lib/r2Client";
+import { getR2Client, getStoragePrefix } from "../lib/r2Client";
 
 // Generate a presigned URL for uploading an audio file
 export const generateUploadUrl = action({
@@ -41,10 +41,10 @@ export const generateUploadUrl = action({
       throw new Error("R2_BUCKET_NAME not configured");
     }
 
-    // Generate unique key for the file using the storage account's R2 path prefix
+    // Generate unique key for the file using environment prefix and storage account's R2 path prefix
     const timestamp = Date.now();
     const sanitizedFileName = args.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const r2Key = `${storageAccount.r2PathPrefix}/audiobooks/${timestamp}-${sanitizedFileName}`;
+    const r2Key = `${getStoragePrefix()}/${storageAccount.r2PathPrefix}/audiobooks/${timestamp}-${sanitizedFileName}`;
 
     const command = new PutObjectCommand({
       Bucket: bucketName,

@@ -2,7 +2,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { v } from "convex/values";
 
 import { action } from "../_generated/server";
-import { getR2Client } from "../lib/r2Client";
+import { getR2Client, getStoragePrefix } from "../lib/r2Client";
 import type { OpenLibraryAuthorSuggestion, OpenLibraryBookSuggestion } from "./types";
 
 // Search books on Open Library
@@ -156,7 +156,7 @@ export const uploadImageFromUrl = action({
 
       const timestamp = Date.now();
       const sanitizedFileName = args.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const r2Key = `media/${args.pathPrefix}/${timestamp}-${sanitizedFileName}`;
+      const r2Key = `${getStoragePrefix()}/media/${args.pathPrefix}/${timestamp}-${sanitizedFileName}`;
 
       const command = new PutObjectCommand({
         Bucket: bucketName,

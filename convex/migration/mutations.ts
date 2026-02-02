@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { type Id } from "../_generated/dataModel";
 import { action, internalAction, internalMutation, mutation } from "../_generated/server";
-import { getR2Client } from "../lib/r2Client";
+import { getR2Client, getStoragePrefix } from "../lib/r2Client";
 
 // Internal mutation to upsert an author (for migration)
 export const upsertAuthor = internalMutation({
@@ -179,7 +179,7 @@ export const uploadImageFromUrl = internalAction({
 
       const timestamp = Date.now();
       const sanitizedFileName = args.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const r2Key = `media/${args.path}/${timestamp}-${sanitizedFileName}`;
+      const r2Key = `${getStoragePrefix()}/media/${args.path}/${timestamp}-${sanitizedFileName}`;
 
       const command = new PutObjectCommand({
         Bucket: bucketName,

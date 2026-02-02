@@ -1,8 +1,9 @@
-import { v } from "convex/values";
-import { action } from "../_generated/server";
-import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { getR2Client } from "../lib/r2Client";
+import { v } from "convex/values";
+
+import { action } from "../_generated/server";
+import { getR2Client, getStoragePrefix } from "../lib/r2Client";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -38,10 +39,10 @@ export const generateUploadUrl = action({
       throw new Error("R2_BUCKET_NAME not configured");
     }
 
-    // Generate unique key for the file
+    // Generate unique key for the file with environment prefix
     const timestamp = Date.now();
     const sanitizedFileName = args.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const r2Key = `media/${args.path}/${timestamp}-${sanitizedFileName}`;
+    const r2Key = `${getStoragePrefix()}/media/${args.path}/${timestamp}-${sanitizedFileName}`;
 
     const command = new PutObjectCommand({
       Bucket: bucketName,
