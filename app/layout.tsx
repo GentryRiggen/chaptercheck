@@ -2,6 +2,7 @@ import "./globals.css";
 
 import type { Metadata } from "next";
 
+import { NowPlayingSpacer } from "@/components/audio/NowPlayingSpacer";
 import { NowPlayingUI } from "@/components/audio/NowPlayingUI";
 import { MeshBackground } from "@/components/layout/MeshBackground";
 import { Navigation } from "@/components/layout/Navigation";
@@ -25,6 +26,7 @@ export default function RootLayout({
           <MeshBackground />
           <Navigation />
           {children}
+          <NowPlayingSpacer />
           <NowPlayingUI />
         </Providers>
       </body>
