@@ -20,7 +20,10 @@
     "cf-deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "migrate": "tsx scripts/migrate-from-firebase.ts",
     "migrate:dry-run": "tsx scripts/migrate-from-firebase.ts --dry-run",
-    "migrate:test": "tsx scripts/migrate-from-firebase.ts --dry-run --limit=5"
+    "migrate:test": "tsx scripts/migrate-from-firebase.ts --dry-run --limit=5",
+    "migrate:files": "tsx scripts/migrate-files-from-firebase.ts",
+    "migrate:files:dry-run": "tsx scripts/migrate-files-from-firebase.ts --dry-run",
+    "migrate:files:test": "tsx scripts/migrate-files-from-firebase.ts --dry-run --limit=5 --verbose"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.965.0",

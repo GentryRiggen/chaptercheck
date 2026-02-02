@@ -367,3 +367,236 @@ export const getSeriesByName = mutation({
       .first();
   },
 });
+
+// ============================================
+// FILE MIGRATION (separate from author/book migration)
+// ============================================
+
+// Get book by Convex ID with series info (for file migration)
+export const getBookWithSeries = internalMutation({
+  args: { bookId: v.id("books") },
+  handler: async (ctx, args) => {
+    const book = await ctx.db.get(args.bookId);
+    if (!book) return null;
+
+    const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
+    return { book, series };
+  },
+});
+
+// Upsert audio file (for migration)
+export const upsertAudioFile = internalMutation({
+  args: {
+    bookId: v.id("books"),
+    fileName: v.string(),
+    fileSize: v.number(),
+    duration: v.number(),
+    format: v.string(),
+    r2Key: v.string(),
+    r2Bucket: v.string(),
+    storageAccountId: v.optional(v.id("storageAccounts")),
+    firebaseStoragePath: v.string(),
+    uploadedBy: v.id("users"),
+    partNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Check if audio file already exists by firebaseStoragePath
+    const existingFiles = await ctx.db
+      .query("audioFiles")
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
+      .collect();
+
+    const existing = existingFiles.find((f) => f.firebaseStoragePath === args.firebaseStoragePath);
+
+    const now = Date.now();
+
+    if (existing) {
+      // Update existing audio file
+      await ctx.db.patch(existing._id, {
+        fileName: args.fileName,
+        fileSize: args.fileSize,
+        duration: args.duration,
+        format: args.format,
+        r2Key: args.r2Key,
+        r2Bucket: args.r2Bucket,
+        storageAccountId: args.storageAccountId,
+        partNumber: args.partNumber,
+      });
+      return { audioFileId: existing._id, created: false };
+    }
+
+    // Create new audio file
+    const audioFileId = await ctx.db.insert("audioFiles", {
+      bookId: args.bookId,
+      fileName: args.fileName,
+      fileSize: args.fileSize,
+      duration: args.duration,
+      format: args.format,
+      r2Key: args.r2Key,
+      r2Bucket: args.r2Bucket,
+      storageAccountId: args.storageAccountId,
+      firebaseStoragePath: args.firebaseStoragePath,
+      uploadedBy: args.uploadedBy,
+      uploadedAt: now,
+      partNumber: args.partNumber,
+    });
+
+    return { audioFileId, created: true };
+  },
+});
+
+// Get user by clerkId
+export const getUserByClerkId = internalMutation({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+  },
+});
+
+// List all books with their firebaseId (for file migration)
+export const listBooksWithFirebaseId = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const books = await ctx.db.query("books").collect();
+    const booksWithSeries = await Promise.all(
+      books.map(async (book) => {
+        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
+        return {
+          _id: book._id,
+          title: book.title,
+          firebaseId: book.firebaseId,
+          seriesName: series?.name || null,
+          seriesOrder: book.seriesOrder || null,
+        };
+      })
+    );
+    return booksWithSeries.filter((b) => b.firebaseId);
+  },
+});
+
+// Get or create storage account for migration
+export const getOrCreateStorageAccount = mutation({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    // Get the user
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) {
+      throw new Error(`User not found for clerkId: ${args.clerkId}`);
+    }
+
+    // If user already has a storage account, return it
+    if (user.storageAccountId) {
+      const storageAccount = await ctx.db.get(user.storageAccountId);
+      if (storageAccount) {
+        return { storageAccount, userId: user._id };
+      }
+    }
+
+    // Create new storage account
+    const now = Date.now();
+
+    const storageAccountId = await ctx.db.insert("storageAccounts", {
+      r2PathPrefix: "", // Will be set after we have the ID
+      totalBytesUsed: 0,
+      fileCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Set r2PathPrefix using the storage account ID
+    const r2PathPrefix = `storage-accounts/${storageAccountId}`;
+    await ctx.db.patch(storageAccountId, { r2PathPrefix });
+
+    // Link to user
+    await ctx.db.patch(user._id, { storageAccountId });
+
+    const storageAccount = await ctx.db.get(storageAccountId);
+    return { storageAccount, userId: user._id };
+  },
+});
+
+// Update storage account r2PathPrefix to new format
+export const updateStorageAccountPath = mutation({
+  args: { storageAccountId: v.id("storageAccounts") },
+  handler: async (ctx, args) => {
+    const storageAccount = await ctx.db.get(args.storageAccountId);
+    if (!storageAccount) {
+      throw new Error("Storage account not found");
+    }
+
+    const newPrefix = `storage-accounts/${args.storageAccountId}`;
+    await ctx.db.patch(args.storageAccountId, { r2PathPrefix: newPrefix });
+
+    return { oldPrefix: storageAccount.r2PathPrefix, newPrefix };
+  },
+});
+
+// Check if audio file already exists (for idempotent migration)
+export const checkAudioFileExists = mutation({
+  args: {
+    bookId: v.id("books"),
+    firebaseStoragePath: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existingFiles = await ctx.db
+      .query("audioFiles")
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
+      .collect();
+
+    const existing = existingFiles.find((f) => f.firebaseStoragePath === args.firebaseStoragePath);
+    return existing ? { exists: true, r2Key: existing.r2Key } : { exists: false, r2Key: null };
+  },
+});
+
+// Create audio file record (R2 upload handled by migration script)
+export const createMigratedAudioFile = mutation({
+  args: {
+    bookId: v.id("books"),
+    firebaseStoragePath: v.string(),
+    fileSize: v.number(),
+    duration: v.number(),
+    format: v.string(),
+    partNumber: v.number(),
+    friendlyFileName: v.string(),
+    r2Key: v.string(),
+    r2Bucket: v.string(),
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get the user
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) {
+      throw new Error(`User not found for clerkId: ${args.clerkId}`);
+    }
+
+    // Create new audio file (caller should check for existing first)
+    const now = Date.now();
+    const audioFileId = await ctx.db.insert("audioFiles", {
+      bookId: args.bookId,
+      fileName: args.friendlyFileName,
+      fileSize: args.fileSize,
+      duration: args.duration,
+      format: args.format,
+      r2Key: args.r2Key,
+      r2Bucket: args.r2Bucket,
+      storageAccountId: user.storageAccountId,
+      firebaseStoragePath: args.firebaseStoragePath,
+      uploadedBy: user._id,
+      uploadedAt: now,
+      partNumber: args.partNumber,
+    });
+
+    return { audioFileId, created: true };
+  },
+});

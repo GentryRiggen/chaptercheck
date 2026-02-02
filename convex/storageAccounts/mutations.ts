@@ -9,7 +9,7 @@ import { requireAuthMutation } from "../lib/auth";
 export const getOrCreateStorageAccount = mutation({
   args: {},
   handler: async (ctx) => {
-    const { user, identity } = await requireAuthMutation(ctx);
+    const { user } = await requireAuthMutation(ctx);
 
     // Check if user already has a storage account
     if (user.storageAccountId) {
@@ -21,15 +21,18 @@ export const getOrCreateStorageAccount = mutation({
 
     // Create new storage account
     const now = Date.now();
-    const r2PathPrefix = `users/${identity.subject}`;
 
     const storageAccountId = await ctx.db.insert("storageAccounts", {
-      r2PathPrefix,
+      r2PathPrefix: "", // Will be set after we have the ID
       totalBytesUsed: 0,
       fileCount: 0,
       createdAt: now,
       updatedAt: now,
     });
+
+    // Set r2PathPrefix using the storage account ID
+    const r2PathPrefix = `storage-accounts/${storageAccountId}`;
+    await ctx.db.patch(storageAccountId, { r2PathPrefix });
 
     // Assign to user
     await ctx.db.patch(user._id, {

@@ -21,6 +21,7 @@ import type * as images_actions from "../images/actions.js";
 import type * as lib_audioFileNames from "../lib/audioFileNames.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_r2Client from "../lib/r2Client.js";
+import type * as lib_r2Keys from "../lib/r2Keys.js";
 import type * as migration_mutations from "../migration/mutations.js";
 import type * as openLibrary_actions from "../openLibrary/actions.js";
 import type * as openLibrary_types from "../openLibrary/types.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   "lib/audioFileNames": typeof lib_audioFileNames;
   "lib/auth": typeof lib_auth;
   "lib/r2Client": typeof lib_r2Client;
+  "lib/r2Keys": typeof lib_r2Keys;
   "migration/mutations": typeof migration_mutations;
   "openLibrary/actions": typeof openLibrary_actions;
   "openLibrary/types": typeof openLibrary_types;

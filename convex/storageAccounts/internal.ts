@@ -28,15 +28,18 @@ export const getOrCreateStorageAccountInternal = internalMutation({
 
     // Create new storage account
     const now = Date.now();
-    const r2PathPrefix = `users/${args.clerkId}`;
 
     const storageAccountId = await ctx.db.insert("storageAccounts", {
-      r2PathPrefix,
+      r2PathPrefix: "", // Will be set after we have the ID
       totalBytesUsed: 0,
       fileCount: 0,
       createdAt: now,
       updatedAt: now,
     });
+
+    // Set r2PathPrefix using the storage account ID
+    const r2PathPrefix = `storage-accounts/${storageAccountId}`;
+    await ctx.db.patch(storageAccountId, { r2PathPrefix });
 
     // Assign to user
     await ctx.db.patch(user._id, {

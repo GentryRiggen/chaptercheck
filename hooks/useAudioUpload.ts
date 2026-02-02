@@ -30,6 +30,7 @@ export const useAudioUpload = (bookId: Id<"books">) => {
     try {
       // Step 1: Get presigned URL from Convex (also creates storage account if needed)
       const { uploadUrl, r2Key, r2Bucket, storageAccountId } = await generateUploadUrl({
+        bookId,
         fileName: file.name,
         fileSize: file.size,
         contentType: file.type,

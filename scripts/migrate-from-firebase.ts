@@ -24,10 +24,11 @@
 
 import { ConvexHttpClient } from "convex/browser";
 import { anyApi } from "convex/server";
-import { cert, initializeApp } from "firebase-admin/app";
+import { cert, initializeApp, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
+import * as readline from "readline";
 
 import type { Id } from "../convex/_generated/dataModel";
 
@@ -93,6 +94,24 @@ function loadEnvFile(): void {
 }
 
 loadEnvFile();
+
+// ============================================
+// CONFIRMATION HELPER
+// ============================================
+
+async function confirmContinue(message: string): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(`${message} (y/N): `, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes");
+    });
+  });
+}
 
 // ============================================
 // CONFIGURATION
@@ -402,25 +421,11 @@ async function main(): Promise<void> {
   console.log("🚀 Starting Firebase to ChapterCheck Migration");
   console.log("=".repeat(60));
 
-  if (DRY_RUN) {
-    console.log("⚠️  DRY RUN MODE - No data will be written\n");
-  }
-
-  if (LIMIT > 0) {
-    console.log(`📊 Limited to ${LIMIT} books\n`);
-  }
-
-  if (!CONVEX_URL) {
-    console.error("❌ NEXT_PUBLIC_CONVEX_URL environment variable not set");
-    console.error("   Run: source .env.local");
-    process.exit(1);
-  }
-
-  // Load Firebase service account
-  let serviceAccount;
+  // Load Firebase service account (needed for display)
+  let serviceAccount: ServiceAccount & { project_id?: string };
   try {
     const content = readFileSync(FIREBASE_SERVICE_ACCOUNT_PATH, "utf-8");
-    serviceAccount = JSON.parse(content);
+    serviceAccount = JSON.parse(content) as ServiceAccount & { project_id?: string };
   } catch {
     console.error(
       `❌ Could not load Firebase service account from: ${FIREBASE_SERVICE_ACCOUNT_PATH}`
@@ -429,6 +434,35 @@ async function main(): Promise<void> {
     console.error("   Download from: Firebase Console > Project Settings > Service Accounts");
     process.exit(1);
   }
+
+  if (!CONVEX_URL) {
+    console.error("❌ NEXT_PUBLIC_CONVEX_URL environment variable not set");
+    console.error("   Run: source .env.local");
+    process.exit(1);
+  }
+
+  // Display configuration
+  console.log("\n📋 Configuration:");
+  console.log(`   Convex URL:              ${CONVEX_URL}`);
+  console.log(`   Firebase Project:        ${serviceAccount.project_id || "unknown"}`);
+  console.log(`   Firebase Service Acct:   ${FIREBASE_SERVICE_ACCOUNT_PATH}`);
+  console.log(`   Dry Run:                 ${DRY_RUN ? "YES" : "no"}`);
+  console.log(`   Verbose:                 ${VERBOSE ? "YES" : "no"}`);
+  console.log(`   Book Limit:              ${LIMIT > 0 ? LIMIT : "none"}`);
+  console.log("");
+
+  if (DRY_RUN) {
+    console.log("⚠️  DRY RUN MODE - No data will be written\n");
+  }
+
+  // Ask for confirmation
+  const confirmed = await confirmContinue("Continue with migration?");
+  if (!confirmed) {
+    console.log("Migration cancelled.");
+    process.exit(0);
+  }
+
+  console.log("");
 
   // Initialize Firebase
   const app = initializeApp({ credential: cert(serviceAccount) });
