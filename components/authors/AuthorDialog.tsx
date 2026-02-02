@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "convex/react";
+import { useRouter } from "next/navigation";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
@@ -14,9 +15,17 @@ interface AuthorDialogProps {
   onOpenChange: (open: boolean) => void;
   onCreated?: (authorId: Id<"authors">) => void;
   initialName?: string;
+  navigateOnCreate?: boolean;
 }
 
-export function AuthorDialog({ open, onOpenChange, onCreated, initialName }: AuthorDialogProps) {
+export function AuthorDialog({
+  open,
+  onOpenChange,
+  onCreated,
+  initialName,
+  navigateOnCreate = true,
+}: AuthorDialogProps) {
+  const router = useRouter();
   const createAuthor = useMutation(api.authors.mutations.createAuthor);
 
   const handleSubmit = async (values: AuthorFormValues) => {
@@ -27,6 +36,9 @@ export function AuthorDialog({ open, onOpenChange, onCreated, initialName }: Aut
     });
     onOpenChange(false);
     onCreated?.(authorId);
+    if (navigateOnCreate && !onCreated) {
+      router.push(`/authors/${authorId}`);
+    }
   };
 
   return (

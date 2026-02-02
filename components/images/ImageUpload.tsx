@@ -1,7 +1,7 @@
 "use client";
 
-import { User, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { ExternalLink, User, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -11,17 +11,37 @@ interface ImageUploadProps {
   path: string;
   value?: string; // Current R2 key
   previewUrl?: string; // URL to display for existing image
+  externalUrl?: string; // External URL (e.g., from Open Library) to preview
   onChange: (r2Key: string | undefined) => void;
+  onExternalUrlClear?: () => void; // Called when user clears the external URL
 }
 
-export function ImageUpload({ path, previewUrl, onChange }: ImageUploadProps) {
+export function ImageUpload({
+  path,
+  previewUrl,
+  externalUrl,
+  onChange,
+  onExternalUrlClear,
+}: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(previewUrl || null);
   const { uploadImage, uploading, progress, error } = useImageUpload({ path });
+
+  // Update preview when externalUrl changes
+  useEffect(() => {
+    if (externalUrl) {
+      setPreview(externalUrl);
+    }
+  }, [externalUrl]);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
+
+      // Clear external URL when user uploads their own image
+      if (externalUrl && onExternalUrlClear) {
+        onExternalUrlClear();
+      }
 
       // Show local preview immediately
       const localPreview = URL.createObjectURL(file);
@@ -37,13 +57,16 @@ export function ImageUpload({ path, previewUrl, onChange }: ImageUploadProps) {
         URL.revokeObjectURL(localPreview);
       }
     },
-    [uploadImage, onChange, previewUrl]
+    [uploadImage, onChange, previewUrl, externalUrl, onExternalUrlClear]
   );
 
   const handleRemove = useCallback(() => {
     setPreview(null);
     onChange(undefined);
-  }, [onChange]);
+    if (externalUrl && onExternalUrlClear) {
+      onExternalUrlClear();
+    }
+  }, [onChange, externalUrl, onExternalUrlClear]);
 
   return (
     <div className="space-y-3">
@@ -91,6 +114,13 @@ export function ImageUpload({ path, previewUrl, onChange }: ImageUploadProps) {
       )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {externalUrl && !uploading && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <ExternalLink className="h-3 w-3" />
+          <span>From Open Library</span>
+        </div>
+      )}
 
       {(preview || previewUrl) && !uploading && (
         <label className="cursor-pointer">

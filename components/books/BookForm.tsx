@@ -1,11 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAction } from "convex/react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthorMultiSelect } from "@/components/authors/AuthorMultiSelect";
 import { ImageUpload } from "@/components/images/ImageUpload";
 import { SeriesSelect } from "@/components/series/SeriesSelect";
+import { BookSuggestions } from "@/components/suggestions/OpenLibrarySuggestions";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -17,7 +20,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
+import type { OpenLibraryBookSuggestion } from "@/convex/openLibrary/types";
+import { useOpenLibraryBookSearch } from "@/hooks/useOpenLibrarySearch";
 import { type BookFormValues, bookSchema } from "@/lib/validations/book";
 
 interface BookFormProps {
@@ -37,6 +43,10 @@ export function BookForm({
   submitLabel,
   bookId,
 }: BookFormProps) {
+  const [externalCoverUrl, setExternalCoverUrl] = useState<string | undefined>();
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [titleSearch, setTitleSearch] = useState("");
+
   const form = useForm<BookFormValues>({
     resolver: zodResolver(bookSchema),
     defaultValues: {
@@ -53,9 +63,57 @@ export function BookForm({
     },
   });
 
+  const { suggestions, isLoading } = useOpenLibraryBookSearch(titleSearch);
+  const uploadImageFromUrl = useAction(api.openLibrary.actions.uploadImageFromUrl);
+
+  const handleSuggestionSelect = useCallback(
+    (suggestion: OpenLibraryBookSuggestion) => {
+      form.setValue("title", suggestion.title);
+      if (suggestion.subtitle) {
+        form.setValue("subtitle", suggestion.subtitle);
+      }
+      if (suggestion.description) {
+        form.setValue("description", suggestion.description);
+      }
+      if (suggestion.isbn) {
+        form.setValue("isbn", suggestion.isbn);
+      }
+      if (suggestion.publishedYear) {
+        form.setValue("publishedYear", suggestion.publishedYear);
+      }
+      if (suggestion.language) {
+        form.setValue("language", suggestion.language);
+      }
+      if (suggestion.coverUrl) {
+        setExternalCoverUrl(suggestion.coverUrl);
+        // Clear any existing R2 key since we're using external URL
+        form.setValue("coverImageR2Key", undefined);
+      }
+
+      setShowSuggestions(false);
+      setTitleSearch("");
+    },
+    [form]
+  );
+
   const handleSubmit = async (values: BookFormValues) => {
+    let coverImageR2Key = values.coverImageR2Key;
+
+    // Upload external cover to R2 if we have one
+    if (externalCoverUrl && !coverImageR2Key) {
+      const r2Key = await uploadImageFromUrl({
+        imageUrl: externalCoverUrl,
+        pathPrefix: "books",
+        fileName: `${values.title.replace(/\s+/g, "-")}.jpg`,
+      });
+      if (r2Key) {
+        coverImageR2Key = r2Key;
+      }
+    }
+
     await onSubmit({
       ...values,
+      coverImageR2Key,
       subtitle: values.subtitle || undefined,
       description: values.description || undefined,
       isbn: values.isbn || undefined,
@@ -84,7 +142,9 @@ export function BookForm({
                   path="books"
                   value={field.value}
                   previewUrl={initialCoverUrl}
+                  externalUrl={externalCoverUrl}
                   onChange={field.onChange}
+                  onExternalUrlClear={() => setExternalCoverUrl(undefined)}
                 />
               </FormControl>
               <FormMessage />
@@ -99,7 +159,27 @@ export function BookForm({
             <FormItem>
               <FormLabel>Title *</FormLabel>
               <FormControl>
-                <Input placeholder="Book title" {...field} />
+                <div className="relative">
+                  <Input
+                    placeholder="Book title"
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setTitleSearch(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                  />
+                  {showSuggestions && (
+                    <BookSuggestions
+                      query={titleSearch}
+                      suggestions={suggestions}
+                      isLoading={isLoading}
+                      onSelect={handleSuggestionSelect}
+                      onDismiss={() => setShowSuggestions(false)}
+                    />
+                  )}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>

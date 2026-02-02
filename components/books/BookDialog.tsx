@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "convex/react";
+import { useRouter } from "next/navigation";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
@@ -13,13 +14,20 @@ interface BookDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialAuthorId?: Id<"authors">;
+  navigateOnCreate?: boolean;
 }
 
-export function BookDialog({ open, onOpenChange, initialAuthorId }: BookDialogProps) {
+export function BookDialog({
+  open,
+  onOpenChange,
+  initialAuthorId,
+  navigateOnCreate = true,
+}: BookDialogProps) {
+  const router = useRouter();
   const createBook = useMutation(api.books.mutations.createBook);
 
   const handleSubmit = async (values: BookFormValues) => {
-    await createBook({
+    const bookId = await createBook({
       title: values.title,
       subtitle: values.subtitle || undefined,
       description: values.description || undefined,
@@ -32,6 +40,9 @@ export function BookDialog({ open, onOpenChange, initialAuthorId }: BookDialogPr
       authorIds: values.authorIds?.length ? (values.authorIds as Id<"authors">[]) : undefined,
     });
     onOpenChange(false);
+    if (navigateOnCreate) {
+      router.push(`/books/${bookId}`);
+    }
   };
 
   return (

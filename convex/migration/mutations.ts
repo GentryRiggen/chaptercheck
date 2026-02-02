@@ -160,12 +160,12 @@ export const uploadImageFromUrl = internalAction({
 
       const contentType = response.headers.get("content-type") || "image/jpeg";
       const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const uint8Array = new Uint8Array(arrayBuffer);
 
       // Reject placeholder images (Open Library returns ~43 byte 1x1 GIF when no image)
-      if (buffer.length < 1000) {
+      if (uint8Array.length < 1000) {
         console.log(
-          `Image too small (${buffer.length} bytes), likely a placeholder: ${args.imageUrl}`
+          `Image too small (${uint8Array.length} bytes), likely a placeholder: ${args.imageUrl}`
         );
         return null;
       }
@@ -184,7 +184,7 @@ export const uploadImageFromUrl = internalAction({
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: r2Key,
-        Body: buffer,
+        Body: uint8Array,
         ContentType: contentType,
       });
 

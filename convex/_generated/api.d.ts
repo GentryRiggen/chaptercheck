@@ -22,6 +22,8 @@ import type * as lib_audioFileNames from "../lib/audioFileNames.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_r2Client from "../lib/r2Client.js";
 import type * as migration_mutations from "../migration/mutations.js";
+import type * as openLibrary_actions from "../openLibrary/actions.js";
+import type * as openLibrary_types from "../openLibrary/types.js";
 import type * as series_mutations from "../series/mutations.js";
 import type * as series_queries from "../series/queries.js";
 import type * as storageAccounts_internal from "../storageAccounts/internal.js";
@@ -50,6 +52,8 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/r2Client": typeof lib_r2Client;
   "migration/mutations": typeof migration_mutations;
+  "openLibrary/actions": typeof openLibrary_actions;
+  "openLibrary/types": typeof openLibrary_types;
   "series/mutations": typeof series_mutations;
   "series/queries": typeof series_queries;
   "storageAccounts/internal": typeof storageAccounts_internal;
