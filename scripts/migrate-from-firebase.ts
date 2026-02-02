@@ -266,8 +266,9 @@ async function validateCoverUrl(url: string): Promise<boolean> {
 function parseSeriesFromTitle(title: string): SeriesParseResult {
   // Try multiple patterns in order of specificity
 
-  // Pattern: "Title (Series Name #1)" or "Title (Series Name #1.5)"
-  const pattern1 = /^(.+?)\s*\(([^)]+?)\s*#([\d.]+)\)\s*$/;
+  // Pattern: "Title (Series Name #1)" or "Title (Series Name #1.5)" or "Title (Series Name #1-2)"
+  // For ranges like #1-2, we capture only the first number
+  const pattern1 = /^(.+?)\s*\(([^)]+?)\s*#([\d.]+)(?:-[\d.]+)?\)\s*$/;
   const match1 = title.match(pattern1);
   if (match1) {
     return {
@@ -300,7 +301,8 @@ function parseSeriesFromTitle(title: string): SeriesParseResult {
   }
 
   // Pattern: "Series Name #1: Title" or "Series Name #1 - Title"
-  const pattern2 = /^(.+?)\s*#([\d.]+)\s*[-–:]\s*(.+)$/;
+  // But NOT if the # is inside parentheses (that's handled by pattern1)
+  const pattern2 = /^([^(]+?)\s*#([\d.]+)\s*[-–:]\s*(.+)$/;
   const match2 = title.match(pattern2);
   if (match2) {
     return {
