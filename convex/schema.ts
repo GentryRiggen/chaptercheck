@@ -18,7 +18,12 @@ export default defineSchema({
     email: v.string(),
     name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
-    role: v.optional(v.union(v.literal("admin"), v.literal("user"))), // defaults to "user"
+    // Role hierarchy: admin > editor > viewer
+    // Legacy "user" role maps to "viewer" via getEffectiveRole()
+    role: v.optional(
+      v.union(v.literal("admin"), v.literal("editor"), v.literal("viewer"), v.literal("user"))
+    ), // defaults to "viewer"
+    hasPremium: v.optional(v.boolean()), // defaults to false, gates audio features
     // Storage account (optional, created lazily on first upload)
     // Multiple users can share the same storage account
     storageAccountId: v.optional(v.id("storageAccounts")),

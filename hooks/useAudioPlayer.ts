@@ -46,8 +46,7 @@ export function useAudioPlayer(audioFile: AudioFileWithNames, bookInfo: BookInfo
 
     try {
       const { streamUrl } = await generateStreamUrl({
-        r2Key: audioFile.r2Key,
-        r2Bucket: audioFile.r2Bucket,
+        audioFileId: audioFile._id,
         downloadFileName: audioFile.friendlyName || audioFile.fileName,
       });
       setDownloadUrl(streamUrl);
@@ -56,14 +55,7 @@ export function useAudioPlayer(audioFile: AudioFileWithNames, bookInfo: BookInfo
       console.error("Failed to generate download URL:", err);
       return null;
     }
-  }, [
-    audioFile.r2Key,
-    audioFile.r2Bucket,
-    audioFile.friendlyName,
-    audioFile.fileName,
-    downloadUrl,
-    generateStreamUrl,
-  ]);
+  }, [audioFile._id, audioFile.friendlyName, audioFile.fileName, downloadUrl, generateStreamUrl]);
 
   const togglePlayPause = useCallback(async () => {
     if (isCurrentTrack) {
@@ -73,8 +65,6 @@ export function useAudioPlayer(audioFile: AudioFileWithNames, bookInfo: BookInfo
       } else {
         const trackInfo: TrackInfo = {
           audioFileId: audioFile._id,
-          r2Key: audioFile.r2Key,
-          r2Bucket: audioFile.r2Bucket,
           displayName: audioFile.displayName || audioFile.fileName,
           bookId: audioFile.bookId,
           bookTitle: bookInfo.bookTitle,
@@ -90,8 +80,6 @@ export function useAudioPlayer(audioFile: AudioFileWithNames, bookInfo: BookInfo
       // Start playing this track
       const trackInfo: TrackInfo = {
         audioFileId: audioFile._id,
-        r2Key: audioFile.r2Key,
-        r2Bucket: audioFile.r2Bucket,
         displayName: audioFile.displayName || audioFile.fileName,
         bookId: audioFile.bookId,
         bookTitle: bookInfo.bookTitle,
@@ -109,8 +97,6 @@ export function useAudioPlayer(audioFile: AudioFileWithNames, bookInfo: BookInfo
     pause,
     play,
     audioFile._id,
-    audioFile.r2Key,
-    audioFile.r2Bucket,
     audioFile.displayName,
     audioFile.fileName,
     audioFile.bookId,

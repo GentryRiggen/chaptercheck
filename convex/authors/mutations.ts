@@ -1,6 +1,7 @@
 import { v } from "convex/values";
+
 import { mutation } from "../_generated/server";
-import { requireAuthMutation } from "../lib/auth";
+import { requireEditorMutation } from "../lib/auth";
 
 // Create a new author
 export const createAuthor = mutation({
@@ -10,7 +11,7 @@ export const createAuthor = mutation({
     imageR2Key: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAuthMutation(ctx);
+    await requireEditorMutation(ctx);
 
     const now = Date.now();
 
@@ -35,7 +36,7 @@ export const updateAuthor = mutation({
     imageR2Key: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAuthMutation(ctx);
+    await requireEditorMutation(ctx);
 
     const { authorId, ...updates } = args;
 
@@ -52,7 +53,7 @@ export const updateAuthor = mutation({
 export const deleteAuthor = mutation({
   args: { authorId: v.id("authors") },
   handler: async (ctx, args) => {
-    await requireAuthMutation(ctx);
+    await requireEditorMutation(ctx);
 
     // Get all book-author relationships for this author
     const bookAuthors = await ctx.db

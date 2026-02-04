@@ -16,8 +16,6 @@ import { type Id } from "@/convex/_generated/dataModel";
 
 export interface TrackInfo {
   audioFileId: Id<"audioFiles">;
-  r2Key: string;
-  r2Bucket: string;
   displayName: string;
   bookId: Id<"books">;
   bookTitle: string;
@@ -153,8 +151,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
       try {
         const { streamUrl } = await generateStreamUrl({
-          r2Key: track.r2Key,
-          r2Bucket: track.r2Bucket,
+          audioFileId: track.audioFileId,
         });
         setAudioUrl(streamUrl);
       } catch (err) {

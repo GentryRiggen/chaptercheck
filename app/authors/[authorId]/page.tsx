@@ -11,6 +11,7 @@ import { AuthorEditDialog } from "@/components/authors/AuthorEditDialog";
 import { AuthorImage } from "@/components/authors/AuthorImage";
 import { BookCover } from "@/components/books/BookCover";
 import { BookDialog } from "@/components/books/BookDialog";
+import { RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
@@ -97,18 +98,20 @@ export default function AuthorDetailPage({
             ) : null}
 
             {/* Action buttons */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => setBookDialogOpen(true)}>
-                <Plus className="mr-1 h-4 w-4" />
-                Add Book
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => setEditDialogOpen(true)}>
-                Edit
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-                Delete
-              </Button>
-            </div>
+            <RoleGate minRole="editor">
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => setBookDialogOpen(true)}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Book
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setEditDialogOpen(true)}>
+                  Edit
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                  Delete
+                </Button>
+              </div>
+            </RoleGate>
           </div>
         </div>
 

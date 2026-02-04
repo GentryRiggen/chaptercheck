@@ -9,6 +9,7 @@
  */
 
 import type * as audioFiles_actions from "../audioFiles/actions.js";
+import type * as audioFiles_internal from "../audioFiles/internal.js";
 import type * as audioFiles_mutations from "../audioFiles/mutations.js";
 import type * as audioFiles_queries from "../audioFiles/queries.js";
 import type * as auth_clerkWebhook from "../auth/clerkWebhook.js";
@@ -31,6 +32,8 @@ import type * as storageAccounts_internal from "../storageAccounts/internal.js";
 import type * as storageAccounts_mutations from "../storageAccounts/mutations.js";
 import type * as storageAccounts_queries from "../storageAccounts/queries.js";
 import type * as users_helpers from "../users/helpers.js";
+import type * as users_mutations from "../users/mutations.js";
+import type * as users_queries from "../users/queries.js";
 
 import type {
   ApiFromModules,
@@ -40,6 +43,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "audioFiles/actions": typeof audioFiles_actions;
+  "audioFiles/internal": typeof audioFiles_internal;
   "audioFiles/mutations": typeof audioFiles_mutations;
   "audioFiles/queries": typeof audioFiles_queries;
   "auth/clerkWebhook": typeof auth_clerkWebhook;
@@ -62,6 +66,8 @@ declare const fullApi: ApiFromModules<{
   "storageAccounts/mutations": typeof storageAccounts_mutations;
   "storageAccounts/queries": typeof storageAccounts_queries;
   "users/helpers": typeof users_helpers;
+  "users/mutations": typeof users_mutations;
+  "users/queries": typeof users_queries;
 }>;
 
 /**

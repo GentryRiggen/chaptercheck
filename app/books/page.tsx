@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { BookCover } from "@/components/books/BookCover";
 import { BookDialog } from "@/components/books/BookDialog";
+import { RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
@@ -84,18 +85,20 @@ export default function BooksPage() {
                 )}
               />
             </div>
-            <Button
-              onClick={() => setDialogOpen(true)}
-              className={cn(
-                "shrink-0 transition-all duration-200",
-                scrolled ? "h-7 px-2 sm:px-3" : "h-8 px-2 sm:px-3"
-              )}
-            >
-              <Plus
-                className={cn("transition-all duration-200", scrolled ? "h-4 w-4" : "h-5 w-5")}
-              />
-              <span className="hidden sm:inline">Add Book</span>
-            </Button>
+            <RoleGate minRole="editor">
+              <Button
+                onClick={() => setDialogOpen(true)}
+                className={cn(
+                  "shrink-0 transition-all duration-200",
+                  scrolled ? "h-7 px-2 sm:px-3" : "h-8 px-2 sm:px-3"
+                )}
+              >
+                <Plus
+                  className={cn("transition-all duration-200", scrolled ? "h-4 w-4" : "h-5 w-5")}
+                />
+                <span className="hidden sm:inline">Add Book</span>
+              </Button>
+            </RoleGate>
           </div>
         </div>
       </header>
@@ -114,9 +117,11 @@ export default function BooksPage() {
             ) : (
               <>
                 <p className="mb-3 text-sm text-muted-foreground">No books yet</p>
-                <Button variant="link" size="sm" onClick={() => setDialogOpen(true)}>
-                  Create your first book
-                </Button>
+                <RoleGate minRole="editor">
+                  <Button variant="link" size="sm" onClick={() => setDialogOpen(true)}>
+                    Create your first book
+                  </Button>
+                </RoleGate>
               </>
             )}
           </div>

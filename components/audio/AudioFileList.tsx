@@ -1,13 +1,24 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { ArrowDown, ArrowUp, Download, GripVertical, Pause, Play, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Download,
+  GripVertical,
+  Lock,
+  Pause,
+  Play,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { AudioFileDeleteDialog } from "@/components/audio/AudioFileDeleteDialog";
+import { RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { api } from "@/convex/_generated/api";
 import { type Doc, type Id } from "@/convex/_generated/dataModel";
 import { type BookInfo, useAudioPlayer } from "@/hooks/useAudioPlayer";
@@ -71,14 +82,16 @@ export function AudioFileList({ bookId, audioFiles, bookInfo }: AudioFileListPro
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Audio Files</CardTitle>
             {audioFiles.length > 1 && (
-              <Button
-                variant={isReordering ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIsReordering(!isReordering)}
-              >
-                <GripVertical className="mr-1 h-4 w-4" />
-                {isReordering ? "Done" : "Reorder"}
-              </Button>
+              <RoleGate minRole="editor">
+                <Button
+                  variant={isReordering ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsReordering(!isReordering)}
+                >
+                  <GripVertical className="mr-1 h-4 w-4" />
+                  {isReordering ? "Done" : "Reorder"}
+                </Button>
+              </RoleGate>
             )}
           </div>
         </CardHeader>
@@ -142,6 +155,7 @@ function AudioFileRow({
   onMoveDown,
   onDelete,
 }: AudioFileRowProps) {
+  const { hasPremium } = usePermissions();
   const {
     isPlaying,
     isLoading,
@@ -234,7 +248,7 @@ function AudioFileRow({
         <div className="flex items-center gap-2">
           {isLoading ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
-          ) : (
+          ) : hasPremium ? (
             <>
               <Button
                 size="icon"
@@ -250,6 +264,16 @@ function AudioFileRow({
                 </span>
               )}
             </>
+          ) : (
+            <Button
+              size="icon"
+              variant="ghost"
+              disabled
+              className="h-8 w-8 cursor-not-allowed rounded-full"
+              title="Premium required to play audio"
+            >
+              <Lock className="h-4 w-4" />
+            </Button>
           )}
         </div>
       )}
@@ -265,15 +289,17 @@ function AudioFileRow({
         >
           <Download className="h-4 w-4" />
         </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={onDelete}
-          className="h-8 w-8 text-destructive hover:text-destructive"
-          title="Delete"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <RoleGate minRole="editor">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onDelete}
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </RoleGate>
       </div>
     </div>
   );

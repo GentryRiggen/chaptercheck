@@ -1,13 +1,14 @@
 import { v } from "convex/values";
 
 import { mutation } from "../_generated/server";
-import { requireAuthMutation } from "../lib/auth";
+import { hasPremium, requireEditorMutation } from "../lib/auth";
 import {
   updateStorageStatsOnDelete,
   updateStorageStatsOnInsert,
 } from "../storageAccounts/mutations";
 
 // Create audio file metadata after successful upload to R2
+// Requires editor role and premium access
 export const createAudioFile = mutation({
   args: {
     bookId: v.id("books"),
@@ -23,7 +24,12 @@ export const createAudioFile = mutation({
     chapterTitle: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireEditorMutation(ctx);
+
+    // Premium check for audio uploads
+    if (!hasPremium(user)) {
+      throw new Error("Premium access required to upload audio files");
+    }
 
     // Verify the user has access to this storage account
     if (user.storageAccountId !== args.storageAccountId) {
@@ -61,6 +67,7 @@ export const createAudioFile = mutation({
 });
 
 // Reorder audio files for a book
+// Requires editor role
 export const reorderAudioFiles = mutation({
   args: {
     bookId: v.id("books"),
@@ -68,7 +75,7 @@ export const reorderAudioFiles = mutation({
     orderedFileIds: v.array(v.id("audioFiles")),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireEditorMutation(ctx);
 
     // Verify access to all files and update their part numbers
     for (let i = 0; i < args.orderedFileIds.length; i++) {
@@ -104,10 +111,11 @@ export const reorderAudioFiles = mutation({
 });
 
 // Delete an audio file (metadata only - file stays in R2 for now)
+// Requires editor role
 export const deleteAudioFile = mutation({
   args: { audioFileId: v.id("audioFiles") },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireEditorMutation(ctx);
 
     const audioFile = await ctx.db.get(args.audioFileId);
     if (!audioFile) {

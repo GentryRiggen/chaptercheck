@@ -31,8 +31,7 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
       try {
         setLoading(true);
         const { streamUrl } = await generateStreamUrl({
-          r2Key: audioFile.r2Key,
-          r2Bucket: audioFile.r2Bucket,
+          audioFileId: audioFile._id,
         });
         setAudioUrl(streamUrl);
       } catch (err) {
@@ -43,7 +42,7 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
     };
 
     loadAudio();
-  }, [audioFile, generateStreamUrl]);
+  }, [audioFile._id, generateStreamUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;

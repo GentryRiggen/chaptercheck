@@ -1,5 +1,5 @@
-import { MutationCtx, QueryCtx } from "../_generated/server";
-import { Doc } from "../_generated/dataModel";
+import { type Doc } from "../_generated/dataModel";
+import { type MutationCtx, type QueryCtx } from "../_generated/server";
 
 /**
  * Auth utilities for Convex functions
@@ -12,9 +12,52 @@ import { Doc } from "../_generated/dataModel";
  *
  * For admin-only:
  *   const user = await requireAdmin(ctx);
+ *
+ * For editor+ operations (content management):
+ *   const user = await requireEditorMutation(ctx);
+ *
+ * For premium features:
+ *   const user = await requirePremiumMutation(ctx);
  */
 
-export type UserRole = "admin" | "user";
+// Role hierarchy: admin > editor > viewer
+export type UserRole = "admin" | "editor" | "viewer";
+
+// Role levels for comparison (higher = more permissions)
+// Exported for use in frontend permission checks
+export const ROLE_LEVELS: Record<UserRole, number> = {
+  viewer: 1,
+  editor: 2,
+  admin: 3,
+};
+
+/**
+ * Get the effective role for a user, handling legacy "user" role migration
+ * - "user" or undefined → "viewer"
+ * - "admin", "editor", "viewer" → unchanged
+ */
+export function getEffectiveRole(user: Doc<"users">): UserRole {
+  const role = user.role;
+  if (role === "admin") return "admin";
+  if (role === "editor") return "editor";
+  // Legacy "user" role and undefined both map to "viewer"
+  return "viewer";
+}
+
+/**
+ * Check if user has at least the specified role level
+ */
+export function hasRoleLevel(user: Doc<"users">, minRole: UserRole): boolean {
+  const effectiveRole = getEffectiveRole(user);
+  return ROLE_LEVELS[effectiveRole] >= ROLE_LEVELS[minRole];
+}
+
+/**
+ * Check if user has premium access
+ */
+export function hasPremium(user: Doc<"users">): boolean {
+  return user.hasPremium === true;
+}
 
 export interface AuthenticatedUser {
   user: Doc<"users">;
@@ -70,7 +113,7 @@ export async function requireAuthMutation(ctx: MutationCtx): Promise<Authenticat
       email: identity.email || "",
       name: identity.name,
       imageUrl: identity.pictureUrl,
-      role: "user",
+      role: "viewer", // New users start as viewers
       createdAt: now,
       updatedAt: now,
     });
@@ -91,7 +134,7 @@ export async function requireAuthMutation(ctx: MutationCtx): Promise<Authenticat
 export async function requireAdmin(ctx: QueryCtx): Promise<AuthenticatedUser> {
   const auth = await requireAuth(ctx);
 
-  if (auth.user.role !== "admin") {
+  if (!hasRoleLevel(auth.user, "admin")) {
     throw new Error("Admin access required");
   }
 
@@ -104,8 +147,60 @@ export async function requireAdmin(ctx: QueryCtx): Promise<AuthenticatedUser> {
 export async function requireAdminMutation(ctx: MutationCtx): Promise<AuthenticatedUser> {
   const auth = await requireAuthMutation(ctx);
 
-  if (auth.user.role !== "admin") {
+  if (!hasRoleLevel(auth.user, "admin")) {
     throw new Error("Admin access required");
+  }
+
+  return auth;
+}
+
+/**
+ * Require editor role for queries (content read operations that need editor access)
+ */
+export async function requireEditor(ctx: QueryCtx): Promise<AuthenticatedUser> {
+  const auth = await requireAuth(ctx);
+
+  if (!hasRoleLevel(auth.user, "editor")) {
+    throw new Error("Editor access required");
+  }
+
+  return auth;
+}
+
+/**
+ * Require editor role for mutations (content management operations)
+ */
+export async function requireEditorMutation(ctx: MutationCtx): Promise<AuthenticatedUser> {
+  const auth = await requireAuthMutation(ctx);
+
+  if (!hasRoleLevel(auth.user, "editor")) {
+    throw new Error("Editor access required");
+  }
+
+  return auth;
+}
+
+/**
+ * Require premium access for queries
+ */
+export async function requirePremium(ctx: QueryCtx): Promise<AuthenticatedUser> {
+  const auth = await requireAuth(ctx);
+
+  if (!hasPremium(auth.user)) {
+    throw new Error("Premium access required");
+  }
+
+  return auth;
+}
+
+/**
+ * Require premium access for mutations
+ */
+export async function requirePremiumMutation(ctx: MutationCtx): Promise<AuthenticatedUser> {
+  const auth = await requireAuthMutation(ctx);
+
+  if (!hasPremium(auth.user)) {
+    throw new Error("Premium access required");
   }
 
   return auth;
@@ -117,7 +212,31 @@ export async function requireAdminMutation(ctx: MutationCtx): Promise<Authentica
 export async function isAdmin(ctx: QueryCtx): Promise<boolean> {
   try {
     const auth = await requireAuth(ctx);
-    return auth.user.role === "admin";
+    return hasRoleLevel(auth.user, "admin");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if the current user is an editor or higher (non-throwing)
+ */
+export async function isEditor(ctx: QueryCtx): Promise<boolean> {
+  try {
+    const auth = await requireAuth(ctx);
+    return hasRoleLevel(auth.user, "editor");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if the current user has premium (non-throwing)
+ */
+export async function isPremium(ctx: QueryCtx): Promise<boolean> {
+  try {
+    const auth = await requireAuth(ctx);
+    return hasPremium(auth.user);
   } catch {
     return false;
   }

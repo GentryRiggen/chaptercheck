@@ -10,6 +10,7 @@ import { AudioUpload } from "@/components/audio/AudioUpload";
 import { BookCover } from "@/components/books/BookCover";
 import { BookDeleteDialog } from "@/components/books/BookDeleteDialog";
 import { BookEditDialog } from "@/components/books/BookEditDialog";
+import { PremiumGate, RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
@@ -140,14 +141,16 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
             </div>
 
             {/* Action buttons */}
-            <div className="mt-4 flex gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setEditDialogOpen(true)}>
-                Edit
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-                Delete
-              </Button>
-            </div>
+            <RoleGate minRole="editor">
+              <div className="mt-4 flex gap-2">
+                <Button size="sm" variant="secondary" onClick={() => setEditDialogOpen(true)}>
+                  Edit
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                  Delete
+                </Button>
+              </div>
+            </RoleGate>
           </div>
         </div>
 
@@ -165,7 +168,9 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
 
         {/* Audio section */}
         <div className="space-y-4">
-          <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
+          <PremiumGate lockedMessage="Upgrade to Premium to upload audio files">
+            <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
+          </PremiumGate>
 
           {audioFiles === undefined || !bookInfo ? (
             <Card>

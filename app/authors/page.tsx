@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { AuthorDialog } from "@/components/authors/AuthorDialog";
 import { AuthorImage } from "@/components/authors/AuthorImage";
+import { RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
@@ -88,18 +89,20 @@ export default function AuthorsPage() {
                 )}
               />
             </div>
-            <Button
-              onClick={() => setDialogOpen(true)}
-              className={cn(
-                "shrink-0 transition-all duration-200",
-                scrolled ? "h-7 px-2 sm:px-3" : "h-8 px-2 sm:px-3"
-              )}
-            >
-              <Plus
-                className={cn("transition-all duration-200", scrolled ? "h-4 w-4" : "h-5 w-5")}
-              />
-              <span className="hidden sm:inline">Add Author</span>
-            </Button>
+            <RoleGate minRole="editor">
+              <Button
+                onClick={() => setDialogOpen(true)}
+                className={cn(
+                  "shrink-0 transition-all duration-200",
+                  scrolled ? "h-7 px-2 sm:px-3" : "h-8 px-2 sm:px-3"
+                )}
+              >
+                <Plus
+                  className={cn("transition-all duration-200", scrolled ? "h-4 w-4" : "h-5 w-5")}
+                />
+                <span className="hidden sm:inline">Add Author</span>
+              </Button>
+            </RoleGate>
           </div>
         </div>
       </header>
@@ -118,9 +121,11 @@ export default function AuthorsPage() {
             ) : (
               <>
                 <p className="mb-3 text-sm text-muted-foreground">No authors yet</p>
-                <Button variant="link" size="sm" onClick={() => setDialogOpen(true)}>
-                  Create your first author
-                </Button>
+                <RoleGate minRole="editor">
+                  <Button variant="link" size="sm" onClick={() => setDialogOpen(true)}>
+                    Create your first author
+                  </Button>
+                </RoleGate>
               </>
             )}
           </div>
