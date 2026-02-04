@@ -6,6 +6,7 @@ import { NowPlayingSpacer } from "@/components/audio/NowPlayingSpacer";
 import { NowPlayingUI } from "@/components/audio/NowPlayingUI";
 import { MeshBackground } from "@/components/layout/MeshBackground";
 import { Navigation } from "@/components/layout/Navigation";
+import { ScrollToTop } from "@/components/layout/ScrollToTop";
 
 import { Providers } from "./providers";
 
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>
+          <ScrollToTop />
           <MeshBackground />
           <Navigation />
           {children}
