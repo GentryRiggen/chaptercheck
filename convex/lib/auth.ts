@@ -114,6 +114,7 @@ export async function requireAuthMutation(ctx: MutationCtx): Promise<Authenticat
       name: identity.name,
       imageUrl: identity.pictureUrl,
       role: "viewer", // New users start as viewers
+      hasPremium: false, // Premium must be granted by admin
       createdAt: now,
       updatedAt: now,
     });

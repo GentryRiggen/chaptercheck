@@ -1,7 +1,8 @@
-import { httpAction } from "../_generated/server";
+import { type WebhookEvent } from "@clerk/nextjs/server";
 import { Webhook } from "svix";
-import { WebhookEvent } from "@clerk/nextjs/server";
+
 import { internal } from "../_generated/api";
+import { httpAction } from "../_generated/server";
 
 export const handleClerkWebhook = httpAction(async (ctx, request) => {
   const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
@@ -99,6 +100,8 @@ export const createUser = internalMutation({
       email: args.email,
       name: args.name,
       imageUrl: args.imageUrl,
+      role: "viewer", // New users start as viewers
+      hasPremium: false, // Premium must be granted by admin
       createdAt: now,
       updatedAt: now,
     });
@@ -146,5 +149,6 @@ export const deleteUser = internalMutation({
 });
 
 // Import required dependencies
-import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
+
+import { internalMutation } from "../_generated/server";
