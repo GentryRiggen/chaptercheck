@@ -1,18 +1,27 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { Loader2, Plus, Search } from "lucide-react";
+import { ArrowUpDown, Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { BookCard } from "@/components/books/BookCard";
 import { BookCover } from "@/components/books/BookCover";
 import { BookDialog } from "@/components/books/BookDialog";
+import { GenreFilterPopover } from "@/components/books/GenreFilterPopover";
 import { StarRating } from "@/components/books/StarRating";
 import { RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
+import { type Id } from "@/convex/_generated/dataModel";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { useDebounce } from "@/hooks/useDebounce";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -20,17 +29,22 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useScrolled } from "@/hooks/useScrolled";
 import { cn } from "@/lib/utils";
 
+type SortOption = "title_asc" | "title_desc" | "recent" | "top_rated";
+
 export default function BooksPage() {
   usePageTitle("Books");
   const { shouldSkipQuery } = useAuthReady();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
+  const [sort, setSort] = useState<SortOption>("title_asc");
+  const [genreFilter, setGenreFilter] = useState<Id<"genres">[]>([]);
   const debouncedSearch = useDebounce(searchInput, 300);
   const scrolled = useScrolled();
 
   const isSearching = debouncedSearch.trim().length > 0;
+  const isGenreFiltering = genreFilter.length > 0;
 
-  // Paginated query for browsing (when not searching)
+  // Paginated query for browsing (when not searching or genre filtering)
   const {
     items: paginatedResults,
     isLoading: isPaginatedLoading,
@@ -38,7 +52,11 @@ export default function BooksPage() {
     canLoadMore,
     loadMoreRef,
     loadMore,
-  } = usePaginatedList(api.books.queries.listBooks, {}, { skip: shouldSkipQuery || isSearching });
+  } = usePaginatedList(
+    api.books.queries.listBooks,
+    { sort },
+    { skip: shouldSkipQuery || isSearching || isGenreFiltering }
+  );
 
   // Search query (when searching)
   const searchResults = useQuery(
@@ -46,9 +64,19 @@ export default function BooksPage() {
     shouldSkipQuery || !isSearching ? "skip" : { search: debouncedSearch }
   );
 
-  // Determine which results to show
-  const books = isSearching ? searchResults : paginatedResults;
-  const isLoading = isSearching ? searchResults === undefined : isPaginatedLoading;
+  // Genre filter query (when filtering by genre, not searching)
+  const genreResults = useQuery(
+    api.books.queries.filterBooksByGenres,
+    shouldSkipQuery || isSearching || !isGenreFiltering ? "skip" : { genreIds: genreFilter, sort }
+  );
+
+  // Determine which results to show: searching > genre filtering > browsing
+  const books = isSearching ? searchResults : isGenreFiltering ? genreResults : paginatedResults;
+  const isLoading = isSearching
+    ? searchResults === undefined
+    : isGenreFiltering
+      ? genreResults === undefined
+      : isPaginatedLoading;
   const isEmpty = books !== undefined && books.length === 0 && !isLoading;
 
   return (
@@ -87,6 +115,32 @@ export default function BooksPage() {
                 )}
               />
             </div>
+            {!isSearching && (
+              <>
+                <Select value={sort} onValueChange={(v: SortOption) => setSort(v)}>
+                  <SelectTrigger
+                    className={cn(
+                      "w-[130px] shrink-0 transition-all duration-200",
+                      scrolled ? "h-7" : "h-8"
+                    )}
+                  >
+                    <ArrowUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="title_asc">Title A-Z</SelectItem>
+                    <SelectItem value="title_desc">Title Z-A</SelectItem>
+                    <SelectItem value="recent">Recently Added</SelectItem>
+                    <SelectItem value="top_rated">Top Rated</SelectItem>
+                  </SelectContent>
+                </Select>
+                <GenreFilterPopover
+                  value={genreFilter}
+                  onChange={setGenreFilter}
+                  scrolled={scrolled}
+                />
+              </>
+            )}
             <RoleGate minRole="editor">
               <Button
                 onClick={() => setDialogOpen(true)}
@@ -116,6 +170,8 @@ export default function BooksPage() {
               <p className="text-sm text-muted-foreground">
                 No books found for &quot;{debouncedSearch}&quot;
               </p>
+            ) : isGenreFiltering ? (
+              <p className="text-sm text-muted-foreground">No books match the selected genres</p>
             ) : (
               <>
                 <p className="mb-3 text-sm text-muted-foreground">No books yet</p>
@@ -177,8 +233,8 @@ export default function BooksPage() {
           </>
         )}
 
-        {/* Infinite scroll trigger (only when not searching) */}
-        {!isSearching && (
+        {/* Infinite scroll trigger (only in browsing mode) */}
+        {!isSearching && !isGenreFiltering && (
           <div ref={loadMoreRef} className="py-3">
             {isLoadingMore && (
               <div className="flex justify-center">

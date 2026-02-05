@@ -36,16 +36,38 @@ export const getBook = query({
   },
 });
 
-// List all books with pagination, authors, and series (for infinite scroll), sorted alphabetically
+// List all books with pagination, authors, and series (for infinite scroll)
 export const listBooks = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    sort: v.optional(
+      v.union(
+        v.literal("title_asc"),
+        v.literal("title_desc"),
+        v.literal("recent"),
+        v.literal("top_rated")
+      )
+    ),
+  },
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    const results = await ctx.db
-      .query("books")
-      .withIndex("by_title")
-      .order("asc")
-      .paginate(args.paginationOpts);
+    const sort = args.sort ?? "title_asc";
+    let q;
+    switch (sort) {
+      case "title_desc":
+        q = ctx.db.query("books").withIndex("by_title").order("desc");
+        break;
+      case "recent":
+        q = ctx.db.query("books").order("desc");
+        break;
+      case "top_rated":
+        q = ctx.db.query("books").withIndex("by_averageRating").order("desc");
+        break;
+      default:
+        q = ctx.db.query("books").withIndex("by_title").order("asc");
+        break;
+    }
+    const results = await q.paginate(args.paginationOpts);
 
     // Enrich with authors and series
     const booksWithDetails = await Promise.all(
@@ -126,6 +148,98 @@ export const searchBooks = query({
     // Enrich with authors and series
     const booksWithDetails = await Promise.all(
       cappedBooks.map(async (book) => {
+        const bookAuthors = await ctx.db
+          .query("bookAuthors")
+          .withIndex("by_book", (q) => q.eq("bookId", book._id))
+          .collect();
+
+        const authors = await Promise.all(
+          bookAuthors.map(async (ba) => {
+            const author = await ctx.db.get(ba.authorId);
+            return author ? { ...author, role: ba.role } : null;
+          })
+        );
+
+        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
+
+        return {
+          ...book,
+          authors: authors.filter((a) => a !== null),
+          series: series ? { _id: series._id, name: series.name } : null,
+        };
+      })
+    );
+
+    return booksWithDetails;
+  },
+});
+
+// Filter books by genres (non-paginated, like search)
+export const filterBooksByGenres = query({
+  args: {
+    genreIds: v.array(v.id("genres")),
+    sort: v.optional(
+      v.union(
+        v.literal("title_asc"),
+        v.literal("title_desc"),
+        v.literal("recent"),
+        v.literal("top_rated")
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
+    if (args.genreIds.length === 0) {
+      return [];
+    }
+
+    // For each genre, get all bookIds that have votes for that genre
+    const bookIdSets = await Promise.all(
+      args.genreIds.map(async (genreId) => {
+        const votes = await ctx.db
+          .query("bookGenreVotes")
+          .withIndex("by_genre", (q) => q.eq("genreId", genreId))
+          .collect();
+        return new Set(votes.map((v) => v.bookId));
+      })
+    );
+
+    // Union all bookIds (OR logic)
+    const allBookIds = new Set<(typeof bookIdSets)[number] extends Set<infer T> ? T : never>();
+    for (const idSet of bookIdSets) {
+      for (const id of idSet) {
+        allBookIds.add(id);
+      }
+    }
+
+    // Fetch books
+    const books = (await Promise.all([...allBookIds].map((id) => ctx.db.get(id)))).filter(
+      (b) => b !== null
+    );
+
+    // Sort in-memory
+    const sort = args.sort ?? "title_asc";
+    switch (sort) {
+      case "title_desc":
+        books.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case "recent":
+        books.sort((a, b) => b._creationTime - a._creationTime);
+        break;
+      case "top_rated":
+        books.sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0));
+        break;
+      default:
+        books.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+    }
+
+    const capped = books.slice(0, 50);
+
+    // Enrich with authors and series
+    const booksWithDetails = await Promise.all(
+      capped.map(async (book) => {
         const bookAuthors = await ctx.db
           .query("bookAuthors")
           .withIndex("by_book", (q) => q.eq("bookId", book._id))

@@ -99,6 +99,7 @@ export default defineSchema({
     .index("by_series", ["seriesId"])
     .index("by_series_and_order", ["seriesId", "seriesOrder"])
     .index("by_firebaseId", ["firebaseId"])
+    .index("by_averageRating", ["averageRating"])
     .searchIndex("search_books", {
       searchField: "title",
       filterFields: ["language", "publishedYear"],
