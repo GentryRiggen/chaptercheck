@@ -25,7 +25,11 @@
     "migrate:files:dry-run": "tsx scripts/migrate-files-from-firebase.ts --dry-run",
     "migrate:files:test": "tsx scripts/migrate-files-from-firebase.ts --dry-run --limit=5 --verbose",
     "seed": "tsx scripts/seed/index.ts",
-    "seed:nuke": "tsx scripts/seed/index.ts --nuke"
+    "seed:nuke": "tsx scripts/seed/index.ts --nuke",
+    "e2e": "playwright test --config=e2e/playwright.config.ts",
+    "e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
+    "e2e:headed": "playwright test --config=e2e/playwright.config.ts --headed",
+    "e2e:debug": "playwright test --config=e2e/playwright.config.ts --debug"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.965.0",
@@ -64,7 +68,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@clerk/testing": "^1.13.35",
     "@opennextjs/cloudflare": "^1.16.1",
+    "@playwright/test": "^1.58.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

@@ -42,3 +42,9 @@ next-env.d.ts
 
 # firebase
 firebase-service-account.json
+
+# playwright
+e2e/.clerk/
+e2e/test-results/
+e2e/playwright-report/
+test-results/
