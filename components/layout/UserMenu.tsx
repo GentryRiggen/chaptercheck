@@ -13,26 +13,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useConfetti } from "@/hooks/useConfetti";
 import { useTripleClick } from "@/hooks/useTripleClick";
 
 import { VersionInfo } from "./VersionInfo";
-
-function UserAvatar({
-  firstName,
-  lastName,
-}: {
-  firstName?: string | null;
-  lastName?: string | null;
-}) {
-  const initials = [firstName?.[0], lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
-
-  return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-sm font-medium text-primary-foreground">
-      {initials}
-    </div>
-  );
-}
 
 export function UserMenu() {
   const { user, isLoaded } = useUser();
@@ -57,7 +42,7 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
-          <UserAvatar firstName={user.firstName} lastName={user.lastName} />
+          <UserAvatar name={[user.firstName, user.lastName].filter(Boolean).join(" ")} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

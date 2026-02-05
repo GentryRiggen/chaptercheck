@@ -1,3 +1,4 @@
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import { type Id } from "../_generated/dataModel";
@@ -71,8 +72,72 @@ export const getPublicReviewsForBook = query({
 });
 
 /**
+ * Get public reviews for a book with pagination
+ * Returns reviews where isReviewPrivate is false, ordered by reviewedAt descending
+ * Includes user info and isOwnReview flag for the current user
+ */
+export const getPublicReviewsForBookPaginated = query({
+  args: {
+    bookId: v.id("books"),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireAuth(ctx);
+
+    // Get all reviews for this book
+    const allBookUserData = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
+      .collect();
+
+    // Filter to public reviews that have actual review content
+    const publicReviews = allBookUserData.filter(
+      (data) => !data.isReviewPrivate && (data.rating !== undefined || data.reviewText)
+    );
+
+    // Sort by reviewedAt descending (most recent first)
+    publicReviews.sort((a, b) => {
+      const aTime = a.reviewedAt ?? 0;
+      const bTime = b.reviewedAt ?? 0;
+      return bTime - aTime;
+    });
+
+    // Manual pagination
+    const { cursor, numItems } = args.paginationOpts;
+    const startIndex = cursor ? parseInt(cursor as string, 10) : 0;
+    const endIndex = startIndex + numItems;
+    const paginatedReviews = publicReviews.slice(startIndex, endIndex);
+    const hasMore = endIndex < publicReviews.length;
+
+    // Enrich with user info
+    const reviewsWithUsers = await Promise.all(
+      paginatedReviews.map(async (review) => {
+        const reviewUser = await ctx.db.get(review.userId);
+        return {
+          ...review,
+          isOwnReview: review.userId === user._id,
+          user: reviewUser
+            ? {
+                _id: reviewUser._id,
+                name: reviewUser.name,
+                imageUrl: reviewUser.imageUrl,
+              }
+            : null,
+        };
+      })
+    );
+
+    return {
+      page: reviewsWithUsers,
+      isDone: !hasMore,
+      continueCursor: hasMore ? String(endIndex) : null,
+    };
+  },
+});
+
+/**
  * Get rating statistics for a book
- * Returns average rating and count of ratings (only from public reviews)
+ * Returns average rating and count of ratings (includes all ratings, even private ones)
  */
 export const getBookRatingStats = query({
   args: { bookId: v.id("books") },
@@ -84,24 +149,29 @@ export const getBookRatingStats = query({
       .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
       .collect();
 
-    // Filter to public reviews with ratings
-    const publicRatings = allBookUserData.filter(
-      (data) => !data.isReviewPrivate && data.rating !== undefined
-    );
+    // Include ALL ratings in the average (even private ones)
+    const allRatings = allBookUserData.filter((data) => data.rating !== undefined);
 
-    if (publicRatings.length === 0) {
+    // Count only public reviews for the review count display
+    const publicReviewCount = allBookUserData.filter(
+      (data) => !data.isReviewPrivate && (data.rating !== undefined || data.reviewText)
+    ).length;
+
+    if (allRatings.length === 0) {
       return {
         averageRating: null,
-        ratingCount: 0,
+        ratingCount: allRatings.length,
+        reviewCount: publicReviewCount,
       };
     }
 
-    const totalRating = publicRatings.reduce((sum, data) => sum + (data.rating ?? 0), 0);
-    const averageRating = totalRating / publicRatings.length;
+    const totalRating = allRatings.reduce((sum, data) => sum + (data.rating ?? 0), 0);
+    const averageRating = totalRating / allRatings.length;
 
     return {
       averageRating,
-      ratingCount: publicRatings.length,
+      ratingCount: allRatings.length,
+      reviewCount: publicReviewCount,
     };
   },
 });

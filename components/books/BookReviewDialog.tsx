@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
-import { BookCheck } from "lucide-react";
+import { BookCheck, EyeOff, Globe, Lock } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
@@ -168,19 +168,29 @@ export function BookReviewDialog({
               )}
             />
 
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Lock className="h-4 w-4" />
+                <span>Privacy Settings</span>
+              </div>
+
               <FormField
                 control={form.control}
                 name="isReadPrivate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border bg-background p-3">
                     <FormControl>
                       <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Keep read status private</FormLabel>
-                      <FormDescription>
-                        Others won&apos;t see that you&apos;ve read this book.
+                    <div className="flex-1 space-y-1 leading-none">
+                      <FormLabel className="flex items-center gap-2">
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        Hide that I&apos;ve read this book
+                      </FormLabel>
+                      <FormDescription className="text-xs">
+                        Your reading activity stays completely private. This book won&apos;t appear
+                        in your public reading history, and others won&apos;t know you&apos;ve read
+                        it.
                       </FormDescription>
                     </div>
                   </FormItem>
@@ -191,7 +201,7 @@ export function BookReviewDialog({
                 control={form.control}
                 name="isReviewPrivate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border bg-background p-3">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -199,12 +209,21 @@ export function BookReviewDialog({
                         disabled={isReadPrivate}
                       />
                     </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Keep review private</FormLabel>
-                      <FormDescription>
+                    <div className="flex-1 space-y-1 leading-none">
+                      <FormLabel className="flex items-center gap-2">
+                        {field.value ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Globe className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        {field.value ? "Keep my review private" : "Share my review publicly"}
+                      </FormLabel>
+                      <FormDescription className="text-xs">
                         {isReadPrivate
-                          ? "Review is automatically private when read status is private."
-                          : "Others won't see your rating or review."}
+                          ? "Automatically private because your read status is hidden."
+                          : field.value
+                            ? "Only you can see your rating and review. It won't appear on the book page or contribute to the public average."
+                            : "Your rating and review will be visible to others on the book page and included in the average rating."}
                       </FormDescription>
                     </div>
                     <FormMessage />

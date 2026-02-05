@@ -10,10 +10,13 @@ import { AudioUpload } from "@/components/audio/AudioUpload";
 import { BookCover } from "@/components/books/BookCover";
 import { BookDeleteDialog } from "@/components/books/BookDeleteDialog";
 import { BookEditDialog } from "@/components/books/BookEditDialog";
+import { BookRatingStats } from "@/components/books/BookRatingStats";
 import { BookReadStatus } from "@/components/books/BookReadStatus";
+import { ReviewsList } from "@/components/books/ReviewsList";
 import { PremiumGate, RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
@@ -74,9 +77,42 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
     );
   }
 
+  const hasAudioFiles = audioFiles && audioFiles.length > 0;
+
+  // Reviews Section Component
+  const ReviewsSection = (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Reviews</h2>
+      <ReviewsList bookId={bookId} />
+    </div>
+  );
+
+  // Audio Section Component
+  const AudioSection = (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Audio</h2>
+      <PremiumGate lockedMessage="Upgrade to Premium to upload audio files">
+        <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
+      </PremiumGate>
+
+      {audioFiles === undefined || !bookInfo ? (
+        <Card>
+          <CardHeader className="py-3">
+            <CardTitle className="text-base">Audio Files</CardTitle>
+          </CardHeader>
+          <CardContent className="py-3">
+            <p className="text-sm text-muted-foreground">Loading audio files...</p>
+          </CardContent>
+        </Card>
+      ) : hasAudioFiles ? (
+        <AudioFileList bookId={bookId} audioFiles={audioFiles} bookInfo={bookInfo} />
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="min-h-screen">
-      <main className="mx-auto max-w-4xl px-3 py-4 pb-24 sm:px-6 sm:py-6 lg:px-8">
+      <main className="mx-auto max-w-5xl px-3 py-4 pb-24 sm:px-6 sm:py-6 lg:px-8">
         {/* Back link */}
         <Link href="/books" className="mb-4 inline-block text-sm text-primary hover:underline">
           &larr; Back to Books
@@ -146,6 +182,11 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
               {book.isbn && <span className="hidden sm:inline">ISBN: {book.isbn}</span>}
             </div>
 
+            {/* Rating stats */}
+            <div className="mt-3">
+              <BookRatingStats bookId={bookId} />
+            </div>
+
             {/* Action buttons */}
             <RoleGate minRole="editor">
               <div className="mt-4 flex gap-2">
@@ -172,24 +213,29 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
           </div>
         )}
 
-        {/* Audio section */}
-        <div className="space-y-4">
-          <PremiumGate lockedMessage="Upgrade to Premium to upload audio files">
-            <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
-          </PremiumGate>
+        {/* Mobile Layout - Tabbed Interface */}
+        <div className="block md:hidden">
+          <Tabs defaultValue="reviews" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="reviews">Reviews</TabsTrigger>
+              <TabsTrigger value="audio">Audio</TabsTrigger>
+            </TabsList>
+            <TabsContent value="reviews" className="mt-4">
+              {ReviewsSection}
+            </TabsContent>
+            <TabsContent value="audio" className="mt-4">
+              {AudioSection}
+            </TabsContent>
+          </Tabs>
+        </div>
 
-          {audioFiles === undefined || !bookInfo ? (
-            <Card>
-              <CardHeader className="py-3">
-                <CardTitle className="text-base">Audio Files</CardTitle>
-              </CardHeader>
-              <CardContent className="py-3">
-                <p className="text-sm text-muted-foreground">Loading audio files...</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <AudioFileList bookId={bookId} audioFiles={audioFiles} bookInfo={bookInfo} />
-          )}
+        {/* Desktop Layout - Two Column */}
+        <div className="hidden md:grid md:grid-cols-2 md:gap-8">
+          {/* Left Column - Reviews */}
+          <div>{ReviewsSection}</div>
+
+          {/* Right Column - Audio */}
+          <div>{AudioSection}</div>
         </div>
       </main>
 
