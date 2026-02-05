@@ -13,6 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useConfetti } from "@/hooks/useConfetti";
+import { useTripleClick } from "@/hooks/useTripleClick";
+
+import { VersionInfo } from "./VersionInfo";
 
 function UserAvatar({
   firstName,
@@ -33,6 +37,9 @@ function UserAvatar({
 export function UserMenu() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
+  const { fireConfetti } = useConfetti();
+  const { ref: versionRef, clickProps: versionClickProps } =
+    useTripleClick<HTMLButtonElement>(fireConfetti);
 
   if (!isLoaded) {
     return <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />;
@@ -76,6 +83,8 @@ export function UserMenu() {
           <LogOut className="mr-2 h-4 w-4" />
           Sign out
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <VersionInfo ref={versionRef} onClick={versionClickProps.onClick} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

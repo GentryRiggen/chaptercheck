@@ -115,6 +115,10 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 
+      - name: 🕐 Set deploy timestamp
+        id: timestamp
+        run: echo "deploy_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
       - name: ☁️ Deploy to Cloudflare
         run: npm run cf-deploy
         env:
@@ -123,6 +127,8 @@ jobs:
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_GIT_HASH: ${{ github.sha }}
+          NEXT_PUBLIC_DEPLOY_DATE: ${{ steps.timestamp.outputs.deploy_date }}
 
       - name: 🎉 Deployment complete
         run: echo "Successfully deployed to production!"
