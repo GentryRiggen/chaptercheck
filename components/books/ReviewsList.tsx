@@ -91,17 +91,15 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
         ? allReviews
         : (reviewsResult?.page ?? []);
 
-  // Check if user has a private review that should be shown
-  const hasPrivateReview =
-    myBookData?.isReviewPrivate && (myBookData.rating !== undefined || myBookData.reviewText);
+  // Check if user has any review (rating or text) that should be pinned at top
+  const hasOwnReview =
+    myBookData?.rating !== undefined ||
+    (myBookData?.reviewText && myBookData.reviewText.length > 0);
+
+  const isOwnReviewPrivate = myBookData?.isReviewPrivate ?? false;
 
   // Check if book is not yet marked as read (show "marking as read" callout)
   const isNotRead = !myBookData?.isRead;
-
-  // Check if user already has a review (rating or text)
-  const hasExistingReview =
-    myBookData?.rating !== undefined ||
-    (myBookData?.reviewText && myBookData.reviewText.length > 0);
 
   const handleEdit = () => {
     setReviewDialogOpen(true);
@@ -119,15 +117,17 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
 
   return (
     <div className="space-y-4">
-      {/* Write/Edit Review button */}
-      <Button
-        variant="outline"
-        onClick={() => setReviewDialogOpen(true)}
-        className="w-full sm:w-auto"
-      >
-        <MessageSquarePlus className="mr-2 h-4 w-4" />
-        {hasExistingReview ? "Edit my Review" : "Write a Review"}
-      </Button>
+      {/* Write a Review button - only shown when user has no review */}
+      {!hasOwnReview && (
+        <Button
+          variant="outline"
+          onClick={() => setReviewDialogOpen(true)}
+          className="w-full sm:w-auto"
+        >
+          <MessageSquarePlus className="mr-2 h-4 w-4" />
+          Write a Review
+        </Button>
+      )}
 
       {/* Reviews list */}
       {isLoading ? (
@@ -136,41 +136,54 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
             <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />
           ))}
         </div>
-      ) : displayReviews.length === 0 && !hasPrivateReview ? (
+      ) : displayReviews.length === 0 && !hasOwnReview ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Show user's private review at the top */}
-          {hasPrivateReview && myBookData && (
-            <ReviewCard
-              review={{
-                _id: myBookData._id,
-                rating: myBookData.rating,
-                reviewText: myBookData.reviewText,
-                reviewedAt: myBookData.reviewedAt,
-                user: {
-                  _id: myBookData.userId,
-                  name: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : undefined,
-                  imageUrl: user?.imageUrl,
-                },
-              }}
-              isOwnReview={true}
-              isPrivate={true}
-              onEdit={handleEdit}
-            />
+          {/* Pinned: User's own review at the top (private or public) */}
+          {hasOwnReview && myBookData && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Your Review
+              </p>
+              <ReviewCard
+                review={{
+                  _id: myBookData._id,
+                  rating: myBookData.rating,
+                  reviewText: myBookData.reviewText,
+                  reviewedAt: myBookData.reviewedAt,
+                  user: {
+                    _id: myBookData.userId,
+                    name: user
+                      ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                      : undefined,
+                    imageUrl: user?.imageUrl,
+                  },
+                }}
+                isOwnReview={true}
+                isPrivate={isOwnReviewPrivate}
+                onEdit={handleEdit}
+              />
+            </div>
           )}
 
-          {/* Public reviews */}
-          {displayReviews.map((review) => (
-            <ReviewCard
-              key={review._id}
-              review={review}
-              isOwnReview={review.isOwnReview}
-              onEdit={review.isOwnReview ? handleEdit : undefined}
-            />
-          ))}
+          {/* Other reviews - filter out user's own review to avoid duplication */}
+          {displayReviews.filter((r) => !r.isOwnReview).length > 0 && (
+            <div className="space-y-4">
+              {hasOwnReview && (
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Community Reviews
+                </p>
+              )}
+              {displayReviews
+                .filter((review) => !review.isOwnReview)
+                .map((review) => (
+                  <ReviewCard key={review._id} review={review} isOwnReview={false} />
+                ))}
+            </div>
+          )}
 
           {/* Load More button */}
           {hasMore && (

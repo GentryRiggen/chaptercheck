@@ -1,6 +1,14 @@
-import { useState, useEffect } from "react";
 import { useAction } from "convex/react";
+import { useEffect, useState } from "react";
+
 import { api } from "@/convex/_generated/api";
+
+/**
+ * Check if a string is an external URL (vs an R2 storage key)
+ */
+function isExternalUrl(value: string): boolean {
+  return value.startsWith("http://") || value.startsWith("https://");
+}
 
 export const useImageUrl = (r2Key: string | undefined) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -12,6 +20,14 @@ export const useImageUrl = (r2Key: string | undefined) => {
   useEffect(() => {
     if (!r2Key) {
       setImageUrl(null);
+      return;
+    }
+
+    // If it's already an external URL, use it directly (e.g., seed data)
+    if (isExternalUrl(r2Key)) {
+      setImageUrl(r2Key);
+      setLoading(false);
+      setError(null);
       return;
     }
 

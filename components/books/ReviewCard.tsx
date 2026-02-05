@@ -1,6 +1,7 @@
 "use client";
 
 import { EyeOff, Pencil } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -27,9 +28,14 @@ interface ReviewCardProps {
 }
 
 export function ReviewCard({ review, isOwnReview, isPrivate, onEdit }: ReviewCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const userName = review.user?.name || "Anonymous";
   const userImage = review.user?.imageUrl;
   const reviewDate = review.reviewedAt ? formatRelativeDate(review.reviewedAt) : null;
+
+  // Check if text is long enough to need truncation (rough estimate: >100 chars)
+  const needsTruncation = review.reviewText && review.reviewText.length > 100;
 
   return (
     <div
@@ -79,7 +85,25 @@ export function ReviewCard({ review, isOwnReview, isPrivate, onEdit }: ReviewCar
 
       {/* Review text */}
       {review.reviewText && (
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{review.reviewText}</p>
+        <div className="mt-3">
+          <p
+            className={cn(
+              "whitespace-pre-wrap text-sm leading-relaxed",
+              !isExpanded && needsTruncation && "line-clamp-2"
+            )}
+          >
+            {review.reviewText}
+          </p>
+          {needsTruncation && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="mt-1 text-xs font-medium text-primary hover:underline"
+            >
+              {isExpanded ? "Show less" : "Show more"}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
