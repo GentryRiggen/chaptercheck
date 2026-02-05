@@ -95,9 +95,37 @@ export const searchBooks = query({
       .withSearchIndex("search_books", (q) => q.search("title", searchTerm))
       .take(50);
 
+    // Also search series by name
+    const matchingSeries = await ctx.db
+      .query("series")
+      .withSearchIndex("search_series", (q) => q.search("name", searchTerm))
+      .take(10);
+
+    // Get books from matching series
+    const seriesBookArrays = await Promise.all(
+      matchingSeries.map((s) =>
+        ctx.db
+          .query("books")
+          .withIndex("by_series", (q) => q.eq("seriesId", s._id))
+          .collect()
+      )
+    );
+    const seriesBooks = seriesBookArrays.flat();
+
+    // Merge and deduplicate (title results first for relevance)
+    const seenIds = new Set(books.map((b) => b._id));
+    const mergedBooks = [...books];
+    for (const book of seriesBooks) {
+      if (!seenIds.has(book._id)) {
+        seenIds.add(book._id);
+        mergedBooks.push(book);
+      }
+    }
+    const cappedBooks = mergedBooks.slice(0, 50);
+
     // Enrich with authors and series
     const booksWithDetails = await Promise.all(
-      books.map(async (book) => {
+      cappedBooks.map(async (book) => {
         const bookAuthors = await ctx.db
           .query("bookAuthors")
           .withIndex("by_book", (q) => q.eq("bookId", book._id))
