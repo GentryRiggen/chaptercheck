@@ -71,18 +71,28 @@ export const getPublicReviewsForBook = query({
   },
 });
 
+// Sort options for reviews
+export type ReviewSortOption = "recent" | "oldest" | "highest" | "lowest";
+
 /**
  * Get public reviews for a book with pagination
- * Returns reviews where isReviewPrivate is false, ordered by reviewedAt descending
+ * Returns reviews where isReviewPrivate is false
+ * Supports sorting and filtering options
  * Includes user info and isOwnReview flag for the current user
  */
 export const getPublicReviewsForBookPaginated = query({
   args: {
     bookId: v.id("books"),
     paginationOpts: paginationOptsValidator,
+    sortBy: v.optional(
+      v.union(v.literal("recent"), v.literal("oldest"), v.literal("highest"), v.literal("lowest"))
+    ),
+    withTextOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuth(ctx);
+    const sortBy = args.sortBy ?? "recent";
+    const withTextOnly = args.withTextOnly ?? false;
 
     // Get all reviews for this book
     const allBookUserData = await ctx.db
@@ -91,15 +101,28 @@ export const getPublicReviewsForBookPaginated = query({
       .collect();
 
     // Filter to public reviews that have actual review content
-    const publicReviews = allBookUserData.filter(
+    let publicReviews = allBookUserData.filter(
       (data) => !data.isReviewPrivate && (data.rating !== undefined || data.reviewText)
     );
 
-    // Sort by reviewedAt descending (most recent first)
+    // Apply withTextOnly filter
+    if (withTextOnly) {
+      publicReviews = publicReviews.filter((data) => data.reviewText && data.reviewText.length > 0);
+    }
+
+    // Sort based on sortBy option
     publicReviews.sort((a, b) => {
-      const aTime = a.reviewedAt ?? 0;
-      const bTime = b.reviewedAt ?? 0;
-      return bTime - aTime;
+      switch (sortBy) {
+        case "oldest":
+          return (a.reviewedAt ?? 0) - (b.reviewedAt ?? 0);
+        case "highest":
+          return (b.rating ?? 0) - (a.rating ?? 0);
+        case "lowest":
+          return (a.rating ?? 0) - (b.rating ?? 0);
+        case "recent":
+        default:
+          return (b.reviewedAt ?? 0) - (a.reviewedAt ?? 0);
+      }
     });
 
     // Manual pagination

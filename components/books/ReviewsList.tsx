@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { AlertTriangle, MessageSquarePlus } from "lucide-react";
+import { AlertTriangle, Loader2, MessageSquarePlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,8 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
+import { type ReviewSortOption } from "@/convex/bookUserData/queries";
 
 import { BookReviewDialog } from "./BookReviewDialog";
 import { ReviewCard } from "./ReviewCard";
@@ -48,6 +56,7 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
     reviewText?: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sortBy, setSortBy] = useState<ReviewSortOption>("recent");
 
   // Get current user's book data for editing
   const myBookData = useQuery(api.bookUserData.queries.getMyBookData, { bookId });
@@ -63,6 +72,7 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
   const reviewsResult = useQuery(api.bookUserData.queries.getPublicReviewsForBookPaginated, {
     bookId,
     paginationOpts: { numItems: PAGE_SIZE, cursor: cursor ?? null },
+    sortBy,
   });
 
   // Track the user's reviewedAt to detect when their review is deleted
@@ -98,8 +108,9 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
     }
   };
 
-  // Show loading state
-  const isLoading = reviewsResult === undefined;
+  // Loading states
+  const isInitialLoading = reviewsResult === undefined && allReviews.length === 0;
+  const isLoadingMore = reviewsResult === undefined && allReviews.length > 0;
   const hasMore = reviewsResult ? !reviewsResult.isDone : false;
 
   // Combine accumulated reviews with current page (for last page after load more)
@@ -138,6 +149,13 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
     }
   };
 
+  // Reset pagination when sort changes
+  const handleSortChange = (value: ReviewSortOption) => {
+    setSortBy(value);
+    setCursor(null);
+    setAllReviews([]);
+  };
+
   const handleDeleteReview = (review: {
     _id: Id<"bookUserData">;
     user: { name?: string } | null;
@@ -170,22 +188,45 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
     }
   };
 
+  // Check if there are any reviews to show controls for
+  const hasAnyReviews = displayReviews.length > 0 || hasOwnReview;
+
   return (
     <div className="space-y-4">
-      {/* Write a Review button - only shown when user has no review */}
-      {!hasOwnReview && (
-        <Button
-          variant="outline"
-          onClick={() => setReviewDialogOpen(true)}
-          className="w-full sm:w-auto"
-        >
-          <MessageSquarePlus className="mr-2 h-4 w-4" />
-          Write a Review
-        </Button>
-      )}
+      {/* Header with Write a Review button and filters */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Write a Review button - only shown when user has no review */}
+        {!hasOwnReview ? (
+          <Button
+            variant="outline"
+            onClick={() => setReviewDialogOpen(true)}
+            className="w-full bg-background/50 sm:w-auto"
+          >
+            <MessageSquarePlus className="mr-2 h-4 w-4" />
+            Write a Review
+          </Button>
+        ) : (
+          <div /> // Spacer when button is hidden
+        )}
+
+        {/* Sort control - only shown when there are reviews */}
+        {hasAnyReviews && (
+          <Select value={sortBy} onValueChange={handleSortChange}>
+            <SelectTrigger className="w-[140px] bg-background/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Most recent</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="highest">Highest rated</SelectItem>
+              <SelectItem value="lowest">Lowest rated</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
       {/* Reviews list */}
-      {isLoading ? (
+      {isInitialLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />
@@ -247,14 +288,21 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
           )}
 
           {/* Load More button */}
-          {hasMore && (
+          {(hasMore || isLoadingMore) && (
             <Button
               variant="outline"
               onClick={handleLoadMore}
-              className="w-full"
-              disabled={isLoading}
+              className="w-full bg-background/50"
+              disabled={isLoadingMore}
             >
-              Load More
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                "Load More"
+              )}
             </Button>
           )}
         </div>
