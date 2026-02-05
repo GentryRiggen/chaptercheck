@@ -10,6 +10,7 @@ import { AudioUpload } from "@/components/audio/AudioUpload";
 import { BookCover } from "@/components/books/BookCover";
 import { BookDeleteDialog } from "@/components/books/BookDeleteDialog";
 import { BookEditDialog } from "@/components/books/BookEditDialog";
+import { BookGenres } from "@/components/books/BookGenres";
 import { BookRatingStats } from "@/components/books/BookRatingStats";
 import { BookReadStatus } from "@/components/books/BookReadStatus";
 import { ReviewsList } from "@/components/books/ReviewsList";
@@ -174,6 +175,11 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
                 ))}
               </div>
             )}
+
+            {/* Genres */}
+            <div className="mt-2 sm:mt-3">
+              <BookGenres bookId={bookId} />
+            </div>
 
             {/* Meta info */}
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground sm:text-sm">

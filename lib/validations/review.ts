@@ -6,6 +6,7 @@ export const reviewSchema = z
     reviewText: z.string().max(2000).optional().or(z.literal("")),
     isReadPrivate: z.boolean(),
     isReviewPrivate: z.boolean(),
+    genreIds: z.array(z.string()).optional(),
   })
   .refine((data) => !(data.isReadPrivate && !data.isReviewPrivate), {
     message: "Review must be private when read status is private",

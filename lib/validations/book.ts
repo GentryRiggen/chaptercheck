@@ -29,6 +29,7 @@ export const bookSchema = z
     seriesId: z.string().optional(),
     seriesOrder: z.number().optional().nullable(),
     authorIds: z.array(z.string()).min(1, "At least one author is required"),
+    genreIds: z.array(z.string()).optional(),
   })
   .refine(
     (data) => {

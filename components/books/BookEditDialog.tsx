@@ -47,6 +47,7 @@ export function BookEditDialog({ book, open, onOpenChange }: BookEditDialogProps
       seriesId: values.seriesId as Id<"series"> | undefined,
       seriesOrder: values.seriesOrder ?? undefined,
       authorIds: values.authorIds as Id<"authors">[] | undefined,
+      genreIds: values.genreIds as Id<"genres">[] | undefined,
     });
     onOpenChange(false);
   };

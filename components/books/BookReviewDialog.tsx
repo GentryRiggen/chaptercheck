@@ -6,6 +6,7 @@ import { BookCheck, EyeOff, Lock } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
+import { GenreMultiSelect } from "@/components/genres/GenreMultiSelect";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -54,6 +55,7 @@ export function BookReviewDialog({
   initialData,
 }: BookReviewDialogProps) {
   const saveReview = useMutation(api.bookUserData.mutations.saveReview);
+  const setGenreVotes = useMutation(api.bookGenreVotes.mutations.setGenreVotes);
 
   const form = useForm<ReviewFormData>({
     resolver: zodResolver(reviewSchema),
@@ -62,6 +64,7 @@ export function BookReviewDialog({
       reviewText: initialData?.reviewText ?? "",
       isReadPrivate: initialData?.isReadPrivate ?? false,
       isReviewPrivate: initialData?.isReviewPrivate ?? false,
+      genreIds: [],
     },
   });
 
@@ -73,6 +76,7 @@ export function BookReviewDialog({
         reviewText: initialData?.reviewText ?? "",
         isReadPrivate: initialData?.isReadPrivate ?? false,
         isReviewPrivate: initialData?.isReviewPrivate ?? false,
+        genreIds: [],
       });
     }
   }, [open, initialData, form]);
@@ -95,6 +99,15 @@ export function BookReviewDialog({
       isReadPrivate: values.isReadPrivate,
       isReviewPrivate: values.isReviewPrivate,
     });
+
+    // Save genre votes if any were selected
+    if (values.genreIds && values.genreIds.length > 0) {
+      await setGenreVotes({
+        bookId,
+        genreIds: values.genreIds as Parameters<typeof setGenreVotes>[0]["genreIds"],
+      });
+    }
+
     onOpenChange(false);
   };
 
@@ -225,6 +238,24 @@ export function BookReviewDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="genreIds"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Genres (optional)</FormLabel>
+                  <FormControl>
+                    <GenreMultiSelect
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                      bookId={bookId}
+                    />
+                  </FormControl>
+                  <FormDescription>Vote for genres that describe this book</FormDescription>
+                </FormItem>
+              )}
+            />
 
             <div className="flex gap-4 pt-2">
               <Button

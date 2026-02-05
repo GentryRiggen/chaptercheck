@@ -146,6 +146,28 @@ export default defineSchema({
     .index("by_storageAccount", ["storageAccountId"])
     .index("by_storageAccount_and_book", ["storageAccountId", "bookId"]),
 
+  // Genres
+  genres: defineTable({
+    name: v.string(),
+    slug: v.string(), // lowercase, hyphenated (for deduplication)
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .searchIndex("search_genres", { searchField: "name" }),
+
+  // Book-Genre Votes (who voted for which genre on which book)
+  bookGenreVotes: defineTable({
+    bookId: v.id("books"),
+    genreId: v.id("genres"),
+    userId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_book", ["bookId"])
+    .index("by_genre", ["genreId"])
+    .index("by_book_and_user", ["bookId", "userId"])
+    .index("by_book_genre_user", ["bookId", "genreId", "userId"]),
+
   // Book User Data (read status, ratings, reviews)
   bookUserData: defineTable({
     userId: v.id("users"),

@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthorMultiSelect } from "@/components/authors/AuthorMultiSelect";
+import { GenreMultiSelect } from "@/components/genres/GenreMultiSelect";
 import { ImageUpload } from "@/components/images/ImageUpload";
 import { SeriesSelect } from "@/components/series/SeriesSelect";
 import { BookSuggestions } from "@/components/suggestions/OpenLibrarySuggestions";
@@ -60,6 +61,7 @@ export function BookForm({
       seriesId: initialValues?.seriesId,
       seriesOrder: initialValues?.seriesOrder ?? null,
       authorIds: initialValues?.authorIds || [],
+      genreIds: initialValues?.genreIds || [],
     },
   });
 
@@ -273,6 +275,20 @@ export function BookForm({
               <FormLabel>Authors</FormLabel>
               <FormControl>
                 <AuthorMultiSelect value={field.value || []} onChange={field.onChange} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="genreIds"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Genres</FormLabel>
+              <FormControl>
+                <GenreMultiSelect value={field.value || []} onChange={field.onChange} />
               </FormControl>
               <FormMessage />
             </FormItem>

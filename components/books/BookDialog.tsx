@@ -38,6 +38,7 @@ export function BookDialog({
       seriesId: values.seriesId as Id<"series"> | undefined,
       seriesOrder: values.seriesOrder ?? undefined,
       authorIds: values.authorIds?.length ? (values.authorIds as Id<"authors">[]) : undefined,
+      genreIds: values.genreIds?.length ? (values.genreIds as Id<"genres">[]) : undefined,
     });
     onOpenChange(false);
     if (navigateOnCreate) {

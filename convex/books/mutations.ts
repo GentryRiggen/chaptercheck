@@ -16,11 +16,12 @@ export const createBook = mutation({
     seriesId: v.optional(v.id("series")),
     seriesOrder: v.optional(v.number()),
     authorIds: v.optional(v.array(v.id("authors"))),
+    genreIds: v.optional(v.array(v.id("genres"))),
   },
   handler: async (ctx, args) => {
-    await requireEditorMutation(ctx);
+    const { user } = await requireEditorMutation(ctx);
 
-    const { authorIds, ...bookData } = args;
+    const { authorIds, genreIds, ...bookData } = args;
     const now = Date.now();
 
     const bookId = await ctx.db.insert("books", {
@@ -37,6 +38,20 @@ export const createBook = mutation({
             bookId,
             authorId,
             role: "author",
+          })
+        )
+      );
+    }
+
+    // Add genre votes from the editor
+    if (genreIds && genreIds.length > 0) {
+      await Promise.all(
+        genreIds.map((genreId) =>
+          ctx.db.insert("bookGenreVotes", {
+            bookId,
+            genreId,
+            userId: user._id,
+            createdAt: now,
           })
         )
       );
@@ -61,15 +76,17 @@ export const updateBook = mutation({
     seriesId: v.optional(v.id("series")),
     seriesOrder: v.optional(v.number()),
     authorIds: v.optional(v.array(v.id("authors"))),
+    genreIds: v.optional(v.array(v.id("genres"))),
   },
   handler: async (ctx, args) => {
-    await requireEditorMutation(ctx);
+    const { user } = await requireEditorMutation(ctx);
 
-    const { bookId, authorIds, ...updates } = args;
+    const { bookId, authorIds, genreIds, ...updates } = args;
+    const now = Date.now();
 
     await ctx.db.patch(bookId, {
       ...updates,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
 
     // Update author relationships if provided
@@ -90,6 +107,31 @@ export const updateBook = mutation({
               bookId,
               authorId,
               role: "author",
+            })
+          )
+        );
+      }
+    }
+
+    // Update genre votes for this editor if provided
+    if (genreIds !== undefined) {
+      // Delete existing votes from this user
+      const existingVotes = await ctx.db
+        .query("bookGenreVotes")
+        .withIndex("by_book_and_user", (q) => q.eq("bookId", bookId).eq("userId", user._id))
+        .collect();
+
+      await Promise.all(existingVotes.map((vote) => ctx.db.delete(vote._id)));
+
+      // Add new votes
+      if (genreIds.length > 0) {
+        await Promise.all(
+          genreIds.map((genreId) =>
+            ctx.db.insert("bookGenreVotes", {
+              bookId,
+              genreId,
+              userId: user._id,
+              createdAt: now,
             })
           )
         );
