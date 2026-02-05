@@ -24,6 +24,7 @@ export default defineSchema({
       v.union(v.literal("admin"), v.literal("editor"), v.literal("viewer"), v.literal("user"))
     ), // defaults to "viewer"
     hasPremium: v.optional(v.boolean()), // defaults to false, gates audio features
+    isProfilePrivate: v.optional(v.boolean()), // defaults to false = public profile
     // Storage account (optional, created lazily on first upload)
     // Multiple users can share the same storage account
     storageAccountId: v.optional(v.id("storageAccounts")),

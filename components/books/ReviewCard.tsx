@@ -1,6 +1,7 @@
 "use client";
 
 import { EyeOff, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -65,10 +66,28 @@ export function ReviewCard({
       {/* Header: Avatar, name, stars, date */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <UserAvatar name={userName} imageUrl={userImage} size="md" />
+          {review.user ? (
+            <Link
+              href={`/users/${review.user._id}`}
+              className="transition-opacity hover:opacity-80"
+            >
+              <UserAvatar name={userName} imageUrl={userImage} size="md" />
+            </Link>
+          ) : (
+            <UserAvatar name={userName} imageUrl={userImage} size="md" />
+          )}
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="truncate text-sm font-medium">{userName}</span>
+              {review.user ? (
+                <Link
+                  href={`/users/${review.user._id}`}
+                  className="truncate text-sm font-medium transition-colors hover:text-primary"
+                >
+                  {userName}
+                </Link>
+              ) : (
+                <span className="truncate text-sm font-medium">{userName}</span>
+              )}
               {isOwnReview && (
                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                   You

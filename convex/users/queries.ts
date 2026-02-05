@@ -1,5 +1,13 @@
+import { v } from "convex/values";
+
 import { query } from "../_generated/server";
-import { getCurrentUser, getEffectiveRole, hasPremium, hasRoleLevel } from "../lib/auth";
+import {
+  getCurrentUser,
+  getEffectiveRole,
+  hasPremium,
+  hasRoleLevel,
+  requireAuth,
+} from "../lib/auth";
 
 /**
  * Permissions object returned by getCurrentUserWithPermissions
@@ -68,7 +76,69 @@ export const getCurrentUserWithPermissions = query({
       imageUrl: user.imageUrl,
       role: effectiveRole,
       hasPremium: isPremium,
+      isProfilePrivate: user.isProfilePrivate ?? false,
       permissions,
+    };
+  },
+});
+
+/**
+ * Get a user's profile information
+ * Returns basic info for all users, full stats only if profile is public or viewing own profile
+ */
+export const getUserProfile = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const { user: currentUser } = await requireAuth(ctx);
+    const targetUser = await ctx.db.get(args.userId);
+
+    if (!targetUser) {
+      return null;
+    }
+
+    const isOwnProfile = currentUser._id === targetUser._id;
+    const isProfilePrivate = targetUser.isProfilePrivate ?? false;
+
+    // Basic info available to all authenticated users
+    const basicInfo = {
+      _id: targetUser._id,
+      name: targetUser.name,
+      imageUrl: targetUser.imageUrl,
+      createdAt: targetUser.createdAt,
+      isOwnProfile,
+      isProfilePrivate,
+    };
+
+    // If profile is private and not own profile, return limited data
+    if (isProfilePrivate && !isOwnProfile) {
+      return {
+        ...basicInfo,
+        stats: null,
+      };
+    }
+
+    // Get stats for public profiles or own profile
+    const allUserData = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_user", (q) => q.eq("userId", targetUser._id))
+      .collect();
+
+    // Count read books (respecting per-book privacy for non-own profiles)
+    const readBooks = isOwnProfile
+      ? allUserData.filter((d) => d.isRead)
+      : allUserData.filter((d) => d.isRead && !d.isReadPrivate);
+
+    // Count reviews (respecting per-review privacy for non-own profiles)
+    const reviews = isOwnProfile
+      ? allUserData.filter((d) => d.rating !== undefined || d.reviewText)
+      : allUserData.filter((d) => (d.rating !== undefined || d.reviewText) && !d.isReviewPrivate);
+
+    return {
+      ...basicInfo,
+      stats: {
+        booksRead: readBooks.length,
+        reviewsWritten: reviews.length,
+      },
     };
   },
 });

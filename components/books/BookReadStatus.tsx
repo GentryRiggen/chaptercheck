@@ -103,7 +103,7 @@ export function BookReadStatus({ bookId }: BookReadStatusProps) {
       size="sm"
       onClick={() => setUnmarkDialogOpen(true)}
       disabled={isUnmarking}
-      className={cn("rounded-full", justMarked && "animate-bounce")}
+      className={cn("rounded-full", justMarked && "animate-pulse")}
     >
       <Check className={cn("h-4 w-4", isUnmarking && "animate-pulse")} />
       {isUnmarking ? "..." : "Read"}

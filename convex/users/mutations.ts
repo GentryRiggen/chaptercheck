@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
 import { mutation } from "../_generated/server";
-import { requireAdminMutation } from "../lib/auth";
+import { requireAdminMutation, requireAuthMutation } from "../lib/auth";
 
 /**
  * Update a user's role (admin-only)
@@ -46,6 +46,25 @@ export const updateUserPremium = mutation({
 
     await ctx.db.patch(args.userId, {
       hasPremium: args.hasPremium,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Update current user's profile privacy setting
+ */
+export const updateProfilePrivacy = mutation({
+  args: {
+    isProfilePrivate: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireAuthMutation(ctx);
+
+    await ctx.db.patch(user._id, {
+      isProfilePrivate: args.isProfilePrivate,
       updatedAt: Date.now(),
     });
 

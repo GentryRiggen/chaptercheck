@@ -273,3 +273,90 @@ export const getUserPublicReviews = query({
     return reviewsWithBooks;
   },
 });
+
+/**
+ * Get books a user has marked as read
+ * Returns list with book details, respecting privacy settings
+ */
+export const getUserReadBooks = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getCurrentUser(ctx);
+    if (!currentUser) {
+      throw new Error("Not authenticated");
+    }
+
+    const isOwnProfile = currentUser._id === args.userId;
+
+    // Get all user's read data
+    const allUserData = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    // Filter to read books, respecting privacy for non-own profiles
+    let readData = allUserData.filter((d) => d.isRead);
+    if (!isOwnProfile) {
+      readData = readData.filter((d) => !d.isReadPrivate);
+    }
+
+    // Sort by readAt descending (most recently read first)
+    readData.sort((a, b) => {
+      const aTime = a.readAt ?? a.createdAt;
+      const bTime = b.readAt ?? b.createdAt;
+      return bTime - aTime;
+    });
+
+    // Enrich with book details
+    const booksWithDetails = await Promise.all(
+      readData.map(async (data) => {
+        const book = await ctx.db.get(data.bookId);
+        if (!book) return null;
+
+        // Get authors
+        const bookAuthors = await ctx.db
+          .query("bookAuthors")
+          .withIndex("by_book", (q) => q.eq("bookId", book._id))
+          .collect();
+
+        const authors = (
+          await Promise.all(
+            bookAuthors.map(async (ba) => {
+              const author = await ctx.db.get(ba.authorId);
+              return author ? { _id: author._id, name: author.name } : null;
+            })
+          )
+        ).filter((a): a is { _id: Id<"authors">; name: string } => a !== null);
+
+        // Get series if exists
+        let series: { _id: Id<"series">; name: string } | null = null;
+        if (book.seriesId) {
+          const seriesDoc = await ctx.db.get(book.seriesId);
+          if (seriesDoc) {
+            series = { _id: seriesDoc._id, name: seriesDoc.name };
+          }
+        }
+
+        return {
+          _id: book._id,
+          title: book.title,
+          coverImageR2Key: book.coverImageR2Key,
+          seriesOrder: book.seriesOrder,
+          averageRating: book.averageRating,
+          ratingCount: book.ratingCount,
+          authors,
+          series,
+          readAt: data.readAt,
+          userRating: data.rating,
+          userReviewText: data.reviewText,
+          isReviewPrivate: data.isReviewPrivate,
+          isReadPrivate: data.isReadPrivate,
+        };
+      })
+    );
+
+    return booksWithDetails.filter((b) => b !== null);
+  },
+});

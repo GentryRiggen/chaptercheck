@@ -2,8 +2,8 @@
 
 import { useClerk, useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "convex/react";
-import { ArrowLeft, HardDrive, Loader2 } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { ArrowLeft, Eye, EyeOff, HardDrive, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -44,6 +45,8 @@ export default function AccountPage() {
   const { signOut } = useClerk();
   const router = useRouter();
   const storageStats = useQuery(api.storageAccounts.queries.getStorageStats);
+  const currentUserData = useQuery(api.users.queries.getCurrentUserWithPermissions);
+  const updateProfilePrivacy = useMutation(api.users.mutations.updateProfilePrivacy);
 
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
@@ -284,6 +287,50 @@ export default function AccountPage() {
     </Card>
   );
 
+  // Privacy Card Component
+  const isProfilePrivate = currentUserData?.isProfilePrivate ?? false;
+
+  const handlePrivacyToggle = async (checked: boolean) => {
+    try {
+      await updateProfilePrivacy({ isProfilePrivate: checked });
+    } catch (err) {
+      console.error("Failed to update privacy setting:", err);
+    }
+  };
+
+  const PrivacyCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {isProfilePrivate ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          Profile Privacy
+        </CardTitle>
+        <CardDescription>Control who can see your profile and reading activity</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <label htmlFor="profile-privacy" className="text-sm font-medium">
+              Private profile
+            </label>
+            <p className="text-xs text-muted-foreground">
+              When enabled, only you can see your profile and library
+            </p>
+          </div>
+          <Switch
+            id="profile-privacy"
+            checked={isProfilePrivate}
+            onCheckedChange={handlePrivacyToggle}
+            disabled={currentUserData === undefined}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          You can also mark individual books as private when marking them as read.
+        </p>
+      </CardContent>
+    </Card>
+  );
+
   // Storage Usage Card Component
   const StorageCard = (
     <Card>
@@ -349,6 +396,7 @@ export default function AccountPage() {
             <TabsContent value="account" className="space-y-6">
               {ProfileCard}
               {EmailCard}
+              {PrivacyCard}
               {SignOutCard}
             </TabsContent>
             <TabsContent value="storage" className="space-y-6">
@@ -363,6 +411,7 @@ export default function AccountPage() {
           <div className="space-y-6">
             {ProfileCard}
             {EmailCard}
+            {PrivacyCard}
             {SignOutCard}
           </div>
 

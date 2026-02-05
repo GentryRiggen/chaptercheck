@@ -1,7 +1,8 @@
 "use client";
 
 import { useClerk, useUser } from "@clerk/nextjs";
-import { LogOut, Settings } from "lucide-react";
+import { useQuery } from "convex/react";
+import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { api } from "@/convex/_generated/api";
 import { useConfetti } from "@/hooks/useConfetti";
 import { useTripleClick } from "@/hooks/useTripleClick";
 
@@ -23,6 +25,7 @@ export function UserMenu() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const { fireConfetti } = useConfetti();
+  const convexUser = useQuery(api.users.queries.getCurrentUserWithPermissions);
   const { ref: versionRef, clickProps: versionClickProps } =
     useTripleClick<HTMLButtonElement>(fireConfetti);
 
@@ -57,6 +60,14 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {convexUser && (
+          <DropdownMenuItem asChild>
+            <Link href={`/users/${convexUser._id}`} className="cursor-pointer">
+              <User className="mr-2 h-4 w-4" />
+              View Profile
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <Link href="/account" className="cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
