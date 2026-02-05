@@ -34,7 +34,7 @@ async function getOrCreateBookUserData(ctx: MutationCtx, userId: Id<"users">, bo
 /**
  * Toggle read status for a book
  * If marking as read, sets readAt to current time
- * If unmarking, clears readAt
+ * If unmarking, clears readAt and also clears rating/review
  */
 export const markAsRead = mutation({
   args: { bookId: v.id("books") },
@@ -55,11 +55,24 @@ export const markAsRead = mutation({
     const now = Date.now();
     const newIsRead = !bookUserData.isRead;
 
-    await ctx.db.patch(bookUserData._id, {
-      isRead: newIsRead,
-      readAt: newIsRead ? now : undefined,
-      updatedAt: now,
-    });
+    if (newIsRead) {
+      // Marking as read
+      await ctx.db.patch(bookUserData._id, {
+        isRead: true,
+        readAt: now,
+        updatedAt: now,
+      });
+    } else {
+      // Unmarking as read - also clear rating and review
+      await ctx.db.patch(bookUserData._id, {
+        isRead: false,
+        readAt: undefined,
+        rating: undefined,
+        reviewText: undefined,
+        reviewedAt: undefined,
+        updatedAt: now,
+      });
+    }
 
     return { isRead: newIsRead };
   },

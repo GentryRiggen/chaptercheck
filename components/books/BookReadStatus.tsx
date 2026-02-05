@@ -1,13 +1,22 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { BookCheck, Check, Lock, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, BookCheck, Check, EyeOff, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { BookReviewDialog } from "@/components/books/BookReviewDialog";
 import { StarRating } from "@/components/books/StarRating";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
@@ -18,6 +27,7 @@ interface BookReadStatusProps {
 
 export function BookReadStatus({ bookId }: BookReadStatusProps) {
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [unmarkDialogOpen, setUnmarkDialogOpen] = useState(false);
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
   const [isUnmarking, setIsUnmarking] = useState(false);
   const [justMarked, setJustMarked] = useState(false);
@@ -43,11 +53,12 @@ export function BookReadStatus({ bookId }: BookReadStatusProps) {
     setReviewDialogOpen(open);
   };
 
-  const handleUnmarkAsRead = async () => {
+  const handleConfirmUnmark = async () => {
     setIsUnmarking(true);
     try {
       await markAsRead({ bookId });
       toast.success("Unmarked as read");
+      setUnmarkDialogOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update");
     } finally {
@@ -62,6 +73,8 @@ export function BookReadStatus({ bookId }: BookReadStatusProps) {
 
   const isRead = bookUserData?.isRead ?? false;
   const hasRating = bookUserData?.rating !== undefined;
+  const hasReview = !!bookUserData?.reviewText;
+  const hasRatingOrReview = hasRating || hasReview;
   const isPrivate = bookUserData?.isReadPrivate ?? false;
 
   // Not read state - show delightful "Mark as Read" button
@@ -84,22 +97,37 @@ export function BookReadStatus({ bookId }: BookReadStatusProps) {
   }
 
   // Read state - show completed badge with options
+  const ReadButton = (
+    <Button
+      variant="delicious"
+      size="sm"
+      onClick={() => setUnmarkDialogOpen(true)}
+      disabled={isUnmarking}
+      className={cn("rounded-full", justMarked && "animate-bounce")}
+    >
+      <Check className={cn("h-4 w-4", isUnmarking && "animate-pulse")} />
+      {isUnmarking ? "..." : "Read"}
+      {isPrivate && !isUnmarking && <EyeOff className="h-3 w-3 opacity-80" />}
+    </Button>
+  );
+
   return (
     <>
       <div className="flex items-center gap-2">
         {/* Completed badge - clickable to unmark */}
-        <Button
-          variant="delicious"
-          size="sm"
-          onClick={handleUnmarkAsRead}
-          disabled={isUnmarking}
-          title="Click to unmark as read"
-          className={cn("rounded-full", justMarked && "animate-bounce")}
-        >
-          <Check className={cn("h-4 w-4", isUnmarking && "animate-pulse")} />
-          {isUnmarking ? "..." : "Read"}
-          {isPrivate && !isUnmarking && <Lock className="h-3 w-3 opacity-80" />}
-        </Button>
+        {isPrivate ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>{ReadButton}</TooltipTrigger>
+              <TooltipContent className="flex items-center gap-2 bg-muted text-muted-foreground">
+                <EyeOff className="h-3.5 w-3.5" />
+                <span>Only you can see that you&apos;ve read this</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          ReadButton
+        )}
 
         {/* Rating display or add rating button */}
         {hasRating ? (
@@ -140,6 +168,50 @@ export function BookReadStatus({ bookId }: BookReadStatusProps) {
         isMarkingAsRead={isMarkingAsRead}
         initialData={bookUserData ?? undefined}
       />
+
+      {/* Unmark confirmation dialog */}
+      <Dialog open={unmarkDialogOpen} onOpenChange={setUnmarkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unmark as Read?</DialogTitle>
+            <DialogDescription>
+              This will remove this book from your reading history.
+            </DialogDescription>
+          </DialogHeader>
+
+          {hasRatingOrReview && (
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
+              <div className="space-y-1">
+                <p className="font-medium text-destructive">
+                  Your rating and review will be permanently deleted
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {hasRating && hasReview
+                    ? "Your star rating and written review will be lost."
+                    : hasRating
+                      ? "Your star rating will be lost."
+                      : "Your written review will be lost."}{" "}
+                  This action cannot be undone.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setUnmarkDialogOpen(false)}
+              disabled={isUnmarking}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmUnmark} disabled={isUnmarking}>
+              {isUnmarking ? "Removing..." : "Unmark as Read"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

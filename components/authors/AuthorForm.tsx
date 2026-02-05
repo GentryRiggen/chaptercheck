@@ -172,14 +172,14 @@ export function AuthorForm({
         />
 
         <div className="flex gap-4">
-          <Button type="submit" className="flex-1" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Saving..." : submitLabel}
-          </Button>
           {onCancel && (
             <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
               Cancel
             </Button>
           )}
+          <Button type="submit" className="flex-1" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Saving..." : submitLabel}
+          </Button>
         </div>
       </form>
     </Form>

@@ -3,7 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { MessageSquarePlus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
@@ -41,6 +41,20 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
     bookId,
     paginationOpts: { numItems: PAGE_SIZE, cursor: cursor ?? null },
   });
+
+  // Track the user's reviewedAt to detect when their review is deleted
+  const prevReviewedAt = useRef(myBookData?.reviewedAt);
+
+  // Reset cache when user's review is deleted (reviewedAt goes from defined to undefined)
+  useEffect(() => {
+    const currentReviewedAt = myBookData?.reviewedAt;
+    if (prevReviewedAt.current !== undefined && currentReviewedAt === undefined) {
+      // Review was deleted - reset the cache
+      setCursor(null);
+      setAllReviews([]);
+    }
+    prevReviewedAt.current = currentReviewedAt;
+  }, [myBookData?.reviewedAt]);
 
   // Initial load: set reviews when first page arrives
   const isInitialLoad = cursor === null && reviewsResult !== undefined;
@@ -81,6 +95,14 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
   const hasPrivateReview =
     myBookData?.isReviewPrivate && (myBookData.rating !== undefined || myBookData.reviewText);
 
+  // Check if book is not yet marked as read (show "marking as read" callout)
+  const isNotRead = !myBookData?.isRead;
+
+  // Check if user already has a review (rating or text)
+  const hasExistingReview =
+    myBookData?.rating !== undefined ||
+    (myBookData?.reviewText && myBookData.reviewText.length > 0);
+
   const handleEdit = () => {
     setReviewDialogOpen(true);
   };
@@ -97,14 +119,14 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
 
   return (
     <div className="space-y-4">
-      {/* Write a Review button */}
+      {/* Write/Edit Review button */}
       <Button
         variant="outline"
         onClick={() => setReviewDialogOpen(true)}
         className="w-full sm:w-auto"
       >
         <MessageSquarePlus className="mr-2 h-4 w-4" />
-        Write a Review
+        {hasExistingReview ? "Edit my Review" : "Write a Review"}
       </Button>
 
       {/* Reviews list */}
@@ -169,6 +191,7 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
         open={reviewDialogOpen}
         onOpenChange={handleDialogClose}
         bookId={bookId}
+        isMarkingAsRead={isNotRead}
         initialData={
           myBookData
             ? {

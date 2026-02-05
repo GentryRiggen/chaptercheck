@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
-import { BookCheck, EyeOff, Globe, Lock } from "lucide-react";
+import { BookCheck, EyeOff, Lock } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
@@ -211,19 +211,13 @@ export function BookReviewDialog({
                     </FormControl>
                     <div className="flex-1 space-y-1 leading-none">
                       <FormLabel className="flex items-center gap-2">
-                        {field.value ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Globe className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        {field.value ? "Keep my review private" : "Share my review publicly"}
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        Keep my review private
                       </FormLabel>
                       <FormDescription className="text-xs">
                         {isReadPrivate
                           ? "Automatically private because your read status is hidden."
-                          : field.value
-                            ? "Only you can see your rating and review. It won't appear on the book page or contribute to the public average."
-                            : "Your rating and review will be visible to others on the book page and included in the average rating."}
+                          : "Your review is public by default. Check this to hide your rating and review from others."}
                       </FormDescription>
                     </div>
                     <FormMessage />
@@ -233,13 +227,6 @@ export function BookReviewDialog({
             </div>
 
             <div className="flex gap-4 pt-2">
-              <Button type="submit" className="flex-1" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting
-                  ? "Saving..."
-                  : isMarkingAsRead
-                    ? "Mark as Read"
-                    : "Save"}
-              </Button>
               <Button
                 type="button"
                 variant="secondary"
@@ -247,6 +234,13 @@ export function BookReviewDialog({
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
+              </Button>
+              <Button type="submit" className="flex-1" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting
+                  ? "Saving..."
+                  : isMarkingAsRead
+                    ? "Mark as Read"
+                    : "Save"}
               </Button>
             </div>
           </form>
