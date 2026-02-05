@@ -141,4 +141,32 @@ export default defineSchema({
     .index("by_uploadedBy", ["uploadedBy"])
     .index("by_storageAccount", ["storageAccountId"])
     .index("by_storageAccount_and_book", ["storageAccountId", "bookId"]),
+
+  // Book User Data (read status, ratings, reviews)
+  bookUserData: defineTable({
+    userId: v.id("users"),
+    bookId: v.id("books"),
+
+    // Read status
+    isRead: v.boolean(),
+    readAt: v.optional(v.number()),
+
+    // Rating & Review
+    rating: v.optional(v.number()), // 1, 2, or 3 stars
+    reviewText: v.optional(v.string()),
+    reviewedAt: v.optional(v.number()),
+
+    // Privacy
+    isReadPrivate: v.boolean(), // default: false
+    isReviewPrivate: v.boolean(), // default: false
+    // Invariant: isReadPrivate=true forces isReviewPrivate=true
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_and_book", ["userId", "bookId"]) // Primary lookup
+    .index("by_user", ["userId"]) // User's library
+    .index("by_book", ["bookId"]) // Book's reviews
+    .index("by_user_and_reviewedAt", ["userId", "reviewedAt"]) // Profile
+    .index("by_book_and_reviewedAt", ["bookId", "reviewedAt"]), // Book page
 });

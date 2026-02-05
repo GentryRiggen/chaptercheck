@@ -10,6 +10,7 @@ import { AudioUpload } from "@/components/audio/AudioUpload";
 import { BookCover } from "@/components/books/BookCover";
 import { BookDeleteDialog } from "@/components/books/BookDeleteDialog";
 import { BookEditDialog } from "@/components/books/BookEditDialog";
+import { BookReadStatus } from "@/components/books/BookReadStatus";
 import { PremiumGate, RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,7 +83,12 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
         </Link>
 
         {/* Hero section - always side by side */}
-        <div className="mb-6 flex gap-4 sm:gap-6">
+        <div className="relative mb-6 flex gap-4 sm:gap-6">
+          {/* Mark as Read - top right */}
+          <div className="absolute -top-1 right-0 z-10">
+            <BookReadStatus bookId={bookId} />
+          </div>
+
           {/* Fixed-size cover */}
           <div className="flex-shrink-0">
             <BookCover
@@ -94,7 +100,7 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
           </div>
 
           {/* Book info */}
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pr-32 sm:pr-36">
             {book.series && (
               <p className="mb-1 text-sm italic text-muted-foreground">
                 <Link

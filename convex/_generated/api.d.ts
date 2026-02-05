@@ -15,6 +15,8 @@ import type * as audioFiles_queries from "../audioFiles/queries.js";
 import type * as auth_clerkWebhook from "../auth/clerkWebhook.js";
 import type * as authors_mutations from "../authors/mutations.js";
 import type * as authors_queries from "../authors/queries.js";
+import type * as bookUserData_mutations from "../bookUserData/mutations.js";
+import type * as bookUserData_queries from "../bookUserData/queries.js";
 import type * as books_mutations from "../books/mutations.js";
 import type * as books_queries from "../books/queries.js";
 import type * as http from "../http.js";
@@ -49,6 +51,8 @@ declare const fullApi: ApiFromModules<{
   "auth/clerkWebhook": typeof auth_clerkWebhook;
   "authors/mutations": typeof authors_mutations;
   "authors/queries": typeof authors_queries;
+  "bookUserData/mutations": typeof bookUserData_mutations;
+  "bookUserData/queries": typeof bookUserData_queries;
   "books/mutations": typeof books_mutations;
   "books/queries": typeof books_queries;
   http: typeof http;

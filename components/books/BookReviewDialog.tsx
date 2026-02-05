@@ -1,0 +1,238 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "convex/react";
+import { BookCheck } from "lucide-react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/convex/_generated/api";
+import { type Id } from "@/convex/_generated/dataModel";
+import { cn } from "@/lib/utils";
+import { type ReviewFormData, reviewSchema } from "@/lib/validations/review";
+
+import { StarRating } from "./StarRating";
+
+interface BookReviewDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  bookId: Id<"books">;
+  /** When true, shows "marking as read" indication */
+  isMarkingAsRead?: boolean;
+  initialData?: {
+    rating?: number;
+    reviewText?: string;
+    isReadPrivate: boolean;
+    isReviewPrivate: boolean;
+  };
+}
+
+export function BookReviewDialog({
+  open,
+  onOpenChange,
+  bookId,
+  isMarkingAsRead = false,
+  initialData,
+}: BookReviewDialogProps) {
+  const saveReview = useMutation(api.bookUserData.mutations.saveReview);
+
+  const form = useForm<ReviewFormData>({
+    resolver: zodResolver(reviewSchema),
+    defaultValues: {
+      rating: initialData?.rating ?? 0,
+      reviewText: initialData?.reviewText ?? "",
+      isReadPrivate: initialData?.isReadPrivate ?? false,
+      isReviewPrivate: initialData?.isReviewPrivate ?? false,
+    },
+  });
+
+  // Reset form when dialog opens with new data
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        rating: initialData?.rating ?? 0,
+        reviewText: initialData?.reviewText ?? "",
+        isReadPrivate: initialData?.isReadPrivate ?? false,
+        isReviewPrivate: initialData?.isReviewPrivate ?? false,
+      });
+    }
+  }, [open, initialData, form]);
+
+  const isReadPrivate = form.watch("isReadPrivate");
+
+  // Auto-check "Keep review private" when "Keep read status private" is checked
+  useEffect(() => {
+    if (isReadPrivate) {
+      form.setValue("isReviewPrivate", true);
+    }
+  }, [isReadPrivate, form]);
+
+  const handleSubmit = async (values: ReviewFormData) => {
+    await saveReview({
+      bookId,
+      // Convert 0 rating to undefined (no rating)
+      rating: values.rating > 0 ? values.rating : undefined,
+      reviewText: values.reviewText || undefined,
+      isReadPrivate: values.isReadPrivate,
+      isReviewPrivate: values.isReviewPrivate,
+    });
+    onOpenChange(false);
+  };
+
+  const onFormSubmit = (e: React.FormEvent) => {
+    e.stopPropagation();
+    form.handleSubmit(handleSubmit)(e);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{isMarkingAsRead ? "Mark as Read" : "Rate and Review"}</DialogTitle>
+          <DialogDescription>
+            {isMarkingAsRead
+              ? "Add a rating or review (optional)."
+              : "Share your thoughts about this book."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Marking as read indicator */}
+        {isMarkingAsRead && (
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-lg px-3 py-2",
+              "bg-gradient-to-r from-[#ff0099]/10 to-[#00e5ff]/10",
+              "border border-[#ff0099]/20"
+            )}
+          >
+            <BookCheck className="h-4 w-4 text-[#ff0099]" />
+            <span className="text-sm font-medium text-[#ff0099]">
+              This book will be marked as read
+            </span>
+          </div>
+        )}
+
+        <Form {...form}>
+          <form onSubmit={onFormSubmit} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="rating"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rating</FormLabel>
+                  <FormControl>
+                    <StarRating value={field.value} onChange={field.onChange} />
+                  </FormControl>
+                  <FormDescription>Click a star to rate, click again to clear.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="reviewText"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Review (optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Write your review..."
+                      rows={4}
+                      maxLength={2000}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>{field.value?.length ?? 0} / 2000 characters</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="isReadPrivate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Keep read status private</FormLabel>
+                      <FormDescription>
+                        Others won&apos;t see that you&apos;ve read this book.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isReviewPrivate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isReadPrivate}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Keep review private</FormLabel>
+                      <FormDescription>
+                        {isReadPrivate
+                          ? "Review is automatically private when read status is private."
+                          : "Others won't see your rating or review."}
+                      </FormDescription>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex gap-4 pt-2">
+              <Button type="submit" className="flex-1" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting
+                  ? "Saving..."
+                  : isMarkingAsRead
+                    ? "Mark as Read"
+                    : "Save"}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
