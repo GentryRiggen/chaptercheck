@@ -2,7 +2,8 @@
 
 import { useClerk, useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { ArrowLeft, HardDrive, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -27,14 +28,22 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "@/convex/_generated/api";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { formatBytes } from "@/lib/utils";
 import { type AccountSettingsFormValues, accountSettingsSchema } from "@/lib/validations/auth";
+
+// 2 TB storage limit (display only)
+const STORAGE_LIMIT_BYTES = 2 * 1024 * 1024 * 1024 * 1024;
 
 export default function AccountPage() {
   usePageTitle("Account");
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();
+  const storageStats = useQuery(api.storageAccounts.queries.getStorageStats);
 
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
@@ -186,10 +195,142 @@ export default function AccountPage() {
     setEmailError(undefined);
   };
 
+  // Profile Card Component
+  const ProfileCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Profile</CardTitle>
+        <CardDescription>Update your personal information</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleProfileSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="firstName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>First name</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={isUpdatingProfile} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last name</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={isUpdatingProfile} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex items-center gap-4">
+              <Button type="submit" disabled={isUpdatingProfile}>
+                {isUpdatingProfile ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+              {profileSuccess && <span className="text-sm text-green-600">Profile updated!</span>}
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+
+  // Email Card Component
+  const EmailCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Email</CardTitle>
+        <CardDescription>Manage your email address</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <p className="text-sm text-muted-foreground">Current email</p>
+          <p className="font-medium">{user.primaryEmailAddress?.emailAddress}</p>
+        </div>
+        <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
+          Change email
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  // Sign Out Card Component
+  const SignOutCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sign Out</CardTitle>
+        <CardDescription>Sign out of your account</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button variant="destructive" onClick={handleSignOut}>
+          Sign out
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  // Storage Usage Card Component
+  const StorageCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <HardDrive className="h-5 w-5" />
+          Storage Usage
+        </CardTitle>
+        <CardDescription>Your audiobook library storage</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {storageStats === undefined ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Loading storage info...</span>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {formatBytes(storageStats.totalBytesUsed)} of {formatBytes(STORAGE_LIMIT_BYTES)}
+                </span>
+                <span className="font-medium">
+                  {((storageStats.totalBytesUsed / STORAGE_LIMIT_BYTES) * 100).toFixed(1)}%
+                </span>
+              </div>
+              <Progress
+                value={(storageStats.totalBytesUsed / STORAGE_LIMIT_BYTES) * 100}
+                className="h-2"
+              />
+            </div>
+            <div className="flex items-center justify-between border-t pt-4">
+              <span className="text-sm text-muted-foreground">Total files</span>
+              <span className="font-medium">{storageStats.fileCount.toLocaleString()}</span>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-2xl space-y-6 p-4 pb-24 sm:p-6 lg:p-8">
-        <div className="flex items-center gap-4">
+      <div className="mx-auto max-w-4xl p-4 pb-24 sm:p-6 lg:p-8">
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/">
               <ArrowLeft className="h-4 w-4" />
@@ -198,89 +339,39 @@ export default function AccountPage() {
           <h1 className="text-2xl font-bold">Account Settings</h1>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Update your personal information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleProfileSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First name</FormLabel>
-                      <FormControl>
-                        <Input {...field} disabled={isUpdatingProfile} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last name</FormLabel>
-                      <FormControl>
-                        <Input {...field} disabled={isUpdatingProfile} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex items-center gap-4">
-                  <Button type="submit" disabled={isUpdatingProfile}>
-                    {isUpdatingProfile ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save changes"
-                    )}
-                  </Button>
-                  {profileSuccess && (
-                    <span className="text-sm text-green-600">Profile updated!</span>
-                  )}
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+        {/* Mobile Layout - Tabbed Interface */}
+        <div className="block md:hidden">
+          <Tabs defaultValue="account" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="account">Account</TabsTrigger>
+              <TabsTrigger value="storage">Storage</TabsTrigger>
+            </TabsList>
+            <TabsContent value="account" className="space-y-6">
+              {ProfileCard}
+              {EmailCard}
+              {SignOutCard}
+            </TabsContent>
+            <TabsContent value="storage" className="space-y-6">
+              {StorageCard}
+            </TabsContent>
+          </Tabs>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Email</CardTitle>
-            <CardDescription>Manage your email address</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Current email</p>
-              <p className="font-medium">{user.primaryEmailAddress?.emailAddress}</p>
-            </div>
-            <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
-              Change email
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Desktop Layout - Two Column */}
+        <div className="hidden md:grid md:grid-cols-2 md:gap-6">
+          {/* Left Column - Account Cards */}
+          <div className="space-y-6">
+            {ProfileCard}
+            {EmailCard}
+            {SignOutCard}
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign Out</CardTitle>
-            <CardDescription>Sign out of your account</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="destructive" onClick={handleSignOut}>
-              Sign out
-            </Button>
-          </CardContent>
-        </Card>
+          {/* Right Column - Storage Card */}
+          <div className="space-y-6">{StorageCard}</div>
+        </div>
       </div>
 
+      {/* Email Change Dialog */}
       <Dialog open={emailDialogOpen} onOpenChange={closeEmailDialog}>
         <DialogContent>
           <DialogHeader>
