@@ -132,8 +132,8 @@ export const getRecentBooks = query({
     const limit = args.limit ?? 6;
     const books = await ctx.db.query("books").order("desc").take(limit);
 
-    // Enrich with authors
-    const booksWithAuthors = await Promise.all(
+    // Enrich with authors and series
+    const booksWithDetails = await Promise.all(
       books.map(async (book) => {
         const bookAuthors = await ctx.db
           .query("bookAuthors")
@@ -147,14 +147,17 @@ export const getRecentBooks = query({
           })
         );
 
+        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
+
         return {
           ...book,
           authors: authors.filter((a) => a !== null),
+          series: series ? { _id: series._id, name: series.name } : null,
         };
       })
     );
 
-    return booksWithAuthors;
+    return booksWithDetails;
   },
 });
 

@@ -64,7 +64,34 @@ export const getRecentAuthors = query({
   handler: async (ctx, args) => {
     await requireAuth(ctx);
     const limit = args.limit ?? 6;
-    return await ctx.db.query("authors").order("desc").take(limit);
+    const authors = await ctx.db.query("authors").order("desc").take(limit);
+
+    // Enrich with book and series counts
+    const authorsWithCounts = await Promise.all(
+      authors.map(async (author) => {
+        const bookAuthors = await ctx.db
+          .query("bookAuthors")
+          .withIndex("by_author", (q) => q.eq("authorId", author._id))
+          .collect();
+
+        // Count unique series
+        const seriesIds = new Set<string>();
+        for (const ba of bookAuthors) {
+          const book = await ctx.db.get(ba.bookId);
+          if (book?.seriesId) {
+            seriesIds.add(book.seriesId);
+          }
+        }
+
+        return {
+          ...author,
+          bookCount: bookAuthors.length,
+          seriesCount: seriesIds.size,
+        };
+      })
+    );
+
+    return authorsWithCounts;
   },
 });
 

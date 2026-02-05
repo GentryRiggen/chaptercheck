@@ -5,20 +5,20 @@ import { useQuery } from "convex/react";
 import { ArrowRight, BarChart3, BookOpen, Library, Star, Users } from "lucide-react";
 import Link from "next/link";
 
-import { AuthorImage } from "@/components/authors/AuthorImage";
-import { BookCover } from "@/components/books/BookCover";
+import { AuthorCard } from "@/components/authors/AuthorCard";
+import { BookCard } from "@/components/books/BookCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 function RecentBooks() {
-  const books = useQuery(api.books.queries.getRecentBooks, { limit: 4 });
+  const books = useQuery(api.books.queries.getRecentBooks, { limit: 6 });
 
   if (books === undefined) {
     return (
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-3 gap-4 md:grid-cols-6">
+        {[...Array(6)].map((_, i) => (
           <div key={i} className="animate-pulse">
             <div className="mb-2 aspect-[2/3] rounded-lg bg-muted" />
             <div className="mb-1 h-4 w-3/4 rounded bg-muted" />
@@ -44,26 +44,9 @@ function RecentBooks() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div className="grid grid-cols-3 gap-4 md:grid-cols-6">
       {books.map((book) => (
-        <Link key={book._id} href={`/books/${book._id}`} className="group">
-          <div className="overflow-hidden rounded-lg shadow-md transition-shadow group-hover:shadow-xl">
-            <BookCover
-              coverImageR2Key={book.coverImageR2Key}
-              title={book.title}
-              size="lg"
-              className="aspect-[2/3] w-full"
-            />
-          </div>
-          <h3 className="mt-2 line-clamp-1 font-medium transition-colors group-hover:text-primary">
-            {book.title}
-          </h3>
-          {book.authors && book.authors.length > 0 && (
-            <p className="line-clamp-1 text-sm text-muted-foreground">
-              {book.authors.map((a) => a.name).join(", ")}
-            </p>
-          )}
-        </Link>
+        <BookCard key={book._id} book={book} />
       ))}
     </div>
   );
@@ -102,19 +85,7 @@ function RecentAuthors() {
   return (
     <div className="grid grid-cols-3 gap-4 md:grid-cols-6">
       {authors.map((author) => (
-        <Link key={author._id} href={`/authors/${author._id}`} className="group text-center">
-          <div className="mx-auto h-16 w-16 md:h-20 md:w-20">
-            <AuthorImage
-              imageR2Key={author.imageR2Key}
-              name={author.name}
-              size="lg"
-              className="h-full w-full ring-primary transition-all group-hover:ring-2"
-            />
-          </div>
-          <p className="mt-2 line-clamp-1 text-sm font-medium transition-colors group-hover:text-primary">
-            {author.name}
-          </p>
-        </Link>
+        <AuthorCard key={author._id} author={author} variant="compact" />
       ))}
     </div>
   );

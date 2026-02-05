@@ -8,7 +8,7 @@ interface StarRatingProps {
   value: number;
   onChange?: (value: number) => void;
   readonly?: boolean;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
 }
 
 export function StarRating({ value, onChange, readonly = false, size = "md" }: StarRatingProps) {
@@ -24,7 +24,7 @@ export function StarRating({ value, onChange, readonly = false, size = "md" }: S
     }
   };
 
-  const iconSize = size === "sm" ? "h-4 w-4" : "h-6 w-6";
+  const iconSize = size === "xs" ? "h-3 w-3" : size === "sm" ? "h-4 w-4" : "h-6 w-6";
 
   return (
     <div className="flex gap-1">

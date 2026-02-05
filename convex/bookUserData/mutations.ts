@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { type Id } from "../_generated/dataModel";
 import { mutation, type MutationCtx } from "../_generated/server";
 import { requireAdminMutation, requireAuthMutation } from "../lib/auth";
+import { recalculateBookRating } from "../lib/bookRatings";
 
 /**
  * Helper to get or create bookUserData for a user/book combination
@@ -64,6 +65,8 @@ export const markAsRead = mutation({
       });
     } else {
       // Unmarking as read - also clear rating and review
+      const hadRating = bookUserData.rating !== undefined;
+
       await ctx.db.patch(bookUserData._id, {
         isRead: false,
         readAt: undefined,
@@ -72,6 +75,11 @@ export const markAsRead = mutation({
         reviewedAt: undefined,
         updatedAt: now,
       });
+
+      // Recalculate book rating if this user had a rating
+      if (hadRating) {
+        await recalculateBookRating(ctx, args.bookId);
+      }
     }
 
     return { isRead: newIsRead };
@@ -115,6 +123,7 @@ export const saveReview = mutation({
 
     const now = Date.now();
     const hasReviewContent = args.rating !== undefined || args.reviewText;
+    const ratingChanged = bookUserData.rating !== args.rating;
 
     // Always mark as read when saving a review, set readAt if not already set
     await ctx.db.patch(bookUserData._id, {
@@ -127,6 +136,11 @@ export const saveReview = mutation({
       isReviewPrivate,
       updatedAt: now,
     });
+
+    // Recalculate book rating if the rating changed
+    if (ratingChanged) {
+      await recalculateBookRating(ctx, args.bookId);
+    }
 
     return { success: true };
   },
@@ -203,7 +217,14 @@ export const deleteBookUserData = mutation({
       return { success: true, deleted: false };
     }
 
+    const hadRating = bookUserData.rating !== undefined;
+
     await ctx.db.delete(bookUserData._id);
+
+    // Recalculate book rating if this user had a rating
+    if (hadRating) {
+      await recalculateBookRating(ctx, args.bookId);
+    }
 
     return { success: true, deleted: true };
   },
@@ -225,6 +246,9 @@ export const adminDeleteReview = mutation({
       throw new Error("Review not found");
     }
 
+    const hadRating = bookUserData.rating !== undefined;
+    const bookId = bookUserData.bookId;
+
     // Clear only review-related fields, preserve read status
     await ctx.db.patch(args.bookUserDataId, {
       rating: undefined,
@@ -232,6 +256,11 @@ export const adminDeleteReview = mutation({
       reviewedAt: undefined,
       updatedAt: Date.now(),
     });
+
+    // Recalculate book rating if this review had a rating
+    if (hadRating) {
+      await recalculateBookRating(ctx, bookId);
+    }
 
     return { success: true };
   },

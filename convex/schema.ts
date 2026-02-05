@@ -84,6 +84,9 @@ export default defineSchema({
     // Series relationship
     seriesId: v.optional(v.id("series")),
     seriesOrder: v.optional(v.number()), // Supports decimals (e.g., 2.5 for novellas)
+    // Denormalized rating stats (updated when reviews change)
+    averageRating: v.optional(v.number()), // Average of all ratings (1-3 scale)
+    ratingCount: v.optional(v.number()), // Number of ratings
     // Migration-ready
     firebaseId: v.optional(v.string()),
     createdAt: v.number(),

@@ -49,8 +49,8 @@ export function ReviewCard({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border/50 bg-card/25 p-4 backdrop-blur-sm",
-        isOwnReview && "border-primary/30 bg-primary/5",
+        "rounded-lg border border-border/50 bg-card/25 p-4 shadow-sm backdrop-blur-sm",
+        isOwnReview && "border-primary/30 bg-primary/5 shadow-primary/5",
         isPrivate && "border-dashed border-muted-foreground/30 bg-muted/20"
       )}
     >

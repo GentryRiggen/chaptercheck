@@ -5,8 +5,10 @@ import { Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { BookCard } from "@/components/books/BookCard";
 import { BookCover } from "@/components/books/BookCover";
 import { BookDialog } from "@/components/books/BookDialog";
+import { StarRating } from "@/components/books/StarRating";
 import { RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,6 +153,16 @@ export default function BooksPage() {
                         {book.seriesOrder !== undefined && ` #${book.seriesOrder}`}
                       </p>
                     )}
+                    {book.averageRating !== undefined &&
+                      book.ratingCount !== undefined &&
+                      book.ratingCount > 0 && (
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          <StarRating value={Math.round(book.averageRating)} readonly size="xs" />
+                          <span className="text-[10px] text-muted-foreground">
+                            ({book.ratingCount})
+                          </span>
+                        </div>
+                      )}
                   </div>
                 </Link>
               ))}
@@ -159,37 +171,7 @@ export default function BooksPage() {
             {/* Desktop card grid */}
             <div className="hidden gap-4 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {books?.map((book) => (
-                <Link
-                  key={book._id}
-                  href={`/books/${book._id}`}
-                  className="group relative overflow-hidden rounded-xl bg-card/50 p-3 shadow-sm ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 hover:ring-primary/30"
-                >
-                  <div className="relative mb-3 overflow-hidden rounded-lg">
-                    <BookCover
-                      coverImageR2Key={book.coverImageR2Key}
-                      title={book.title}
-                      size="card"
-                      className="transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                  </div>
-                  <div className="space-y-1">
-                    <h2 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">
-                      {book.title}
-                    </h2>
-                    {book.authors && book.authors.length > 0 && (
-                      <p className="line-clamp-1 text-xs text-muted-foreground">
-                        {book.authors.map((a) => a.name).join(", ")}
-                      </p>
-                    )}
-                    {book.series && (
-                      <p className="line-clamp-1 text-[10px] italic text-primary/80">
-                        {book.series.name}
-                        {book.seriesOrder !== undefined && ` #${book.seriesOrder}`}
-                      </p>
-                    )}
-                  </div>
-                </Link>
+                <BookCard key={book._id} book={book} />
               ))}
             </div>
           </>
