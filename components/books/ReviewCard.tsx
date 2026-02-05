@@ -1,6 +1,6 @@
 "use client";
 
-import { EyeOff, Pencil } from "lucide-react";
+import { EyeOff, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -25,9 +25,18 @@ interface ReviewCardProps {
   isOwnReview: boolean;
   isPrivate?: boolean;
   onEdit?: () => void;
+  isAdmin?: boolean;
+  onDelete?: () => void;
 }
 
-export function ReviewCard({ review, isOwnReview, isPrivate, onEdit }: ReviewCardProps) {
+export function ReviewCard({
+  review,
+  isOwnReview,
+  isPrivate,
+  onEdit,
+  isAdmin,
+  onDelete,
+}: ReviewCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const userName = review.user?.name || "Anonymous";
@@ -75,12 +84,24 @@ export function ReviewCard({ review, isOwnReview, isPrivate, onEdit }: ReviewCar
           </div>
         </div>
 
-        {isOwnReview && onEdit && (
-          <Button variant="ghost" size="sm" onClick={onEdit} className="h-8 px-2">
-            <Pencil className="mr-1 h-3 w-3" />
-            Edit
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {isOwnReview && onEdit && (
+            <Button variant="ghost" size="sm" onClick={onEdit} className="h-8 px-2">
+              <Pencil className="mr-1 h-3 w-3" />
+              Edit
+            </Button>
+          )}
+          {isAdmin && !isOwnReview && onDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onDelete}
+              className="h-8 px-2 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Review text */}

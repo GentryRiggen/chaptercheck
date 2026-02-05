@@ -1,11 +1,20 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
-import { MessageSquarePlus } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { AlertTriangle, MessageSquarePlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 
@@ -32,9 +41,23 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
       user: { _id: Id<"users">; name?: string; imageUrl?: string } | null;
     }>
   >([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<{
+    _id: Id<"bookUserData">;
+    userName: string;
+    reviewText?: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Get current user's book data for editing
   const myBookData = useQuery(api.bookUserData.queries.getMyBookData, { bookId });
+
+  // Get current user permissions for admin check
+  const currentUser = useQuery(api.users.queries.getCurrentUserWithPermissions, {});
+  const isAdmin = currentUser?.permissions?.isAdmin ?? false;
+
+  // Admin delete mutation
+  const adminDeleteReview = useMutation(api.bookUserData.mutations.adminDeleteReview);
 
   // Fetch reviews with pagination
   const reviewsResult = useQuery(api.bookUserData.queries.getPublicReviewsForBookPaginated, {
@@ -115,6 +138,38 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
     }
   };
 
+  const handleDeleteReview = (review: {
+    _id: Id<"bookUserData">;
+    user: { name?: string } | null;
+    reviewText?: string;
+  }) => {
+    setReviewToDelete({
+      _id: review._id,
+      userName: review.user?.name ?? "Anonymous",
+      reviewText: review.reviewText,
+    });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!reviewToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await adminDeleteReview({ bookUserDataId: reviewToDelete._id });
+      toast.success("Review deleted");
+      setDeleteDialogOpen(false);
+      setReviewToDelete(null);
+      // Reset pagination to refetch fresh data
+      setCursor(null);
+      setAllReviews([]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete review");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Write a Review button - only shown when user has no review */}
@@ -180,7 +235,13 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
               {displayReviews
                 .filter((review) => !review.isOwnReview)
                 .map((review) => (
-                  <ReviewCard key={review._id} review={review} isOwnReview={false} />
+                  <ReviewCard
+                    key={review._id}
+                    review={review}
+                    isOwnReview={false}
+                    isAdmin={isAdmin}
+                    onDelete={() => handleDeleteReview(review)}
+                  />
                 ))}
             </div>
           )}
@@ -216,6 +277,43 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
             : undefined
         }
       />
+
+      {/* Admin Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Review?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete {reviewToDelete?.userName}&apos;s review.
+            </DialogDescription>
+          </DialogHeader>
+
+          {reviewToDelete?.reviewText && (
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
+              <div className="space-y-1">
+                <p className="font-medium text-destructive">Review preview</p>
+                <p className="line-clamp-3 text-sm text-muted-foreground">
+                  {reviewToDelete.reviewText}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete Review"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

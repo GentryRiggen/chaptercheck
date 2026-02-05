@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import { type Id } from "../_generated/dataModel";
 import { mutation, type MutationCtx } from "../_generated/server";
-import { requireAuthMutation } from "../lib/auth";
+import { requireAdminMutation, requireAuthMutation } from "../lib/auth";
 
 /**
  * Helper to get or create bookUserData for a user/book combination
@@ -206,5 +206,33 @@ export const deleteBookUserData = mutation({
     await ctx.db.delete(bookUserData._id);
 
     return { success: true, deleted: true };
+  },
+});
+
+/**
+ * Admin-only: Delete any user's review
+ * Clears rating/reviewText/reviewedAt but preserves isRead status
+ */
+export const adminDeleteReview = mutation({
+  args: {
+    bookUserDataId: v.id("bookUserData"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminMutation(ctx);
+
+    const bookUserData = await ctx.db.get(args.bookUserDataId);
+    if (!bookUserData) {
+      throw new Error("Review not found");
+    }
+
+    // Clear only review-related fields, preserve read status
+    await ctx.db.patch(args.bookUserDataId, {
+      rating: undefined,
+      reviewText: undefined,
+      reviewedAt: undefined,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });
