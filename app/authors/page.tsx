@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { Loader2, Plus, Search } from "lucide-react";
+import { ArrowUpDown, Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -11,6 +11,13 @@ import { AuthorImage } from "@/components/authors/AuthorImage";
 import { RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -24,6 +31,7 @@ export default function AuthorsPage() {
   const { shouldSkipQuery } = useAuthReady();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
+  const [sort, setSort] = useState<"name_asc" | "name_desc" | "recent">("name_asc");
   const debouncedSearch = useDebounce(searchInput, 300);
   const scrolled = useScrolled();
 
@@ -39,7 +47,7 @@ export default function AuthorsPage() {
     loadMore,
   } = usePaginatedList(
     api.authors.queries.listAuthors,
-    {},
+    { sort },
     { skip: shouldSkipQuery || isSearching }
   );
 
@@ -90,6 +98,24 @@ export default function AuthorsPage() {
                 )}
               />
             </div>
+            {!isSearching && (
+              <Select value={sort} onValueChange={(v: typeof sort) => setSort(v)}>
+                <SelectTrigger
+                  className={cn(
+                    "w-[130px] shrink-0 transition-all duration-200",
+                    scrolled ? "h-7" : "h-8"
+                  )}
+                >
+                  <ArrowUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name_asc">Name A-Z</SelectItem>
+                  <SelectItem value="name_desc">Name Z-A</SelectItem>
+                  <SelectItem value="recent">Recently Added</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             <RoleGate minRole="editor">
               <Button
                 onClick={() => setDialogOpen(true)}

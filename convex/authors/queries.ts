@@ -15,16 +15,28 @@ export const getAuthor = query({
   },
 });
 
-// List all authors with pagination and counts (for infinite scroll), sorted alphabetically
+// List all authors with pagination and counts (for infinite scroll)
 export const listAuthors = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    sort: v.optional(v.union(v.literal("name_asc"), v.literal("name_desc"), v.literal("recent"))),
+  },
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    const results = await ctx.db
-      .query("authors")
-      .withIndex("by_name")
-      .order("asc")
-      .paginate(args.paginationOpts);
+    const sort = args.sort ?? "name_asc";
+    let q;
+    switch (sort) {
+      case "name_desc":
+        q = ctx.db.query("authors").withIndex("by_name").order("desc");
+        break;
+      case "recent":
+        q = ctx.db.query("authors").order("desc");
+        break;
+      default:
+        q = ctx.db.query("authors").withIndex("by_name").order("asc");
+        break;
+    }
+    const results = await q.paginate(args.paginationOpts);
 
     // Enrich with book and series counts
     const authorsWithCounts = await Promise.all(
