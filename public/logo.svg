@@ -1,40 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bookGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#00e5ff;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#ff0099;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="checkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#ff0099;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#00e5ff;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-
-  <!-- Background circle -->
-  <circle cx="256" cy="256" r="240" fill="#0a0a0a"/>
-
-  <!-- Open book shape -->
-  <g transform="translate(256, 280)">
-    <!-- Left page -->
-    <path d="M-20,-100 Q-120,-110 -140,-20 L-140,80 Q-120,70 -20,80 Z"
-          fill="url(#bookGradient)" opacity="0.9"/>
-    <!-- Right page -->
-    <path d="M20,-100 Q120,-110 140,-20 L140,80 Q120,70 20,80 Z"
-          fill="url(#bookGradient)" opacity="0.7"/>
-    <!-- Spine -->
-    <path d="M-20,-100 L-20,80 L20,80 L20,-100 Q0,-90 -20,-100"
-          fill="#1a1a2e"/>
-    <!-- Page lines left -->
-    <line x1="-110" y1="0" x2="-40" y2="5" stroke="#0a0a0a" stroke-width="3" opacity="0.3"/>
-    <line x1="-110" y1="25" x2="-40" y2="30" stroke="#0a0a0a" stroke-width="3" opacity="0.3"/>
-    <line x1="-110" y1="50" x2="-40" y2="55" stroke="#0a0a0a" stroke-width="3" opacity="0.3"/>
-  </g>
-
-  <!-- Checkmark -->
-  <path d="M340,160 L380,200 L440,120"
-        fill="none"
-        stroke="url(#checkGradient)"
-        stroke-width="32"
-        stroke-linecap="round"
-        stroke-linejoin="round"/>
+  <rect width="512" height="512" rx="112" fill="#0a0a0a"/>
+  <path d="M164,120 Q164,84 200,84 L312,84 Q348,84 348,120 L348,396 L256,336 L164,396 Z"
+        fill="none" stroke="#00e5ff" stroke-width="27.5" stroke-linejoin="round"/>
+  <path d="M198,252 L246,300 L320,214"
+        fill="none" stroke="#ff0099" stroke-width="33" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

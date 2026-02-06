@@ -1,35 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1a1a2e"/>
-      <stop offset="100%" style="stop-color:#0a0a0a"/>
-    </linearGradient>
-    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#00e5ff"/>
-      <stop offset="100%" style="stop-color:#ff0099"/>
-    </linearGradient>
-  </defs>
-
-  <!-- Background -->
-  <rect width="180" height="180" rx="40" fill="url(#bg)"/>
-
-  <!-- Simplified book icon -->
-  <g transform="translate(90, 100)">
-    <!-- Left page -->
-    <path d="M-8,-45 Q-50,-50 -55,-10 L-55,35 Q-50,30 -8,35 Z"
-          fill="url(#accent)" opacity="0.9"/>
-    <!-- Right page -->
-    <path d="M8,-45 Q50,-50 55,-10 L55,35 Q50,30 8,35 Z"
-          fill="url(#accent)" opacity="0.7"/>
-    <!-- Spine -->
-    <rect x="-8" y="-45" width="16" height="80" fill="#1a1a2e"/>
-  </g>
-
-  <!-- Checkmark -->
-  <path d="M115,50 L130,65 L155,35"
-        fill="none"
-        stroke="#00e5ff"
-        stroke-width="10"
-        stroke-linecap="round"
-        stroke-linejoin="round"/>
+  <rect width="180" height="180" rx="40" fill="#0a0a0a"/>
+  <path d="M58,43 Q58,30 71,30 L110,30 Q123,30 123,43 L123,140 L90,119 L58,140 Z"
+        fill="none" stroke="#00e5ff" stroke-width="9.7" stroke-linejoin="round"/>
+  <path d="M70,89 L87,106 L113,76"
+        fill="none" stroke="#ff0099" stroke-width="11.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
