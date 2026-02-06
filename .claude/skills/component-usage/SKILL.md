@@ -25,9 +25,10 @@ Find all usages of `$ARGUMENTS` in the codebase.
 Produce a summary table:
 
 | File | Context | Props Used | Conditional? | Notes |
-|------|---------|-----------|-------------|-------|
+| ---- | ------- | ---------- | ------------ | ----- |
 
 Then list:
+
 - **Total usage count**
 - **Unique prop combinations** — which variants/props are actually used in practice
 - **Unused props** — props defined but never passed by any consumer

@@ -16,9 +16,11 @@ Full visual redesign of ChapterCheck from neon cyan/pink to a bold, high-contras
 ## Phase 1: Theme Foundation (do first — cascades everywhere)
 
 ### 1.1 `app/globals.css` — CSS variables
+
 Replace all HSL values. Key changes:
 
 Dark mode (`.dark`):
+
 ```
 --background: 0 0% 0%;           /* pure black */
 --foreground: 0 0% 98%;          /* near-white */
@@ -43,6 +45,7 @@ Dark mode (`.dark`):
 ```
 
 Light mode (`:root`):
+
 ```
 --background: 0 0% 98%;          /* off-white */
 --foreground: 0 0% 5%;
@@ -67,11 +70,13 @@ Light mode (`:root`):
 ```
 
 ### 1.2 `lib/theme.ts` — Replace neon palette
+
 - `neonColors` → `editorialColors` (red, white, neutral)
 - `meshBackground` → `editorialBackground` (simple bg color + grid config)
 - Update exports/types. Only MeshBackground.tsx imports this.
 
 ### 1.3 `tailwind.config.ts` — Remove unused animations
+
 - Remove `slow-spin`, `slow-spin-reverse`, `float`, `ripple` keyframes (MeshBackground no longer needs them)
 
 ---
@@ -79,15 +84,18 @@ Light mode (`:root`):
 ## Phase 2: Background & Layout Chrome (parallel, after Phase 1)
 
 ### 2.1 `components/layout/MeshBackground.tsx`
+
 Replace entire component (~228 lines → ~30 lines). Fixed div with background color + optional CSS grid texture pattern. Remove all mouse tracking, orbs, ripples, corner glows.
 
 ### 2.2 `components/layout/Navigation.tsx`
+
 - Container: `bg-background/90 backdrop-blur-sm` (black/90 in dark)
 - Nav links: Add `uppercase tracking-wider text-xs font-medium`
 - Active state: `border-b-2 border-primary` (red underline) instead of `bg-secondary`
 - Logo text: `uppercase tracking-wider`
 
 ### 2.3 `components/Logo.tsx` + 4 SVG assets
+
 - Bookmark stroke: `currentColor` (adapts to theme) in .tsx, `#ffffff` in static SVGs
 - Checkmark stroke: `#dc2626` (red-600) everywhere
 - Files: `app/icon.svg`, `app/apple-icon.svg`, `public/logo.svg`, `public/logo-mark.svg`
@@ -98,48 +106,56 @@ Replace entire component (~228 lines → ~30 lines). Fixed div with background c
 
 All 10 shadcn/ui components. Most get editorial styling automatically from CSS variables; manual fixes for shadows and the delicious variant:
 
-| File | Changes |
-|------|---------|
-| `button.tsx` | `delicious` variant → solid red with `uppercase tracking-wider`. Remove `shadow` from default. |
-| `card.tsx` | Remove `shadow`. Explicit `rounded-sm`. |
-| `badge.tsx` | Add `uppercase tracking-wider text-[10px]` to base. |
-| `input.tsx` | Remove `shadow-sm`. |
-| `select.tsx` | Remove `shadow-sm` from trigger, `shadow-md` from content. |
-| `dialog.tsx` | Remove `shadow-lg` from content. Overlay already `bg-black/80`. |
-| `tabs.tsx` | Remove `shadow` from active trigger. |
-| `sheet.tsx` | Remove `shadow-lg`. |
-| `progress.tsx` | Track: `bg-neutral-800` explicitly. Fill inherits red from primary. |
-| `slider.tsx` | Track: `bg-neutral-800`. Thumb: `border-neutral-600`. |
+| File           | Changes                                                                                        |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| `button.tsx`   | `delicious` variant → solid red with `uppercase tracking-wider`. Remove `shadow` from default. |
+| `card.tsx`     | Remove `shadow`. Explicit `rounded-sm`.                                                        |
+| `badge.tsx`    | Add `uppercase tracking-wider text-[10px]` to base.                                            |
+| `input.tsx`    | Remove `shadow-sm`.                                                                            |
+| `select.tsx`   | Remove `shadow-sm` from trigger, `shadow-md` from content.                                     |
+| `dialog.tsx`   | Remove `shadow-lg` from content. Overlay already `bg-black/80`.                                |
+| `tabs.tsx`     | Remove `shadow` from active trigger.                                                           |
+| `sheet.tsx`    | Remove `shadow-lg`.                                                                            |
+| `progress.tsx` | Track: `bg-neutral-800` explicitly. Fill inherits red from primary.                            |
+| `slider.tsx`   | Track: `bg-neutral-800`. Thumb: `border-neutral-600`.                                          |
 
 ---
 
 ## Phase 4: Feature Components (after Phases 2+3)
 
 ### Cards (BookCard, AuthorCard, LibraryBookCard)
+
 Replace: `rounded-xl bg-card/50 shadow-sm ring-1 ring-border/50 hover:-translate-y-1 hover:shadow-lg hover:ring-primary/30`
 With: `rounded-sm border border-neutral-800 bg-card hover:border-red-600/50 transition-all`
 
 ### BookCover.tsx
+
 Replace 8 colorful gradient variants with neutral-toned variants (`from-neutral-700/20 to-neutral-900/20`). Two with subtle `red-950/10` tint. Change `rounded-lg` → `rounded-sm`.
 
 ### StarRating.tsx
+
 `fill-amber-500 text-amber-500` → `fill-red-500 text-red-500`
 
 ### BookGenres.tsx
+
 Genre tags already use `hover:border-primary/50` which resolves to red. Add `uppercase tracking-wider` if not on Badge base.
 
 ### AuthorImage.tsx
+
 Replace colorful gradient fallbacks with neutral-toned. Adjust ring colors.
 
 ### ReviewCard.tsx
+
 Remove `shadow-sm backdrop-blur-sm`. Own review: `border-red-600/30 bg-red-950/10`.
 
 ### Audio (NowPlayingBar, NowPlayingExpanded)
+
 - Remove shadows from covers
 - Progress track: explicit `bg-neutral-800`
 - All `bg-primary` fills now red automatically
 
 ### SignInCard.tsx
+
 Inherits editorial styling from Card. Logo colors updated in Phase 2.
 
 ---
@@ -147,24 +163,29 @@ Inherits editorial styling from Card. Logo colors updated in Phase 2.
 ## Phase 5: Pages (after Phase 4)
 
 ### `app/page.tsx` (Landing + Dashboard)
+
 - Hero heading: Add `uppercase tracking-tight font-black`
 - Section headings: Add `uppercase tracking-wider`
 
 ### `app/books/page.tsx` + `app/authors/page.tsx`
+
 - Sticky header: `bg-background/90 backdrop-blur-sm`
 - Page heading: `uppercase tracking-wider`
 - Mobile list: `rounded-sm bg-card` (remove /60 opacity)
 - Optional: pixel-gap grid (`gap-px bg-neutral-800` on container)
 
 ### Detail pages (`books/[bookId]`, `authors/[authorId]`, `series/[seriesId]`)
+
 - Remove `shadow-lg` from covers
 - `rounded-lg` → `rounded-sm` on cards/covers
 - Links already resolve to red via `text-primary`
 
 ### `app/account/page.tsx`, `app/users/[userId]/page.tsx`
+
 - Inherit Card styling from Phase 3. Minimal page-level changes.
 
 ### Auth pages
+
 - `rounded-xl` in skeleton → `rounded-sm`
 
 ---

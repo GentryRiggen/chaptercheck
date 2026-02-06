@@ -16,6 +16,7 @@ Perform a deep audit of the page at `$ARGUMENTS`.
 2. **Read the page and ALL its imported components**: Follow every local import (from `@/components/`, `@/hooks/`, etc.) and read those files too. Build a complete picture of the page's component tree.
 
 3. **Document the visual structure** as a tree:
+
    ```
    Page
    ├── StickyHeader
@@ -48,6 +49,7 @@ Perform a deep audit of the page at `$ARGUMENTS`.
 ## Output
 
 A structured report with:
+
 1. **Component tree** (visual hierarchy)
 2. **Pattern inventory** (every visual pattern on the page)
 3. **Improvement opportunities** (ranked by impact)

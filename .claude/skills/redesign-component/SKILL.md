@@ -13,7 +13,7 @@ You are redesigning a component while preserving its functionality.
 1. **Read the target component**: `$ARGUMENTS` — understand its props, state, event handlers, and data flow
 2. **Find all usages**: Search for imports and usages across the codebase to understand how it's consumed and what props are passed
 3. **Read the design system**: Check `app/globals.css` and `lib/theme.ts` for current design tokens
-4. **Identify functional elements**: List every interactive element, accessible attribute (aria-*, role), keyboard handler, and data binding — these MUST be preserved
+4. **Identify functional elements**: List every interactive element, accessible attribute (aria-\*, role), keyboard handler, and data binding — these MUST be preserved
 5. **Propose the redesign**: Present the new visual approach to the user before implementing, explaining what changes and what stays the same
 6. **Implement**: Apply the new styles using only Tailwind CSS classes and the existing design tokens. Use `cn()` from `lib/utils` for conditional classes.
 
