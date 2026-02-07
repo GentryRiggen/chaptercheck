@@ -145,6 +145,7 @@ jobs:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
       - name: 🔐 Set Cloudflare secrets
+        working-directory: apps/web
         run: |
           echo "$CLERK_SECRET_KEY" | npx wrangler secret put CLERK_SECRET_KEY --name chaptercheck
           echo "$R2_ACCOUNT_ID" | npx wrangler secret put R2_ACCOUNT_ID --name chaptercheck

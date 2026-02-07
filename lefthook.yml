@@ -14,4 +14,4 @@ pre-commit:
       run: npx eslint {staged_files} --max-warnings=0 --no-warn-ignored
 
     - name: typecheck
-      run: npx convex codegen && yarn type-check
+      run: npx convex codegen && yarn turbo type-check

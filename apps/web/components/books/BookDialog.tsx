@@ -1,0 +1,64 @@
+"use client";
+
+import { api } from "@chaptercheck/convex-backend/_generated/api";
+import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
+import type { BookFormValues } from "@chaptercheck/shared/validations/book";
+import { useMutation } from "convex/react";
+import { useRouter } from "next/navigation";
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import { BookForm } from "./BookForm";
+
+interface BookDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialAuthorId?: Id<"authors">;
+  navigateOnCreate?: boolean;
+}
+
+export function BookDialog({
+  open,
+  onOpenChange,
+  initialAuthorId,
+  navigateOnCreate = true,
+}: BookDialogProps) {
+  const router = useRouter();
+  const createBook = useMutation(api.books.mutations.createBook);
+
+  const handleSubmit = async (values: BookFormValues) => {
+    const bookId = await createBook({
+      title: values.title,
+      subtitle: values.subtitle || undefined,
+      description: values.description || undefined,
+      isbn: values.isbn || undefined,
+      publishedYear: values.publishedYear ?? undefined,
+      language: values.language || undefined,
+      coverImageR2Key: values.coverImageR2Key,
+      seriesId: values.seriesId as Id<"series"> | undefined,
+      seriesOrder: values.seriesOrder ?? undefined,
+      authorIds: values.authorIds?.length ? (values.authorIds as Id<"authors">[]) : undefined,
+      genreIds: values.genreIds?.length ? (values.genreIds as Id<"genres">[]) : undefined,
+    });
+    onOpenChange(false);
+    if (navigateOnCreate) {
+      router.push(`/books/${bookId}`);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add New Book</DialogTitle>
+        </DialogHeader>
+        <BookForm
+          initialValues={initialAuthorId ? { authorIds: [initialAuthorId] } : undefined}
+          onSubmit={handleSubmit}
+          onCancel={() => onOpenChange(false)}
+          submitLabel="Create Book"
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}

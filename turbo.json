@@ -21,6 +21,10 @@
     },
     "test:run": {
       "dependsOn": ["^build"]
+    },
+    "cf-deploy": {
+      "dependsOn": ["build"],
+      "cache": false
     }
   }
 }

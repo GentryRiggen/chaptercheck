@@ -14,7 +14,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 
-import { api } from "../convex/_generated/api";
+import { api } from "../packages/convex-backend/convex/_generated/api";
 
 // Load .env.local if present (CI provides env vars directly)
 function loadEnvFile(): void {

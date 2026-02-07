@@ -13,13 +13,13 @@
 
 ## Phase 2: Workspace packages + move web app
 
-- [ ] 2a: Create `packages/convex-backend/` (move `convex/`, add `convex.json`)
-- [ ] 2a: Verify `npx convex codegen` works
-- [ ] 2b: Create `packages/shared/` (validations, utils, hooks, types)
-- [ ] 2c: Create `packages/tailwind-config/` (theme, cn(), colors)
-- [ ] 2d: Move web app into `apps/web/` (all files, package.json, tsconfig)
-- [ ] 2e: Update all imports in `apps/web/`
-- [ ] Verify: `yarn turbo build`, `yarn turbo lint`, `yarn turbo type-check`
+- [x] 2a: Create `packages/convex-backend/` (move `convex/`, add `convex.json`)
+- [x] 2a: Verify `npx convex codegen` works
+- [x] 2b: Create `packages/shared/` (validations, utils, hooks, types)
+- [x] 2c: Create `packages/tailwind-config/` (theme, cn(), colors)
+- [x] 2d: Move web app into `apps/web/` (all files, package.json, tsconfig)
+- [x] 2e: Update all imports in `apps/web/`
+- [x] Verify: `yarn turbo build`, `yarn turbo lint`, `yarn turbo type-check`
 - [ ] Verify: `npx convex dev` works
 - [ ] Verify: E2E tests pass
 - [ ] Merge to main
