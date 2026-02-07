@@ -26,6 +26,7 @@
     "migrate:files:test": "tsx scripts/migrate-files-from-firebase.ts --dry-run --limit=5 --verbose",
     "seed": "tsx scripts/seed/index.ts",
     "seed:nuke": "tsx scripts/seed/index.ts --nuke",
+    "seed:e2e": "tsx scripts/seed-e2e.ts",
     "e2e": "playwright test --config=e2e/playwright.config.ts",
     "e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
     "e2e:headed": "playwright test --config=e2e/playwright.config.ts --headed",

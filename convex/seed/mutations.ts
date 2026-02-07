@@ -346,6 +346,118 @@ export const nukeTable = mutation({
   },
 });
 
+// =============================================================================
+// E2E SEED DATA (idempotent — safe to call repeatedly)
+// =============================================================================
+
+/**
+ * Ensure minimal test data exists for E2E tests.
+ * If books already exist, this is a no-op.
+ * Otherwise, inserts 3 authors, 1 series, 5 books with bookAuthor relationships.
+ */
+export const ensureE2ESeedData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Check if data already exists
+    const existingBook = await ctx.db.query("books").first();
+    if (existingBook) {
+      return { seeded: false, reason: "data_exists" };
+    }
+
+    const now = Date.now();
+
+    // Seed 3 authors (A/M/Z for sort coverage)
+    const authorIds = [];
+    const authors = [
+      { name: "Alice Thornberry", bio: "Fantasy and science fiction author." },
+      { name: "Marcus Chen", bio: "Thriller and mystery writer." },
+      { name: "Zara Okonkwo", bio: "Literary fiction and historical novels." },
+    ];
+    for (const author of authors) {
+      const id = await ctx.db.insert("authors", {
+        ...author,
+        createdAt: now,
+        updatedAt: now,
+      });
+      authorIds.push(id);
+    }
+
+    // Seed 1 series
+    const seriesId = await ctx.db.insert("series", {
+      name: "The Thornberry Chronicles",
+      description: "A fantasy series by Alice Thornberry.",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Seed 5 books
+    const booksData = [
+      {
+        title: "The Crystal Gateway",
+        description: "A portal opens to another world.",
+        publishedYear: 2021,
+        seriesId,
+        seriesOrder: 1,
+        authorIndices: [0],
+      },
+      {
+        title: "Beyond the Horizon",
+        description: "An epic journey across uncharted lands.",
+        publishedYear: 2022,
+        authorIndices: [1],
+      },
+      {
+        title: "The Last Ember",
+        description: "The Thornberry Chronicles continue.",
+        publishedYear: 2023,
+        seriesId,
+        seriesOrder: 2,
+        authorIndices: [0],
+      },
+      {
+        title: "Quantum Dreams",
+        description: "A sci-fi thriller co-authored by two writers.",
+        publishedYear: 2023,
+        authorIndices: [0, 1],
+      },
+      {
+        title: "A Whisper in the Dark",
+        description: "A haunting tale of secrets and discovery.",
+        publishedYear: 2024,
+        authorIndices: [2],
+      },
+    ];
+
+    let bookCount = 0;
+    for (const book of booksData) {
+      const bookId = await ctx.db.insert("books", {
+        title: book.title,
+        description: book.description,
+        publishedYear: book.publishedYear,
+        seriesId: book.seriesId,
+        seriesOrder: book.seriesOrder,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      for (const idx of book.authorIndices) {
+        await ctx.db.insert("bookAuthors", {
+          bookId,
+          authorId: authorIds[idx],
+          role: "author",
+        });
+      }
+      bookCount++;
+    }
+
+    return { seeded: true, authors: authorIds.length, books: bookCount, series: 1 };
+  },
+});
+
+// =============================================================================
+// NUKE DATABASE
+// =============================================================================
+
 /**
  * Get users to preserve and their storage accounts.
  */
