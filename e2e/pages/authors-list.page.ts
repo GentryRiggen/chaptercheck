@@ -6,7 +6,7 @@ export class AuthorsListPage {
   constructor(private page: Page) {}
 
   get searchInput() {
-    return this.page.getByPlaceholder("Search...");
+    return this.page.getByPlaceholder("Search authors...");
   }
 
   get sortTrigger() {
