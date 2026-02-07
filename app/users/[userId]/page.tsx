@@ -1,11 +1,13 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { Book, Calendar, Lock, MessageSquare, Settings } from "lucide-react";
+import { Book, BookOpen, Calendar, Lock, MessageSquare, Plus, Settings } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { LibraryBookCard } from "@/components/books/LibraryBookCard";
+import { ShelfCard } from "@/components/shelves/ShelfCard";
+import { ShelfDialog } from "@/components/shelves/ShelfDialog";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { api } from "@/convex/_generated/api";
@@ -28,6 +30,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     api.bookUserData.queries.getUserReadBooks,
     shouldSkipBooks ? "skip" : { userId }
   );
+
+  const shouldSkipShelves =
+    !userId || (profile?.isProfilePrivate === true && !profile?.isOwnProfile);
+  const shelvesData = useQuery(
+    api.shelves.queries.getUserShelves,
+    shouldSkipShelves ? "skip" : { userId }
+  );
+
+  const [createShelfOpen, setCreateShelfOpen] = useState(false);
 
   const booksLoading = readBooks === undefined && !shouldSkipBooks;
   const noBooksRead = readBooks !== undefined && readBooks.length === 0;
@@ -101,6 +112,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <BookOpen className="h-4 w-4" />
+                  <span>
+                    <span className="font-medium text-foreground">
+                      {profile.stats.shelvesCount}
+                    </span>{" "}
+                    {profile.stats.shelvesCount === 1 ? "shelf" : "shelves"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
                   <Calendar className="h-4 w-4" />
                   <span>Joined {memberSince}</span>
                 </div>
@@ -129,6 +149,57 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <p className="mt-1 text-sm text-muted-foreground">
               {profile.name || "This user"} has chosen to keep their reading activity private.
             </p>
+          </div>
+        )}
+
+        {/* Shelves section - only show if profile is public or own profile */}
+        {(!profile.isProfilePrivate || profile.isOwnProfile) && (
+          <div className="mb-8">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Shelves
+              </h2>
+              {profile.isOwnProfile && (
+                <Button variant="outline" size="sm" onClick={() => setCreateShelfOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Shelf
+                </Button>
+              )}
+            </div>
+
+            {shelvesData === undefined ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />
+                ))}
+              </div>
+            ) : shelvesData.shelves.length === 0 ? (
+              <div className="rounded-lg border border-border/50 bg-card/50 p-8 text-center">
+                <BookOpen className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+                <p className="text-muted-foreground">
+                  {profile.isOwnProfile
+                    ? "Create your first shelf to curate book lists."
+                    : "No shelves yet."}
+                </p>
+                {profile.isOwnProfile && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => setCreateShelfOpen(true)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create your first shelf
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {shelvesData.shelves.map((shelf) => (
+                  <ShelfCard key={shelf._id} shelf={shelf} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -169,6 +240,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
           </div>
         )}
       </main>
+
+      {profile.isOwnProfile && (
+        <ShelfDialog open={createShelfOpen} onOpenChange={setCreateShelfOpen} />
+      )}
     </div>
   );
 }

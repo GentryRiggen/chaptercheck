@@ -15,6 +15,7 @@ import { BookRatingStats } from "@/components/books/BookRatingStats";
 import { BookReadStatus } from "@/components/books/BookReadStatus";
 import { ReviewsList } from "@/components/books/ReviewsList";
 import { PremiumGate, RoleGate } from "@/components/permissions";
+import { AddToShelfPopover } from "@/components/shelves/AddToShelfPopover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -121,8 +122,9 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
 
         {/* Hero section - always side by side */}
         <div className="relative mb-6 flex gap-4 sm:gap-6">
-          {/* Mark as Read - top right */}
-          <div className="absolute -top-1 right-0 z-10">
+          {/* Mark as Read + Shelves - top right */}
+          <div className="absolute -top-1 right-0 z-10 flex items-center gap-2">
+            <AddToShelfPopover bookId={bookId} />
             <BookReadStatus bookId={bookId} />
           </div>
 

@@ -169,6 +169,29 @@ export default defineSchema({
     .index("by_book_and_user", ["bookId", "userId"])
     .index("by_book_genre_user", ["bookId", "genreId", "userId"]),
 
+  // Shelves (user-created book lists)
+  shelves: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    isOrdered: v.boolean(),
+    isPublic: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  // Shelf-Book relationship (many-to-many)
+  shelfBooks: defineTable({
+    shelfId: v.id("shelves"),
+    bookId: v.id("books"),
+    position: v.optional(v.number()),
+    addedAt: v.number(),
+  })
+    .index("by_shelf", ["shelfId"])
+    .index("by_shelf_and_position", ["shelfId", "position"])
+    .index("by_book", ["bookId"])
+    .index("by_shelf_and_book", ["shelfId", "bookId"]),
+
   // Book User Data (read status, ratings, reviews)
   bookUserData: defineTable({
     userId: v.id("users"),

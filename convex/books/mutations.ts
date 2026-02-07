@@ -164,6 +164,14 @@ export const deleteBook = mutation({
 
     await Promise.all(audioFiles.map((af) => ctx.db.delete(af._id)));
 
+    // Delete all shelf-book entries for this book
+    const shelfBooks = await ctx.db
+      .query("shelfBooks")
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
+      .collect();
+
+    await Promise.all(shelfBooks.map((sb) => ctx.db.delete(sb._id)));
+
     // Delete the book
     await ctx.db.delete(args.bookId);
 

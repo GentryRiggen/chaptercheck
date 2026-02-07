@@ -36,6 +36,8 @@ import type * as openLibrary_types from "../openLibrary/types.js";
 import type * as seed_mutations from "../seed/mutations.js";
 import type * as series_mutations from "../series/mutations.js";
 import type * as series_queries from "../series/queries.js";
+import type * as shelves_mutations from "../shelves/mutations.js";
+import type * as shelves_queries from "../shelves/queries.js";
 import type * as storageAccounts_internal from "../storageAccounts/internal.js";
 import type * as storageAccounts_mutations from "../storageAccounts/mutations.js";
 import type * as storageAccounts_queries from "../storageAccounts/queries.js";
@@ -78,6 +80,8 @@ declare const fullApi: ApiFromModules<{
   "seed/mutations": typeof seed_mutations;
   "series/mutations": typeof series_mutations;
   "series/queries": typeof series_queries;
+  "shelves/mutations": typeof shelves_mutations;
+  "shelves/queries": typeof shelves_queries;
   "storageAccounts/internal": typeof storageAccounts_internal;
   "storageAccounts/mutations": typeof storageAccounts_mutations;
   "storageAccounts/queries": typeof storageAccounts_queries;

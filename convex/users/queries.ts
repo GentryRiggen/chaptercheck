@@ -133,11 +133,21 @@ export const getUserProfile = query({
       ? allUserData.filter((d) => d.rating !== undefined || d.reviewText)
       : allUserData.filter((d) => (d.rating !== undefined || d.reviewText) && !d.isReviewPrivate);
 
+    // Count shelves (public only for non-own profiles)
+    const allShelves = await ctx.db
+      .query("shelves")
+      .withIndex("by_user", (q) => q.eq("userId", targetUser._id))
+      .collect();
+    const shelvesCount = isOwnProfile
+      ? allShelves.length
+      : allShelves.filter((s) => s.isPublic).length;
+
     return {
       ...basicInfo,
       stats: {
         booksRead: readBooks.length,
         reviewsWritten: reviews.length,
+        shelvesCount,
       },
     };
   },
