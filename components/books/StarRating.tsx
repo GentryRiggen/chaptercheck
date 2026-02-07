@@ -47,7 +47,7 @@ export function StarRating({ value, onChange, readonly = false, size = "md" }: S
               className={cn(
                 iconSize,
                 isFilled
-                  ? "fill-amber-500 text-amber-500"
+                  ? "fill-[#D4A76A] text-[#D4A76A]"
                   : "fill-transparent text-muted-foreground"
               )}
             />

@@ -133,12 +133,12 @@ export function BookReviewDialog({
           <div
             className={cn(
               "flex items-center gap-2 rounded-lg px-3 py-2",
-              "bg-gradient-to-r from-[#ff0099]/10 to-[#00e5ff]/10",
-              "border border-[#ff0099]/20"
+              "bg-primary/10",
+              "border border-primary/20"
             )}
           >
-            <BookCheck className="h-4 w-4 text-[#ff0099]" />
-            <span className="text-sm font-medium text-[#ff0099]">
+            <BookCheck className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">
               This book will be marked as read
             </span>
           </div>

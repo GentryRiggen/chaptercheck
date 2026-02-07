@@ -1,71 +1,60 @@
 // Centralized theme colors for the mesh background and other components
-// These are the neon accent colors used throughout the app
+// Scandinavian Light: sage green + warm stone palette
 
-export const neonColors = {
-  cyan: {
-    hex: "#00e5ff",
-    rgb: { r: 0, g: 229, b: 255 },
-    rgbString: "0, 229, 255",
+export const themeColors = {
+  sage: {
+    hex: "#8BA78B",
+    rgb: { r: 139, g: 167, b: 139 },
+    rgbString: "139, 167, 139",
   },
-  pink: {
-    hex: "#ff0099",
-    rgb: { r: 255, g: 0, b: 153 },
-    rgbString: "255, 0, 153",
+  darkSage: {
+    hex: "#6B8E6B",
+    rgb: { r: 107, g: 142, b: 107 },
+    rgbString: "107, 142, 107",
   },
-  // Deeper variants for light mode (better contrast)
-  deepPink: {
-    hex: "#db2777",
-    rgb: { r: 219, g: 39, b: 119 },
-    rgbString: "219, 39, 119",
+  warmStone: {
+    hex: "#D4C5A9",
+    rgb: { r: 212, g: 197, b: 169 },
+    rgbString: "212, 197, 169",
   },
-  deepCyan: {
-    hex: "#06b6d4",
-    rgb: { r: 6, g: 182, b: 212 },
-    rgbString: "6, 182, 212",
+  warmDark: {
+    hex: "#374151",
+    rgb: { r: 55, g: 65, b: 81 },
+    rgbString: "55, 65, 81",
   },
 } as const;
 
 export const meshBackground = {
   dark: {
-    primary: neonColors.cyan,
-    secondary: neonColors.pink,
-    baseGradient: "radial-gradient(ellipse at 50% 50%, #1a1a2e 0%, #0a0a0a 100%)",
+    primary: themeColors.sage,
+    secondary: themeColors.warmStone,
+    baseGradient: "radial-gradient(ellipse at 50% 50%, #1F1F1B 0%, #1A1A17 100%)",
     opacity: {
-      spotlight: 0.12,
-      ambientGlow: 0.08,
-      gridDot: 0.3,
-      gridLine: 0.08,
-      rippleBorder: 0.3,
-      rippleGlow: 0.15,
-      cornerGlow: 0.3,
-      cornerGlowInner: 0.15,
+      spotlight: 0.06,
+      ambientGlow: 0.04,
+      cornerGlow: 0.15,
+      cornerGlowInner: 0.08,
     },
     orbs: [
-      { baseX: 20, baseY: 25, size: 300, opacity: 0.06, speed: 0.3 },
-      { baseX: 75, baseY: 70, size: 250, opacity: 0.05, speed: 0.2 },
-      { baseX: 50, baseY: 20, size: 200, opacity: 0.07, speed: 0.25 },
-      { baseX: 80, baseY: 30, size: 280, opacity: 0.04, speed: 0.15 },
+      { baseX: 25, baseY: 30, size: 400, opacity: 0.04, speed: 0.15 },
+      { baseX: 70, baseY: 65, size: 350, opacity: 0.03, speed: 0.1 },
+      { baseX: 50, baseY: 20, size: 300, opacity: 0.05, speed: 0.12 },
     ],
   },
   light: {
-    primary: neonColors.deepPink,
-    secondary: neonColors.deepCyan,
-    baseGradient: "radial-gradient(ellipse at 50% 50%, #fdf2f8 0%, #f0f4f8 50%, #ecfeff 100%)",
+    primary: themeColors.sage,
+    secondary: themeColors.warmStone,
+    baseGradient: "radial-gradient(ellipse at 50% 50%, #FAF9F6 0%, #F7F7F3 50%, #F4F1EC 100%)",
     opacity: {
-      spotlight: 0.18,
-      ambientGlow: 0.12,
-      gridDot: 0.4,
-      gridLine: 0.12,
-      rippleBorder: 0.25,
-      rippleGlow: 0.1,
-      cornerGlow: 0.4,
-      cornerGlowInner: 0.2,
+      spotlight: 0.08,
+      ambientGlow: 0.05,
+      cornerGlow: 0.2,
+      cornerGlowInner: 0.1,
     },
     orbs: [
-      { baseX: 20, baseY: 25, size: 300, opacity: 0.1, speed: 0.3 },
-      { baseX: 75, baseY: 70, size: 250, opacity: 0.08, speed: 0.2 },
-      { baseX: 50, baseY: 20, size: 200, opacity: 0.12, speed: 0.25 },
-      { baseX: 80, baseY: 30, size: 280, opacity: 0.07, speed: 0.15 },
+      { baseX: 25, baseY: 30, size: 400, opacity: 0.06, speed: 0.15 },
+      { baseX: 70, baseY: 65, size: 350, opacity: 0.05, speed: 0.1 },
+      { baseX: 50, baseY: 20, size: 300, opacity: 0.07, speed: 0.12 },
     ],
   },
 } as const;
@@ -76,5 +65,5 @@ export function getMeshTheme(isDark: boolean) {
 }
 
 // Type exports for use in components
-export type NeonColor = (typeof neonColors)[keyof typeof neonColors];
+export type ThemeColor = (typeof themeColors)[keyof typeof themeColors];
 export type MeshTheme = (typeof meshBackground)["dark" | "light"];
