@@ -9,6 +9,7 @@ pre-commit:
       run: npx prettier --check {staged_files}
 
     - name: lint
+      root: "apps/web"
       glob: "*.{js,jsx,ts,tsx,mjs,mts}"
       exclude: "_generated"
       run: npx eslint {staged_files} --max-warnings=0 --no-warn-ignored

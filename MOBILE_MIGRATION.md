@@ -26,12 +26,12 @@
 
 ## Phase 3: Scaffold Expo mobile app
 
-- [ ] 3a: Create `apps/mobile/` with Expo + package.json
-- [ ] 3b: Configure Metro for monorepo
-- [ ] 3c: Configure NativeWind + tailwind
-- [ ] 3d: Set up Clerk + Convex auth providers
-- [ ] 3e: Set up Expo Router navigation (tabs + stack)
-- [ ] Verify: App builds for iOS simulator, auth works, Convex data loads
+- [x] 3a: Create `apps/mobile/` with Expo + package.json
+- [x] 3b: Configure Metro for monorepo
+- [x] 3c: Configure NativeWind + tailwind
+- [x] 3d: Set up Clerk + Convex auth providers
+- [x] 3e: Set up Expo Router navigation (tabs + stack)
+- [x] Verify: App builds for iOS simulator, TypeScript passes, Metro bundles successfully
 
 ## Phase 4a: Core UI components
 
