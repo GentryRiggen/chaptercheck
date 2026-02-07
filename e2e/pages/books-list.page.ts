@@ -37,17 +37,19 @@ export class BooksListPage {
   async goto() {
     // Navigate to /books with retry. The GenreFilterPopover fires a
     // Convex query that can fail before Clerk→Convex auth syncs,
-    // causing a Next.js error overlay. Retry until the page loads clean.
+    // causing a Next.js error overlay. The dev server can also abort
+    // navigations during recompilation (net::ERR_ABORTED). Retry
+    // until the page loads clean.
     for (let attempt = 0; attempt < 4; attempt++) {
-      if (attempt === 0) {
-        await this.page.goto("/books");
-      } else {
-        await this.dismissErrorOverlay();
-        await this.page.waitForTimeout(1000);
-        await this.page.reload();
-      }
-
       try {
+        if (attempt === 0) {
+          await this.page.goto("/books");
+        } else {
+          await this.dismissErrorOverlay();
+          await this.page.waitForTimeout(1000);
+          await this.page.reload();
+        }
+
         await this.pageHeading.waitFor({ timeout: 5000 });
         await waitForConvexData(this.page);
         // Wait a beat for any late-arriving error overlay (GenreFilterPopover)
@@ -58,7 +60,7 @@ export class BooksListPage {
         if (bookCount > 0) return;
         // If no books visible, overlay may have reappeared — retry
       } catch {
-        // heading not found — error overlay likely showing, retry
+        // Navigation failed or heading not found — retry
       }
     }
 
