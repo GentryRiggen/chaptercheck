@@ -15,8 +15,8 @@ test.describe("Responsive layout", () => {
     await expect(page).toHaveURL("/books");
   });
 
-  test("books page shows list layout on mobile", async ({ page }) => {
-    await page.goto("/books");
+  test("books page shows list layout on mobile", async ({ booksListPage, page }) => {
+    await booksListPage.goto();
 
     // Mobile list should be visible (the divide-y container)
     const mobileList = page.locator(".divide-y").first();
@@ -27,11 +27,11 @@ test.describe("Responsive layout", () => {
     await expect(desktopGrid).toBeHidden();
   });
 
-  test("book detail uses tabs on mobile", async ({ page, bookDetailPage }) => {
-    await page.goto("/books");
+  test("book detail uses tabs on mobile", async ({ booksListPage, page, bookDetailPage }) => {
+    await booksListPage.goto();
 
     // Click the first book link
-    await page.locator('a[href^="/books/"]').first().click();
+    await booksListPage.bookLinks.first().click();
     await bookDetailPage.waitForLoad();
 
     // Tabs should be visible on mobile

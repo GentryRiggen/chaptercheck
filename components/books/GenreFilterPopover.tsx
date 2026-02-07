@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import { cn } from "@/lib/utils";
 
 interface GenreFilterPopoverProps {
@@ -20,7 +21,8 @@ interface GenreFilterPopoverProps {
 }
 
 export function GenreFilterPopover({ value, onChange, scrolled }: GenreFilterPopoverProps) {
-  const genres = useQuery(api.genres.queries.getAllGenres);
+  const { shouldSkipQuery } = useAuthReady();
+  const genres = useQuery(api.genres.queries.getAllGenres, shouldSkipQuery ? "skip" : {});
   const [search, setSearch] = useState("");
 
   const filteredGenres = useMemo(() => {

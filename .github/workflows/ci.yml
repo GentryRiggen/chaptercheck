@@ -78,6 +78,7 @@ jobs:
   e2e:
     name: 🎭 E2E Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: quality
     env:
       NEXT_PUBLIC_CONVEX_URL: ${{ secrets.E2E_CONVEX_URL }}
