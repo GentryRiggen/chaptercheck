@@ -18,19 +18,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: "yarn"
 
       - name: 📚 Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: 🎨 Check formatting
-        run: npm run format:check
+        run: yarn format:check
 
       - name: 🔍 Run ESLint
-        run: npm run lint
+        run: yarn lint
 
       - name: 🔷 TypeScript check
-        run: npm run type-check
+        run: yarn type-check
 
   build:
     name: 🏗️ Build
@@ -44,13 +44,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: "yarn"
 
       - name: 📚 Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: 🔨 Build application
-        run: npm run build
+        run: yarn build
         env:
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
@@ -67,13 +67,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: "yarn"
 
       - name: 📚 Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: 🧪 Run tests
-        run: npm run test:run
+        run: yarn test:run
 
   e2e:
     name: 🎭 E2E Tests
@@ -93,10 +93,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: "yarn"
 
       - name: 📚 Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: 🎭 Install Playwright Chromium
         run: npx playwright install chromium
@@ -107,10 +107,10 @@ jobs:
           CONVEX_DEPLOY_KEY: ${{ secrets.E2E_CONVEX_DEPLOY_KEY }}
 
       - name: 🌱 Seed test data
-        run: npm run seed:e2e
+        run: yarn seed:e2e
 
       - name: 🧪 Run E2E tests
-        run: npm run e2e
+        run: yarn e2e
 
       - name: 📊 Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -134,10 +134,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: "yarn"
 
       - name: 📚 Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: 🗄️ Deploy Convex
         run: npx convex deploy
@@ -165,7 +165,7 @@ jobs:
         run: echo "deploy_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
 
       - name: ☁️ Deploy to Cloudflare
-        run: npm run cf-deploy
+        run: yarn cf-deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
