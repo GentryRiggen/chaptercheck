@@ -20,8 +20,8 @@
 - [x] 2d: Move web app into `apps/web/` (all files, package.json, tsconfig)
 - [x] 2e: Update all imports in `apps/web/`
 - [x] Verify: `yarn turbo build`, `yarn turbo lint`, `yarn turbo type-check`
-- [ ] Verify: `npx convex dev` works
-- [ ] Verify: E2E tests pass
+- [x] Verify: `npx convex dev` works
+- [x] Verify: E2E tests pass
 - [ ] Merge to main
 
 ## Phase 3: Scaffold Expo mobile app
