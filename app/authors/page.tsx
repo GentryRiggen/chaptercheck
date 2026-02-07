@@ -71,7 +71,7 @@ export default function AuthorsPage() {
             scrolled && "py-1.5 sm:py-2"
           )}
         >
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
             <h1
               className={cn(
                 "shrink-0 font-bold transition-all duration-200",
@@ -80,21 +80,21 @@ export default function AuthorsPage() {
             >
               Authors
             </h1>
-            <div className="relative flex-1">
+            <div className="relative order-last w-full sm:order-none sm:w-auto sm:flex-1">
               <Search
                 className={cn(
-                  "absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-all duration-200",
-                  scrolled ? "h-3.5 w-3.5" : "h-4 w-4"
+                  "absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-all duration-200",
+                  scrolled ? "h-3.5 w-3.5 sm:left-2" : "h-4 w-4 sm:left-2"
                 )}
               />
               <Input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search authors..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className={cn(
                   "text-base transition-all duration-200",
-                  scrolled ? "h-7 pl-7" : "h-8 pl-8"
+                  scrolled ? "h-9 pl-8 sm:h-7 sm:pl-7" : "h-10 pl-9 sm:h-8 sm:pl-8"
                 )}
               />
             </div>
