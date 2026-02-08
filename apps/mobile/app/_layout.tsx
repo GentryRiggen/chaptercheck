@@ -1,3 +1,4 @@
+import "../index";
 import "../global.css";
 
 import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/clerk-expo";

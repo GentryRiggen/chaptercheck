@@ -5,7 +5,7 @@ export default defineSchema({
   // Storage Accounts (can be shared by multiple users)
   storageAccounts: defineTable({
     name: v.optional(v.string()), // Optional display name for the account
-    r2PathPrefix: v.string(), // e.g., "users/{clerkId}" - unique prefix for R2 keys
+    r2PathPrefix: v.string(), // e.g., "storage-accounts/{storageAccountId}" - unique prefix for R2 keys
     totalBytesUsed: v.number(),
     fileCount: v.number(),
     createdAt: v.number(),

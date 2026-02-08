@@ -1,5 +1,5 @@
 import { createContext, type ReactNode, useContext } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, type PressableProps, ScrollView, Text, View } from "react-native";
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
@@ -62,6 +62,16 @@ interface TabsTriggerProps {
   className?: string;
 }
 
+// NativeWind bug: conditional shadow-* classes cause a "Couldn't find a navigation
+// context" error with Expo Router. Use inline styles for the shadow instead.
+// https://github.com/nativewind/nativewind/issues/1557
+const ACTIVE_SHADOW: PressableProps["style"] = {
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.05,
+  shadowRadius: 2,
+};
+
 function TabsTrigger({ value, children, className }: TabsTriggerProps) {
   const { value: activeValue, onValueChange } = useTabsContext();
   const isActive = activeValue === value;
@@ -71,9 +81,10 @@ function TabsTrigger({ value, children, className }: TabsTriggerProps) {
       onPress={() => onValueChange(value)}
       className={cn(
         "items-center justify-center rounded-md px-3 py-1.5",
-        isActive ? "bg-card shadow-sm" : "bg-transparent",
+        isActive ? "bg-card" : "bg-transparent",
         className
       )}
+      style={isActive ? ACTIVE_SHADOW : undefined}
     >
       <Text
         className={cn(
