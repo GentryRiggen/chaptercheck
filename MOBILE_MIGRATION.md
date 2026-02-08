@@ -59,13 +59,9 @@
 - [x] Shelf detail (books, reorder, share)
 - [x] User profile (stats, shelves, library)
 
-## Phase 4d: CRUD operations
+## Phase 4d: CRUD operations — SKIPPED
 
-- [ ] Add/Edit/Delete Book forms
-- [ ] Add/Edit/Delete Author forms
-- [ ] Create/Edit/Delete Shelf
-- [ ] Image upload (expo-image-picker → R2)
-- [ ] OpenLibrary autocomplete
+> CRUD for books/authors/series is web-only. Mobile is for browsing, audio playback, and shelves.
 
 ## Phase 4e: Audio player
 
