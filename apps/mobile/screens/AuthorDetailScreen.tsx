@@ -58,7 +58,10 @@ export default function AuthorDetailScreen() {
 
       <ScrollView contentContainerClassName="pb-8">
         {/* Hero Section */}
-        <View className="flex-row items-center gap-4 px-4 pt-6">
+        <View
+          className="flex-row items-center"
+          style={{ gap: 16, paddingHorizontal: 20, paddingTop: 24 }}
+        >
           <AuthorImage imageR2Key={author.imageR2Key} name={author.name} size="lg" />
           <View className="min-w-0 flex-1">
             <Text className="text-2xl font-bold text-foreground">{author.name}</Text>

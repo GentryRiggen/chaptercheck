@@ -106,14 +106,13 @@ function SeekBar({
       <View className="h-1 w-full rounded-full bg-muted">
         {/* Filled portion */}
         <View className="h-full rounded-full bg-primary" style={{ width: `${progressPercent}%` }} />
+        {/* Thumb indicator — centered on the 4px track: (4 - 20) / 2 = -8 */}
+        <View
+          className="absolute h-5 w-5 rounded-full bg-primary"
+          style={{ left: `${progressPercent}%`, top: -8, marginLeft: -10 }}
+          pointerEvents="none"
+        />
       </View>
-
-      {/* Thumb indicator */}
-      <View
-        className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-primary"
-        style={{ left: `${progressPercent}%`, marginLeft: -10 }}
-        pointerEvents="none"
-      />
     </Pressable>
   );
 }
@@ -135,12 +134,6 @@ function ExpandedPlayer() {
     collapse,
     stop,
   } = useAudioPlayerContext();
-
-  const handleCycleSpeed = useCallback(() => {
-    const currentIndex = PLAYBACK_SPEEDS.indexOf(playbackRate as (typeof PLAYBACK_SPEEDS)[number]);
-    const nextIndex = currentIndex === -1 ? 1 : (currentIndex + 1) % PLAYBACK_SPEEDS.length;
-    setPlaybackRate(PLAYBACK_SPEEDS[nextIndex]);
-  }, [playbackRate, setPlaybackRate]);
 
   if (!currentTrack) return null;
 
@@ -254,15 +247,32 @@ function ExpandedPlayer() {
         </View>
 
         {/* Playback speed */}
-        <View className="items-center pb-4">
-          <Pressable
-            onPress={handleCycleSpeed}
-            accessibilityRole="button"
-            accessibilityLabel={`Playback speed ${playbackRate}x. Tap to change.`}
-            className="rounded-full border border-border px-4 py-1.5 active:bg-muted"
-          >
-            <Text className="text-sm font-medium text-foreground">{playbackRate}x</Text>
-          </Pressable>
+        <View className="gap-2 px-6 pb-4">
+          <Text className="text-center text-xs text-muted-foreground">Speed</Text>
+          <View className="flex-row flex-wrap items-center justify-center gap-2">
+            {PLAYBACK_SPEEDS.map((speed) => (
+              <Pressable
+                key={speed}
+                onPress={() => setPlaybackRate(speed)}
+                accessibilityRole="button"
+                accessibilityLabel={`${speed}x speed`}
+                accessibilityState={{ selected: speed === playbackRate }}
+                className={cn(
+                  "rounded-full px-3 py-1.5",
+                  speed === playbackRate ? "bg-primary" : "border border-border active:bg-muted"
+                )}
+              >
+                <Text
+                  className={cn(
+                    "text-xs font-medium",
+                    speed === playbackRate ? "text-primary-foreground" : "text-foreground"
+                  )}
+                >
+                  {speed}x
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       </SafeAreaView>
     </Modal>

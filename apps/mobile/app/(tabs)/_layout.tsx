@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { Redirect, Tabs } from "expo-router";
-import { BookOpen, Library, Settings, Users } from "lucide-react-native";
+import { BookOpen, Home, Library, Settings, Users } from "lucide-react-native";
 import React from "react";
 
 export default function TabsLayout() {
@@ -17,28 +17,35 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="(a-feed)"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="(b-home)"
         options={{
           title: "Books",
           tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="authors"
+        name="(c-authors)"
         options={{
           title: "Authors",
           tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="shelves"
+        name="(d-shelves)"
         options={{
           title: "Shelves",
           tabBarIcon: ({ color, size }) => <Library size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="account"
+        name="(e-account)"
         options={{
           title: "Account",
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,

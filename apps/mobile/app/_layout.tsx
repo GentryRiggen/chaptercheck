@@ -32,17 +32,9 @@ export default function RootLayout() {
           <PermissionsProvider>
             <AudioPlayerProvider>
               <StatusBar style="auto" />
-              <Stack screenOptions={{ headerShown: false, headerBackTitle: "Back" }}>
+              <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="(auth)" />
-                <Stack.Screen name="books/[bookId]" options={{ headerShown: true, title: "" }} />
-                <Stack.Screen
-                  name="authors/[authorId]"
-                  options={{ headerShown: true, title: "" }}
-                />
-                <Stack.Screen name="series/[seriesId]" options={{ headerShown: true, title: "" }} />
-                <Stack.Screen name="shelves/[shelfId]" options={{ headerShown: true, title: "" }} />
-                <Stack.Screen name="users/[userId]" options={{ headerShown: true, title: "" }} />
               </Stack>
               <MiniPlayer />
               <ExpandedPlayer />

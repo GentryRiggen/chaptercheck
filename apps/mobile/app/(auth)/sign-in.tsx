@@ -55,7 +55,7 @@ export default function SignInScreen() {
 
       if (result.status === "complete" && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace("/(tabs)");
+        router.replace("/");
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Invalid verification code";

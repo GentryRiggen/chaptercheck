@@ -223,16 +223,16 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
 
         {/* Mobile Layout - Tabbed Interface */}
         <div className="block md:hidden">
-          <Tabs defaultValue="reviews" className="w-full">
+          <Tabs defaultValue="audio" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="reviews">Reviews</TabsTrigger>
               <TabsTrigger value="audio">Audio</TabsTrigger>
+              <TabsTrigger value="reviews">Reviews</TabsTrigger>
             </TabsList>
-            <TabsContent value="reviews" className="mt-4">
-              {ReviewsSection}
-            </TabsContent>
             <TabsContent value="audio" className="mt-4">
               {AudioSection}
+            </TabsContent>
+            <TabsContent value="reviews" className="mt-4">
+              {ReviewsSection}
             </TabsContent>
           </Tabs>
         </div>

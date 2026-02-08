@@ -1,8 +1,11 @@
 import { Pause, Play, SkipBack, SkipForward } from "lucide-react-native";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BookCover } from "@/components/books/BookCover";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
+
+const TAB_BAR_HEIGHT = 49;
 
 function MiniPlayer() {
   const {
@@ -17,12 +20,18 @@ function MiniPlayer() {
     expand,
   } = useAudioPlayerContext();
 
+  const insets = useSafeAreaInsets();
+
   if (!currentTrack) return null;
 
+  const bottomOffset = TAB_BAR_HEIGHT + insets.bottom;
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <View className="absolute bottom-0 left-0 right-0 border-t border-border bg-card">
+    <View
+      className="absolute left-0 right-0 border-t border-border bg-card"
+      style={{ bottom: bottomOffset }}
+    >
       {/* Progress bar */}
       <View className="h-0.5 w-full bg-muted">
         <View className="h-full bg-primary" style={{ width: `${progressPercent}%` }} />

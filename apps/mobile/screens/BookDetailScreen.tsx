@@ -43,7 +43,7 @@ export default function BookDetailScreen() {
     id ? { bookId: id } : "skip"
   );
 
-  const [activeTab, setActiveTab] = useState("reviews");
+  const [activeTab, setActiveTab] = useState("audio");
 
   // Loading state
   if (book === undefined) {
@@ -73,92 +73,89 @@ export default function BookDetailScreen() {
       <Stack.Screen options={{ title: book.title }} />
 
       {/* Hero Section */}
-      <View className="flex-row gap-4 px-4 pt-4">
-        {/* Cover */}
-        <BookCover coverImageR2Key={book.coverImageR2Key} title={book.title} size="lg" />
+      <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+        {/* Cover + Title row */}
+        <View className="flex-row" style={{ gap: 16 }}>
+          <BookCover coverImageR2Key={book.coverImageR2Key} title={book.title} size="lg" />
 
-        {/* Book Info */}
-        <View className="min-w-0 flex-1 gap-1">
-          {/* Series link */}
-          {book.series && (
-            <Pressable
-              onPress={() => router.push(`/series/${book.series!._id}`)}
-              accessibilityRole="link"
-            >
-              <Text className="text-sm italic text-primary" numberOfLines={1}>
-                {book.series.name}
-                {book.seriesOrder !== undefined && ` #${book.seriesOrder}`}
+          <View className="min-w-0 flex-1 justify-center" style={{ gap: 4 }}>
+            {/* Series link */}
+            {book.series && (
+              <Pressable
+                onPress={() => router.push(`/series/${book.series!._id}`)}
+                accessibilityRole="link"
+              >
+                <Text className="text-sm italic text-primary" numberOfLines={1}>
+                  {book.series.name}
+                  {book.seriesOrder !== undefined && ` #${book.seriesOrder}`}
+                </Text>
+              </Pressable>
+            )}
+
+            <Text className="text-xl font-bold leading-tight text-foreground">{book.title}</Text>
+
+            {book.subtitle && (
+              <Text className="mt-0.5 text-sm text-muted-foreground" numberOfLines={2}>
+                {book.subtitle}
               </Text>
-            </Pressable>
-          )}
+            )}
 
-          {/* Title */}
-          <Text className="text-xl font-bold leading-tight text-foreground">{book.title}</Text>
+            {/* Authors */}
+            {book.authors.length > 0 && (
+              <View className="flex-row flex-wrap items-center" style={{ gap: 2 }}>
+                <Text className="text-sm text-muted-foreground">by </Text>
+                {book.authors.map((author, index) => (
+                  <View key={author._id} className="flex-row items-center">
+                    <Pressable
+                      onPress={() => router.push(`/authors/${author._id}`)}
+                      accessibilityRole="link"
+                    >
+                      <Text className="text-sm text-primary">{author.name}</Text>
+                    </Pressable>
+                    {author.role && author.role !== "author" && (
+                      <Text className="text-xs text-muted-foreground"> ({author.role})</Text>
+                    )}
+                    {index < book.authors.length - 1 && (
+                      <Text className="text-sm text-muted-foreground">, </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
 
-          {/* Subtitle */}
-          {book.subtitle && (
-            <Text className="text-sm text-muted-foreground" numberOfLines={2}>
-              {book.subtitle}
-            </Text>
-          )}
+            {/* Genres */}
+            {genres && genres.length > 0 && (
+              <View className="flex-row flex-wrap" style={{ gap: 6, paddingTop: 4 }}>
+                {genres.map((genre) => (
+                  <Badge key={genre._id} variant="secondary">
+                    {genre.name}
+                  </Badge>
+                ))}
+              </View>
+            )}
 
-          {/* Authors */}
-          {book.authors.length > 0 && (
-            <View className="flex-row flex-wrap items-center gap-x-1">
-              <Text className="text-sm text-muted-foreground">by </Text>
-              {book.authors.map((author, index) => (
-                <View key={author._id} className="flex-row items-center">
-                  <Pressable
-                    onPress={() => router.push(`/authors/${author._id}`)}
-                    accessibilityRole="link"
-                  >
-                    <Text className="text-sm text-primary">{author.name}</Text>
-                  </Pressable>
-                  {author.role && author.role !== "author" && (
-                    <Text className="ml-1 text-xs text-muted-foreground">({author.role})</Text>
-                  )}
-                  {index < book.authors.length - 1 && (
-                    <Text className="text-sm text-muted-foreground">, </Text>
-                  )}
+            {/* Year · Language · Rating */}
+            <View className="flex-row flex-wrap items-center" style={{ gap: 10 }}>
+              {book.publishedYear && (
+                <Text className="text-xs text-muted-foreground">{book.publishedYear}</Text>
+              )}
+              {book.language && (
+                <Text className="text-xs text-muted-foreground">{book.language.toUpperCase()}</Text>
+              )}
+              {hasRating && (
+                <View className="flex-row items-center" style={{ gap: 4 }}>
+                  <StarRating value={Math.round(book.averageRating!)} readonly size="sm" />
+                  <Text className="text-xs text-muted-foreground">({book.ratingCount})</Text>
                 </View>
-              ))}
+              )}
             </View>
-          )}
-
-          {/* Genres */}
-          {genres && genres.length > 0 && (
-            <View className="flex-row flex-wrap gap-1 pt-1">
-              {genres.map((genre) => (
-                <Badge key={genre._id} variant="secondary">
-                  {genre.name}
-                </Badge>
-              ))}
-            </View>
-          )}
-
-          {/* Published year + language */}
-          <View className="flex-row flex-wrap gap-x-3 pt-1">
-            {book.publishedYear && (
-              <Text className="text-xs text-muted-foreground">{book.publishedYear}</Text>
-            )}
-            {book.language && (
-              <Text className="text-xs text-muted-foreground">{book.language}</Text>
-            )}
           </View>
-
-          {/* Rating */}
-          {hasRating && (
-            <View className="flex-row items-center gap-1.5 pt-1">
-              <StarRating value={Math.round(book.averageRating!)} readonly size="sm" />
-              <Text className="text-xs text-muted-foreground">({book.ratingCount})</Text>
-            </View>
-          )}
         </View>
       </View>
 
       {/* Description Section */}
       {book.description && (
-        <View className="gap-2 px-4 pt-6">
+        <View style={{ paddingHorizontal: 20, paddingTop: 24, gap: 8 }}>
           <Text className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Description
           </Text>
@@ -167,16 +164,12 @@ export default function BookDetailScreen() {
       )}
 
       {/* Tabbed Section */}
-      <View className="px-4 pt-6">
+      <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="audio">Audio</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="reviews">
-            <ReviewsTab bookId={id} myBookData={myBookData} />
-          </TabsContent>
 
           <TabsContent value="audio">
             <AudioTab
@@ -187,6 +180,10 @@ export default function BookDetailScreen() {
               seriesName={book.series?.name}
               seriesOrder={book.seriesOrder}
             />
+          </TabsContent>
+
+          <TabsContent value="reviews">
+            <ReviewsTab bookId={id} myBookData={myBookData} />
           </TabsContent>
         </Tabs>
       </View>
