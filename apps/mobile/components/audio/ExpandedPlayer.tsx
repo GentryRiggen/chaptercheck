@@ -1,5 +1,14 @@
 import { cn } from "@chaptercheck/tailwind-config/cn";
-import { ChevronDown, Pause, Play, SkipBack, SkipForward, Square } from "lucide-react-native";
+import {
+  ChevronDown,
+  Minus,
+  Pause,
+  Play,
+  Plus,
+  SkipBack,
+  SkipForward,
+  Square,
+} from "lucide-react-native";
 import { useCallback, useRef } from "react";
 import {
   ActivityIndicator,
@@ -15,7 +24,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BookCover } from "@/components/books/BookCover";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 
-const PLAYBACK_SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3] as const;
+const MIN_SPEED = 0.5;
+const MAX_SPEED = 3;
+const SPEED_STEP = 0.25;
 
 /**
  * Format seconds into mm:ss or h:mm:ss.
@@ -247,32 +258,44 @@ function ExpandedPlayer() {
         </View>
 
         {/* Playback speed */}
-        <View className="gap-2 px-6 pb-4">
-          <Text className="text-center text-xs text-muted-foreground">Speed</Text>
-          <View className="flex-row flex-wrap items-center justify-center gap-2">
-            {PLAYBACK_SPEEDS.map((speed) => (
-              <Pressable
-                key={speed}
-                onPress={() => setPlaybackRate(speed)}
-                accessibilityRole="button"
-                accessibilityLabel={`${speed}x speed`}
-                accessibilityState={{ selected: speed === playbackRate }}
-                className={cn(
-                  "rounded-full px-3 py-1.5",
-                  speed === playbackRate ? "bg-primary" : "border border-border active:bg-muted"
-                )}
-              >
-                <Text
-                  className={cn(
-                    "text-xs font-medium",
-                    speed === playbackRate ? "text-primary-foreground" : "text-foreground"
-                  )}
-                >
-                  {speed}x
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+        <View className="flex-row items-center justify-center px-6 pb-4" style={{ gap: 16 }}>
+          <Pressable
+            onPress={() =>
+              setPlaybackRate(
+                Math.max(MIN_SPEED, Math.round((playbackRate - SPEED_STEP) * 100) / 100)
+              )
+            }
+            disabled={playbackRate <= MIN_SPEED}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease speed"
+            className={cn(
+              "h-9 w-9 items-center justify-center rounded-full border border-border active:bg-muted",
+              playbackRate <= MIN_SPEED && "opacity-30"
+            )}
+          >
+            <Minus size={16} className="text-foreground" />
+          </Pressable>
+
+          <Text className="w-14 text-center text-base font-semibold text-foreground">
+            {playbackRate}x
+          </Text>
+
+          <Pressable
+            onPress={() =>
+              setPlaybackRate(
+                Math.min(MAX_SPEED, Math.round((playbackRate + SPEED_STEP) * 100) / 100)
+              )
+            }
+            disabled={playbackRate >= MAX_SPEED}
+            accessibilityRole="button"
+            accessibilityLabel="Increase speed"
+            className={cn(
+              "h-9 w-9 items-center justify-center rounded-full border border-border active:bg-muted",
+              playbackRate >= MAX_SPEED && "opacity-30"
+            )}
+          >
+            <Plus size={16} className="text-foreground" />
+          </Pressable>
         </View>
       </SafeAreaView>
     </Modal>

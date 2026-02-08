@@ -1,5 +1,5 @@
 import { Check, ChevronDown } from "lucide-react-native";
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { FlatList, Modal, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -17,6 +17,7 @@ interface SelectProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  icon?: ReactNode;
 }
 
 function Select({
@@ -26,6 +27,7 @@ function Select({
   placeholder = "Select...",
   className,
   disabled = false,
+  icon,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const insets = useSafeAreaInsets();
@@ -95,7 +97,7 @@ function Select({
         >
           {displayText}
         </Text>
-        <ChevronDown size={16} className="ml-2 text-muted-foreground" />
+        {icon ?? <ChevronDown size={16} className="ml-2 text-muted-foreground" />}
       </Pressable>
 
       <Modal

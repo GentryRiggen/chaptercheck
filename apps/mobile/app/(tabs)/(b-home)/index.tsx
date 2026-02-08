@@ -3,7 +3,7 @@ import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { useAuthReady } from "@chaptercheck/shared/hooks/useAuthReady";
 import { useDebounce } from "@chaptercheck/shared/hooks/useDebounce";
 import { useQuery } from "convex/react";
-import { Plus, Search, X } from "lucide-react-native";
+import { Search, X } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,8 +11,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BookCard } from "@/components/books/BookCard";
 import { GenreFilter } from "@/components/books/GenreFilter";
 import { SortSelect, type SortOption } from "@/components/books/SortSelect";
-import { Button } from "@/components/ui/button";
-import { RoleGate } from "@/components/permissions/RoleGate";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
 const PRIMARY_COLOR = "hsl(120, 13%, 60%)";
@@ -116,14 +114,7 @@ export default function BooksScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       {/* Header area - search, sort, filter controls */}
       <View className="gap-2.5 border-b border-border/50 px-4 pb-3 pt-4">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-foreground">Books</Text>
-          <RoleGate minRole="editor">
-            <Button size="icon" variant="ghost" onPress={() => {}}>
-              <Plus size={22} className="text-primary" />
-            </Button>
-          </RoleGate>
-        </View>
+        <Text className="text-2xl font-bold text-foreground">Books</Text>
 
         {/* Search bar */}
         <View className="relative">
@@ -135,7 +126,8 @@ export default function BooksScreen() {
             onChangeText={setSearchInput}
             placeholder="Search books..."
             placeholderTextColor={MUTED_FOREGROUND}
-            className="h-10 rounded-md border border-input bg-transparent pl-9 pr-9 text-base text-foreground"
+            className="h-10 rounded-md border border-input bg-transparent pl-9 pr-9 text-foreground"
+            style={{ fontSize: 16, paddingVertical: 0 }}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"

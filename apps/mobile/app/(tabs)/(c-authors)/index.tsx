@@ -1,5 +1,5 @@
 import { useQuery } from "convex/react";
-import { Plus, Search, X } from "lucide-react-native";
+import { Search, X } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,7 +10,6 @@ import { useDebounce } from "@chaptercheck/shared/hooks/useDebounce";
 
 import { AuthorCard } from "@/components/authors/AuthorCard";
 import { AuthorSortSelect, type AuthorSortOption } from "@/components/authors/AuthorSortSelect";
-import { RoleGate } from "@/components/permissions/RoleGate";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
 export default function AuthorsScreen() {
@@ -59,18 +58,10 @@ export default function AuthorsScreen() {
     () => (
       <View className="gap-3 px-4 pb-3 pt-4">
         {/* Title row */}
-        <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-foreground">Authors</Text>
-          <RoleGate minRole="editor">
-            <Pressable className="flex-row items-center gap-1.5 rounded-lg bg-primary px-3 py-2 active:opacity-80">
-              <Plus size={18} className="text-primary-foreground" />
-              <Text className="text-sm font-semibold text-primary-foreground">Add</Text>
-            </Pressable>
-          </RoleGate>
-        </View>
+        <Text className="text-2xl font-bold text-foreground">Authors</Text>
 
         {/* Search bar */}
-        <View className="flex-row items-center rounded-lg border border-input bg-transparent px-3">
+        <View className="h-10 flex-row items-center rounded-lg border border-input bg-transparent px-3">
           <Search size={18} className="text-muted-foreground" />
           <TextInput
             value={searchInput}
@@ -79,7 +70,8 @@ export default function AuthorsScreen() {
             placeholderTextColor="hsl(120, 5%, 50%)"
             autoCapitalize="none"
             autoCorrect={false}
-            className="ml-2 flex-1 py-2.5 text-base text-foreground"
+            className="ml-2 h-10 flex-1 text-foreground"
+            style={{ fontSize: 16, paddingVertical: 0 }}
           />
           {searchInput.length > 0 && (
             <Pressable onPress={handleClearSearch} hitSlop={8}>

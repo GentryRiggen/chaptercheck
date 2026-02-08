@@ -4,13 +4,15 @@ import { type ReviewSortOption } from "@chaptercheck/convex-backend/bookUserData
 import { formatBytes, formatRelativeDate } from "@chaptercheck/shared/utils";
 import { useUser } from "@clerk/clerk-expo";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { MessageSquarePlus, Pause, Play } from "lucide-react-native";
+import { ArrowUpDown, MessageSquarePlus, Pause, Pencil, Play } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useQuery } from "convex/react";
 
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { BookCover } from "@/components/books/BookCover";
+import { BookReadStatus } from "@/components/books/BookReadStatus";
+import { BookReviewDialog } from "@/components/books/BookReviewDialog";
 import { StarRating } from "@/components/books/StarRating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -151,6 +153,11 @@ export default function BookDetailScreen() {
             </View>
           </View>
         </View>
+
+        {/* Read Status */}
+        <View style={{ paddingTop: 14 }}>
+          <BookReadStatus bookId={id} myBookData={myBookData} />
+        </View>
       </View>
 
       {/* Description Section */}
@@ -203,6 +210,7 @@ interface ReviewsTabProps {
         rating?: number;
         reviewText?: string;
         reviewedAt?: number;
+        isReadPrivate?: boolean;
         isReviewPrivate: boolean;
         userId: Id<"users">;
       }
@@ -214,6 +222,8 @@ function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
   const { user } = useUser();
   const [sortBy, setSortBy] = useState<ReviewSortOption>("recent");
   const [cursor, setCursor] = useState<string | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [editingReview, setEditingReview] = useState(false);
   const [accumulatedReviews, setAccumulatedReviews] = useState<
     Array<{
       _id: Id<"bookUserData">;
@@ -289,23 +299,23 @@ function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
   const communityReviews = displayReviews.filter((r) => !r.isOwnReview);
 
   return (
-    <View className="gap-4 pt-2">
-      {/* Sort select + Write a Review button */}
-      <View className="flex-row items-center justify-between gap-2">
-        <Button variant="outline" size="sm" onPress={() => {}}>
+    <View style={{ gap: 16, paddingTop: 8 }}>
+      {/* Write a Review button */}
+      {!hasOwnReview && (
+        <Button
+          variant="outline"
+          size="sm"
+          onPress={() => {
+            setEditingReview(false);
+            setReviewDialogOpen(true);
+          }}
+        >
           <View className="flex-row items-center gap-1.5">
             <MessageSquarePlus size={14} className="text-foreground" />
             <Text className="text-xs font-medium text-foreground">Write a Review</Text>
           </View>
         </Button>
-
-        <Select
-          value={sortBy}
-          onValueChange={handleSortChange}
-          options={SORT_OPTIONS}
-          className="w-36"
-        />
-      </View>
+      )}
 
       {/* Loading state */}
       {isInitialLoading && (
@@ -325,10 +335,24 @@ function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
 
       {/* Own review pinned at top */}
       {hasOwnReview && myBookData && (
-        <View className="gap-2">
-          <Text className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Your Review
-          </Text>
+        <View style={{ gap: 8 }}>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Your Review
+            </Text>
+            <Pressable
+              onPress={() => {
+                setEditingReview(true);
+                setReviewDialogOpen(true);
+              }}
+              hitSlop={8}
+              className="active:opacity-70"
+              accessibilityLabel="Edit your review"
+              accessibilityRole="button"
+            >
+              <Pencil size={14} color={PRIMARY_COLOR} />
+            </Pressable>
+          </View>
           <ReviewItem
             userName={
               user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "You" : "You"
@@ -344,12 +368,19 @@ function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
 
       {/* Community reviews */}
       {communityReviews.length > 0 && (
-        <View className="gap-3">
-          {hasOwnReview && (
+        <View style={{ gap: 12 }}>
+          <View className="flex-row items-center justify-between">
             <Text className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Community Reviews
+              {hasOwnReview ? "Community Reviews" : "Reviews"}
             </Text>
-          )}
+            <Select
+              value={sortBy}
+              onValueChange={handleSortChange}
+              options={SORT_OPTIONS}
+              className="w-36"
+              icon={<ArrowUpDown size={14} className="ml-2 text-muted-foreground" />}
+            />
+          </View>
           {communityReviews.map((review) => (
             <ReviewItem
               key={review._id}
@@ -369,6 +400,23 @@ function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
           {isLoadingMore ? "Loading..." : "Load More"}
         </Button>
       )}
+
+      {/* Review Dialog */}
+      <BookReviewDialog
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        bookId={bookId}
+        initialData={
+          editingReview && myBookData
+            ? {
+                rating: myBookData.rating,
+                reviewText: myBookData.reviewText,
+                isReadPrivate: myBookData.isReadPrivate,
+                isReviewPrivate: myBookData.isReviewPrivate,
+              }
+            : undefined
+        }
+      />
     </View>
   );
 }

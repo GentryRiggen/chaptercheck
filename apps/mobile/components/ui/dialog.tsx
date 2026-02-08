@@ -1,6 +1,15 @@
 import { X } from "lucide-react-native";
 import { createContext, type ReactNode, useContext } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
@@ -39,27 +48,34 @@ interface DialogContentProps {
 
 function DialogContent({ children, className }: DialogContentProps) {
   const { onOpenChange } = useDialogContext();
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal
       visible
-      transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={() => onOpenChange(false)}
-      statusBarTranslucent
+      presentationStyle="fullScreen"
     >
-      <Pressable
-        className="flex-1 items-center justify-center bg-black/80"
-        onPress={() => onOpenChange(false)}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        className="flex-1 bg-background"
       >
-        <Pressable
-          className={cn("w-full max-w-sm rounded-lg bg-card p-6", className)}
-          onPress={(e) => e.stopPropagation()}
+        <View
+          className={cn("flex-1", className)}
+          style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
         >
-          <DialogClose className="absolute right-4 top-4 z-10" />
-          {children}
-        </Pressable>
-      </Pressable>
+          <DialogClose className="absolute right-4 z-10" style={{ top: insets.top + 12 }} />
+          <ScrollView
+            contentContainerClassName="grow"
+            keyboardShouldPersistTaps="handled"
+            style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 }}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
+            {children}
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -70,7 +86,7 @@ interface DialogHeaderProps {
 }
 
 function DialogHeader({ children, className }: DialogHeaderProps) {
-  return <View className={cn("mb-4 gap-1.5", className)}>{children}</View>;
+  return <View className={cn("mb-4 gap-1.5 pr-8", className)}>{children}</View>;
 }
 
 interface DialogFooterProps {
@@ -79,7 +95,7 @@ interface DialogFooterProps {
 }
 
 function DialogFooter({ children, className }: DialogFooterProps) {
-  return <View className={cn("mt-4 flex-row justify-end gap-2", className)}>{children}</View>;
+  return <View className={cn("mt-6 flex-row justify-end gap-2", className)}>{children}</View>;
 }
 
 interface DialogTitleProps {
@@ -102,9 +118,10 @@ function DialogDescription({ children, className }: DialogDescriptionProps) {
 
 interface DialogCloseProps {
   className?: string;
+  style?: object;
 }
 
-function DialogClose({ className }: DialogCloseProps) {
+function DialogClose({ className, style }: DialogCloseProps) {
   const { onOpenChange } = useDialogContext();
 
   return (
@@ -114,6 +131,7 @@ function DialogClose({ className }: DialogCloseProps) {
         "items-center justify-center rounded-sm opacity-70 active:opacity-100",
         className
       )}
+      style={style}
       hitSlop={8}
       accessibilityLabel="Close dialog"
       accessibilityRole="button"
