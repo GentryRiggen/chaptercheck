@@ -3,7 +3,7 @@ import "../global.css";
 import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
-import { Slot } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 
@@ -27,7 +27,15 @@ export default function RootLayout() {
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
           <PermissionsProvider>
             <StatusBar style="auto" />
-            <Slot />
+            <Stack screenOptions={{ headerShown: false, headerBackTitle: "Back" }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="books/[bookId]" options={{ headerShown: true, title: "" }} />
+              <Stack.Screen name="authors/[authorId]" options={{ headerShown: true, title: "" }} />
+              <Stack.Screen name="series/[seriesId]" options={{ headerShown: true, title: "" }} />
+              <Stack.Screen name="shelves/[shelfId]" options={{ headerShown: true, title: "" }} />
+              <Stack.Screen name="users/[userId]" options={{ headerShown: true, title: "" }} />
+            </Stack>
           </PermissionsProvider>
         </ConvexProviderWithClerk>
       </ClerkLoaded>
