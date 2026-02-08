@@ -1,11 +1,10 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { createContext, useContext, useMemo } from "react";
-
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { type UserPermissions } from "@chaptercheck/convex-backend/users/queries";
+import { useQuery } from "convex/react";
+import { createContext, useContext, useMemo } from "react";
 
 type UserRole = "admin" | "editor" | "viewer";
 

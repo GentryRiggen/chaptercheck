@@ -1,10 +1,10 @@
+import { api } from "@chaptercheck/convex-backend/_generated/api";
+import { type Doc } from "@chaptercheck/convex-backend/_generated/dataModel";
+import { type TrackInfo } from "@chaptercheck/shared/types/audio";
 import { useAction } from "convex/react";
 import { useCallback, useState } from "react";
 
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
-import { type TrackInfo } from "@chaptercheck/shared/types/audio";
-import { api } from "@chaptercheck/convex-backend/_generated/api";
-import { type Doc } from "@chaptercheck/convex-backend/_generated/dataModel";
 
 type AudioFileWithNames = Doc<"audioFiles"> & {
   friendlyName: string | null;

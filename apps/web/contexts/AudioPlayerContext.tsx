@@ -1,5 +1,7 @@
 "use client";
 
+import { api } from "@chaptercheck/convex-backend/_generated/api";
+import { type AudioPlayerContextValue, type TrackInfo } from "@chaptercheck/shared/types/audio";
 import { useAction } from "convex/react";
 import {
   createContext,
@@ -10,9 +12,6 @@ import {
   useRef,
   useState,
 } from "react";
-
-import { api } from "@chaptercheck/convex-backend/_generated/api";
-import { type AudioPlayerContextValue, type TrackInfo } from "@chaptercheck/shared/types/audio";
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 

@@ -1,24 +1,36 @@
-import { FlatCompat } from "@eslint/eslintrc";
+import nextPlugin from "@next/eslint-plugin-next";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
+import tsParser from "@typescript-eslint/parser";
+import reactHooksPlugin from "eslint-plugin-react-hooks";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    ignores: ["node_modules/**", ".next/**", "next-env.d.ts"],
+  },
+  // Next.js core-web-vitals rules
+  nextPlugin.flatConfig.coreWebVitals,
+  // React hooks
   {
     plugins: {
-      "simple-import-sort": simpleImportSort,
+      "react-hooks": reactHooksPlugin,
+    },
+    rules: reactHooksPlugin.configs.recommended.rules,
+  },
+  // TypeScript files
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    plugins: {
+      "@typescript-eslint": tsPlugin,
+    },
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        sourceType: "module",
+      },
     },
     rules: {
-      "simple-import-sort/imports": "error",
-      "simple-import-sort/exports": "error",
+      ...tsPlugin.configs.recommended.rules,
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
@@ -29,8 +41,15 @@ const eslintConfig = [
       ],
     },
   },
+  // Import sorting
   {
-    ignores: ["node_modules/**"],
+    plugins: {
+      "simple-import-sort": simpleImportSort,
+    },
+    rules: {
+      "simple-import-sort/imports": "error",
+      "simple-import-sort/exports": "error",
+    },
   },
 ];
 

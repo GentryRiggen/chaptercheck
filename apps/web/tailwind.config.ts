@@ -1,6 +1,6 @@
-import type { Config } from "tailwindcss";
-
 import { sharedTheme } from "@chaptercheck/tailwind-config";
+import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -10,5 +10,5 @@ export default {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: sharedTheme,
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;
