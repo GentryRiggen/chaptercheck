@@ -2649,8 +2649,8 @@ __metadata:
     expo-web-browser: "npm:~15.0.5"
     lucide-react-native: "npm:^0.562.0"
     nativewind: "npm:^4.1.23"
-    react: "npm:19.1.4"
-    react-dom: "npm:19.1.4"
+    react: "npm:19.1.0"
+    react-dom: "npm:19.1.0"
     react-hook-form: "npm:^7.71.1"
     react-native: "npm:0.81.5"
     react-native-gesture-handler: "npm:~2.25.0"
@@ -16498,14 +16498,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:19.1.4":
-  version: 19.1.4
-  resolution: "react-dom@npm:19.1.4"
+"react-dom@npm:19.1.0":
+  version: 19.1.0
+  resolution: "react-dom@npm:19.1.0"
   dependencies:
     scheduler: "npm:^0.26.0"
   peerDependencies:
-    react: ^19.1.4
-  checksum: 10c0/fffb4c273773727c9b6e79418626bbe4f2546ad92018fe6e6b6b7df5a5ed96ef61602805662012b4e53c0a6d339cf83030fe09baadd688cd3587d6f780f39028
+    react: ^19.1.0
+  checksum: 10c0/3e26e89bb6c67c9a6aa86cb888c7a7f8258f2e347a6d2a15299c17eb16e04c19194e3452bc3255bd34000a61e45e2cb51e46292392340432f133e5a5d2dfb5fc
   languageName: node
   linkType: hard
 
@@ -16819,10 +16819,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:19.1.4":
-  version: 19.1.4
-  resolution: "react@npm:19.1.4"
-  checksum: 10c0/159257dbaf168facecc0a34825114e2b00624d315b7dca8468afcc790eadf5a49f90c0234be7492c7207239292e789e443ca419a83121898b82b0824454900f2
+"react@npm:19.1.0":
+  version: 19.1.0
+  resolution: "react@npm:19.1.0"
+  checksum: 10c0/530fb9a62237d54137a13d2cfb67a7db6a2156faed43eecc423f4713d9b20c6f2728b026b45e28fcd72e8eadb9e9ed4b089e99f5e295d2f0ad3134251bdd3698
   languageName: node
   linkType: hard
 
