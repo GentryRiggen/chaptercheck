@@ -52,12 +52,12 @@
 
 ## Phase 4c: Detail screens
 
-- [ ] Book detail (metadata, series, authors, genres, ratings)
-- [ ] Book reviews list + review dialog
-- [ ] Author detail (bio, series, books)
-- [ ] Series detail (ordered books)
-- [ ] Shelf detail (books, reorder, share)
-- [ ] User profile (stats, shelves, library)
+- [x] Book detail (metadata, series, authors, genres, ratings)
+- [x] Book reviews list + review dialog
+- [x] Author detail (bio, series, books)
+- [x] Series detail (ordered books)
+- [x] Shelf detail (books, reorder, share)
+- [x] User profile (stats, shelves, library)
 
 ## Phase 4d: CRUD operations
 
