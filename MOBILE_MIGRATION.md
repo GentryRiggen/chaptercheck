@@ -35,10 +35,10 @@
 
 ## Phase 4a: Core UI components
 
-- [ ] Button, Card, Input, Badge, Separator
-- [ ] Dialog (Modal), Sheet (BottomSheet)
-- [ ] Select, Switch, Tabs
-- [ ] Form components (react-hook-form integration)
+- [x] Button, Card, Input, Badge, Separator, Label
+- [x] Dialog (Modal), Sheet (BottomSheet)
+- [x] Select, Switch, Tabs, Checkbox
+- [x] Form components (react-hook-form integration)
 
 ## Phase 4b: Browse screens
 
