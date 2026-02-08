@@ -4,11 +4,12 @@ import { type ReviewSortOption } from "@chaptercheck/convex-backend/bookUserData
 import { formatBytes, formatRelativeDate } from "@chaptercheck/shared/utils";
 import { useUser } from "@clerk/clerk-expo";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { FileAudio, MessageSquarePlus } from "lucide-react-native";
+import { MessageSquarePlus, Pause, Play } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useQuery } from "convex/react";
 
+import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { BookCover } from "@/components/books/BookCover";
 import { StarRating } from "@/components/books/StarRating";
 import { Badge } from "@/components/ui/badge";
@@ -178,7 +179,14 @@ export default function BookDetailScreen() {
           </TabsContent>
 
           <TabsContent value="audio">
-            <AudioTab audioFiles={audioFiles} />
+            <AudioTab
+              audioFiles={audioFiles}
+              bookId={id}
+              bookTitle={book.title}
+              coverImageR2Key={book.coverImageR2Key}
+              seriesName={book.series?.name}
+              seriesOrder={book.seriesOrder}
+            />
           </TabsContent>
         </Tabs>
       </View>
@@ -434,9 +442,23 @@ interface AudioTabProps {
         format: string;
       }>
     | undefined;
+  bookId: Id<"books">;
+  bookTitle: string;
+  coverImageR2Key?: string;
+  seriesName?: string;
+  seriesOrder?: number;
 }
 
-function AudioTab({ audioFiles }: AudioTabProps) {
+function AudioTab({
+  audioFiles,
+  bookId: bookIdProp,
+  bookTitle,
+  coverImageR2Key,
+  seriesName,
+  seriesOrder,
+}: AudioTabProps) {
+  const { currentTrack, isPlaying, isLoading, play, togglePlayPause } = useAudioPlayerContext();
+
   if (audioFiles === undefined) {
     return (
       <View className="items-center py-8">
@@ -455,32 +477,77 @@ function AudioTab({ audioFiles }: AudioTabProps) {
     );
   }
 
+  const totalParts = audioFiles.length;
+
+  const handlePlay = (
+    file: AudioTabProps["audioFiles"] extends Array<infer T> | undefined ? T : never
+  ) => {
+    const isCurrentFile = currentTrack?.audioFileId === file._id;
+    if (isCurrentFile) {
+      togglePlayPause();
+    } else {
+      play({
+        audioFileId: file._id,
+        displayName: file.displayName || file.fileName,
+        bookId: bookIdProp,
+        bookTitle,
+        coverImageR2Key,
+        seriesName,
+        seriesOrder,
+        partNumber: file.partNumber,
+        totalParts,
+      });
+    }
+  };
+
   return (
     <View className="gap-2 pt-2">
-      {audioFiles.map((file) => (
-        <View
-          key={file._id}
-          className="flex-row items-center gap-3 rounded-lg border border-border bg-card p-3"
-        >
-          {/* File icon */}
-          <View className="h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <FileAudio size={20} className="text-primary" />
-          </View>
+      {audioFiles.map((file) => {
+        const isCurrentFile = currentTrack?.audioFileId === file._id;
+        const isFileLoading = isCurrentFile && isLoading;
+        const isFilePlaying = isCurrentFile && isPlaying;
 
-          {/* File info */}
-          <View className="min-w-0 flex-1 gap-0.5">
-            <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
-              {file.displayName || file.fileName}
-            </Text>
-            <Text className="text-xs text-muted-foreground">{formatBytes(file.fileSize)}</Text>
-          </View>
+        return (
+          <Pressable
+            key={file._id}
+            onPress={() => handlePlay(file)}
+            className="flex-row items-center gap-3 rounded-lg border border-border bg-card p-3 active:bg-muted/50"
+          >
+            {/* Play/Pause button */}
+            <View
+              className={`h-10 w-10 items-center justify-center rounded-full ${isCurrentFile ? "bg-primary" : "bg-primary/10"}`}
+            >
+              {isFileLoading ? (
+                <ActivityIndicator size="small" color={isCurrentFile ? "white" : PRIMARY_COLOR} />
+              ) : isFilePlaying ? (
+                <Pause size={18} color={isCurrentFile ? "white" : PRIMARY_COLOR} />
+              ) : (
+                <Play
+                  size={18}
+                  color={isCurrentFile ? "white" : PRIMARY_COLOR}
+                  fill={isCurrentFile ? "white" : "transparent"}
+                />
+              )}
+            </View>
 
-          {/* Part number badge */}
-          {file.partNumber !== undefined && (
-            <Badge variant="secondary">{`Part ${file.partNumber}`}</Badge>
-          )}
-        </View>
-      ))}
+            {/* File info */}
+            <View className="min-w-0 flex-1 gap-0.5">
+              <Text
+                className={`text-sm font-medium ${isCurrentFile ? "text-primary" : "text-foreground"}`}
+                numberOfLines={1}
+              >
+                {file.displayName || file.fileName}
+              </Text>
+              <Text className="text-xs text-muted-foreground">{formatBytes(file.fileSize)}</Text>
+            </View>
+
+            {/* Part number badge */}
+            {file.partNumber !== undefined && (
+              <Badge variant="secondary">{`Part ${file.partNumber}`}</Badge>
+            )}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

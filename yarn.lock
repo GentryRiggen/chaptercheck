@@ -2635,6 +2635,7 @@ __metadata:
     "@chaptercheck/tailwind-config": "workspace:*"
     "@clerk/clerk-expo": "npm:^2.10.0"
     "@hookform/resolvers": "npm:^5.2.2"
+    "@react-native-async-storage/async-storage": "npm:^2.1.0"
     "@types/react": "npm:~19.1.0"
     convex: "npm:^1.31.3"
     expo: "npm:~54.0.33"
@@ -2658,6 +2659,7 @@ __metadata:
     react-native-safe-area-context: "npm:~5.4.0"
     react-native-screens: "npm:~4.23.0"
     react-native-svg: "npm:~15.13.0"
+    react-native-track-player: "npm:^4.1.1"
     react-native-worklets: "npm:~0.4.0"
     tailwindcss: "npm:^3.4.1"
     typescript: "npm:~5.9.2"
@@ -6235,6 +6237,17 @@ __metadata:
   peerDependencies:
     react-native: ^0.0.0-0 || >=0.60 <1.0
   checksum: 10c0/cad2098ef84251f2ab8ebc07b750e585a20ac7ca07f26e5441e957a76f2b66f01d10ef5fbddb63d675431377b31beb5208548093e1eb17d262d2184b51133f4d
+  languageName: node
+  linkType: hard
+
+"@react-native-async-storage/async-storage@npm:^2.1.0":
+  version: 2.2.0
+  resolution: "@react-native-async-storage/async-storage@npm:2.2.0"
+  dependencies:
+    merge-options: "npm:^3.0.4"
+  peerDependencies:
+    react-native: ^0.0.0-0 || >=0.65 <1.0
+  checksum: 10c0/84900eba46a40225c4ac9bf5eb58885200dc1e789d873ecda46a2a213870cc7110536ed1fd7a74b873071f3603c093958fbd84c635d6f6d4f94bfbb616ffa0ef
   languageName: node
   linkType: hard
 
@@ -16690,6 +16703,23 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10c0/89ba2ed640f78e69d44980473530fdb83e24336a1a43936e19f532e772c41e8532ee1d4f3ae003339e817a3e3b055aa2a8ee3c0da31754cd2c83fa1a81130d6a
+  languageName: node
+  linkType: hard
+
+"react-native-track-player@npm:^4.1.1":
+  version: 4.1.2
+  resolution: "react-native-track-player@npm:4.1.2"
+  peerDependencies:
+    react: ">=16.8.6"
+    react-native: ">=0.60.0-rc.2"
+    react-native-windows: ">=0.63.0"
+    shaka-player: ^4.7.9
+  peerDependenciesMeta:
+    react-native-windows:
+      optional: true
+    shaka-player:
+      optional: true
+  checksum: 10c0/8f4a4f1bd9568c2f2ab8a41b54304bd426d0cb98167d643315f85304ac0983eec6d5b4372c343fbcc398a993648ad263a5ffdd0ea5bc9d966d063afb9705dc04
   languageName: node
   linkType: hard
 

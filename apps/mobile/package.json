@@ -2,7 +2,7 @@
   "name": "@chaptercheck/mobile",
   "version": "0.0.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "./index.ts",
   "scripts": {
     "start": "expo start",
     "ios": "expo run:ios",
@@ -16,6 +16,7 @@
     "@chaptercheck/tailwind-config": "workspace:*",
     "@clerk/clerk-expo": "^2.10.0",
     "@hookform/resolvers": "^5.2.2",
+    "@react-native-async-storage/async-storage": "^2.1.0",
     "convex": "^1.31.3",
     "expo": "~54.0.33",
     "expo-auth-session": "~7.0.5",
@@ -38,6 +39,7 @@
     "react-native-safe-area-context": "~5.4.0",
     "react-native-screens": "~4.23.0",
     "react-native-svg": "~15.13.0",
+    "react-native-track-player": "^4.1.1",
     "react-native-worklets": "~0.4.0",
     "zod": "^4.3.6"
   },
