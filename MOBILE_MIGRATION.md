@@ -42,13 +42,13 @@
 
 ## Phase 4b: Browse screens
 
-- [ ] Adapt usePaginatedList for FlatList
-- [ ] BookCard component
-- [ ] Books browse screen (search, sort, genre filter, infinite scroll)
-- [ ] AuthorCard component
-- [ ] Authors browse screen
-- [ ] RoleGate component
-- [ ] Pull-to-refresh
+- [x] Adapt usePaginatedList for FlatList
+- [x] BookCard component
+- [x] Books browse screen (search, sort, genre filter, infinite scroll)
+- [x] AuthorCard component
+- [x] Authors browse screen
+- [x] RoleGate component
+- [x] Pull-to-refresh
 
 ## Phase 4c: Detail screens
 
