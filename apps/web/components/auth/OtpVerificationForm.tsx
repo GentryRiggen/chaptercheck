@@ -42,6 +42,14 @@ export function OtpVerificationForm({
     await onSubmit(data.code);
   };
 
+  const handleCodeChange = (value: string, onChange: (v: string) => void) => {
+    const digits = value.replace(/\D/g, "").slice(0, 6);
+    onChange(digits);
+    if (digits.length === 6) {
+      form.handleSubmit(handleSubmit)();
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
@@ -64,6 +72,7 @@ export function OtpVerificationForm({
                     inputMode="numeric"
                     disabled={isLoading}
                     {...field}
+                    onChange={(e) => handleCodeChange(e.target.value, field.onChange)}
                   />
                 </FormControl>
                 <FormMessage />

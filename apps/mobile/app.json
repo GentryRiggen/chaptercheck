@@ -20,6 +20,9 @@
     "plugins": ["expo-router", "expo-secure-store"],
     "experiments": {
       "typedRoutes": true
+    },
+    "android": {
+      "package": "com.chaptercheck.app"
     }
   }
 }

@@ -32,12 +32,6 @@ export default function SignInScreen() {
         strategy: "email_code",
       });
       if (result.status === "needs_first_factor") {
-        await result.prepareFirstFactor({
-          strategy: "email_code",
-          emailAddressId:
-            result.supportedFirstFactors?.find((f) => f.strategy === "email_code")
-              ?.emailAddressId ?? "",
-        });
         setPendingVerification(true);
       }
     } catch (err: unknown) {
@@ -48,7 +42,7 @@ export default function SignInScreen() {
     }
   };
 
-  const handleVerifyCode = async () => {
+  const handleVerifyCode = async (codeOverride?: string) => {
     if (!isLoaded) return;
     setLoading(true);
     setError("");
@@ -56,7 +50,7 @@ export default function SignInScreen() {
     try {
       const result = await signIn.attemptFirstFactor({
         strategy: "email_code",
-        code,
+        code: codeOverride ?? code,
       });
 
       if (result.status === "complete" && result.createdSessionId) {
@@ -96,7 +90,10 @@ export default function SignInScreen() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+              textContentType="emailAddress"
               autoComplete="email"
+              returnKeyType="go"
+              onSubmitEditing={handleSendCode}
             />
             <Pressable
               onPress={handleSendCode}
@@ -120,13 +117,21 @@ export default function SignInScreen() {
               placeholder="000000"
               placeholderTextColor="hsl(220, 9%, 46%)"
               value={code}
-              onChangeText={setCode}
+              onChangeText={(text) => {
+                const digits = text.replace(/\D/g, "").slice(0, 6);
+                setCode(digits);
+                if (digits.length === 6) {
+                  handleVerifyCode(digits);
+                }
+              }}
               keyboardType="number-pad"
               maxLength={6}
               autoFocus
+              returnKeyType="go"
+              onSubmitEditing={() => handleVerifyCode()}
             />
             <Pressable
-              onPress={handleVerifyCode}
+              onPress={() => handleVerifyCode()}
               disabled={loading || code.length !== 6}
               className="rounded-lg bg-primary px-4 py-3 disabled:opacity-50"
             >
