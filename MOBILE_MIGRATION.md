@@ -65,11 +65,11 @@
 
 ## Phase 4e: Audio player
 
-- [ ] react-native-track-player setup + playback service
-- [ ] Mobile AudioPlayerContext
-- [ ] Background playback + lock screen controls
-- [ ] Mini player bar
-- [ ] Expanded player (modal)
+- [x] react-native-track-player setup + playback service
+- [x] Mobile AudioPlayerContext
+- [x] Background playback + lock screen controls
+- [x] Mini player bar
+- [x] Expanded player (modal)
 
 ## Phase 4f: Polish
 
