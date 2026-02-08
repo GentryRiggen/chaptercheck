@@ -81,7 +81,7 @@ export function AuthorImage({ imageR2Key, name, size = "md", className }: Author
   // Loading state: pulsing circle
   if (loading) {
     return (
-      <View className={cn("animate-pulse rounded-full bg-muted", SIZE_CLASSES[size], className)} />
+      <View className={cn("rounded-full bg-muted opacity-50", SIZE_CLASSES[size], className)} />
     );
   }
 

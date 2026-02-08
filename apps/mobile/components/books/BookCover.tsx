@@ -65,7 +65,7 @@ export function BookCover({ coverImageR2Key, title, size = "md", className }: Bo
   if (loading) {
     return (
       <View
-        className={cn("shrink-0 animate-pulse rounded-lg bg-muted", SIZE_CLASSES[size], className)}
+        className={cn("shrink-0 rounded-lg bg-muted opacity-50", SIZE_CLASSES[size], className)}
         style={isCard ? { aspectRatio: 2 / 3 } : undefined}
       />
     );
