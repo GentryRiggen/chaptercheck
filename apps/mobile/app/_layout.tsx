@@ -7,6 +7,7 @@ import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 
+import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { tokenCache } from "@/lib/tokenCache";
 
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL as string, {
@@ -24,8 +25,10 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
       <ClerkLoaded>
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-          <StatusBar style="auto" />
-          <Slot />
+          <PermissionsProvider>
+            <StatusBar style="auto" />
+            <Slot />
+          </PermissionsProvider>
         </ConvexProviderWithClerk>
       </ClerkLoaded>
     </ClerkProvider>
