@@ -2658,6 +2658,7 @@ __metadata:
     react-native-safe-area-context: "npm:~5.4.0"
     react-native-screens: "npm:~4.11.0"
     react-native-svg: "npm:~15.13.0"
+    react-native-worklets: "npm:~0.4.0"
     tailwindcss: "npm:^3.4.1"
     typescript: "npm:~5.9.2"
     zod: "npm:^4.3.6"
@@ -16701,6 +16702,28 @@ __metadata:
   peerDependencies:
     react-native: "*"
   checksum: 10c0/a48e6978f5a2c9e225bb93cc5f9985a8ac0fe7d8122105bcd88ef8d8420a3b33a67ce5d2bda2b606bf5fa94af9f6d04efce354580b60900e7c967fd2ebdc42cf
+  languageName: node
+  linkType: hard
+
+"react-native-worklets@npm:~0.4.0":
+  version: 0.4.2
+  resolution: "react-native-worklets@npm:0.4.2"
+  dependencies:
+    "@babel/plugin-transform-arrow-functions": "npm:^7.0.0-0"
+    "@babel/plugin-transform-class-properties": "npm:^7.0.0-0"
+    "@babel/plugin-transform-classes": "npm:^7.0.0-0"
+    "@babel/plugin-transform-nullish-coalescing-operator": "npm:^7.0.0-0"
+    "@babel/plugin-transform-optional-chaining": "npm:^7.0.0-0"
+    "@babel/plugin-transform-shorthand-properties": "npm:^7.0.0-0"
+    "@babel/plugin-transform-template-literals": "npm:^7.0.0-0"
+    "@babel/plugin-transform-unicode-regex": "npm:^7.0.0-0"
+    "@babel/preset-typescript": "npm:^7.16.7"
+    convert-source-map: "npm:^2.0.0"
+  peerDependencies:
+    "@babel/core": ^7.0.0-0
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/23965d7df3e5532f5eb339bfef2e35cd5a3d0c5d6e262485bee6680707b3bff74ca1803d06bb77762636443f3597a4788ac708488b53976740caab2af2998460
   languageName: node
   linkType: hard
 
