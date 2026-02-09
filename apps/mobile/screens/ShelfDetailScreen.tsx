@@ -7,15 +7,15 @@ import { BookOpen, Lock } from "lucide-react-native";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
 import { BookCover } from "@/components/books/BookCover";
+import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Badge } from "@/components/ui/badge";
-
-const PRIMARY_COLOR = "hsl(120, 13%, 60%)";
-const MUTED_FOREGROUND_COLOR = "hsl(220, 9%, 46%)";
 
 export default function ShelfDetailScreen() {
   const { shelfId: shelfIdParam } = useLocalSearchParams<{ shelfId: string }>();
   const shelfId = shelfIdParam as Id<"shelves">;
   const router = useRouter();
+  const colors = useThemeColors();
   const { shouldSkipQuery } = useAuthReady();
 
   const shelf = useQuery(api.shelves.queries.getShelf, shouldSkipQuery ? "skip" : { shelfId });
@@ -23,10 +23,10 @@ export default function ShelfDetailScreen() {
   // Loading state
   if (shelf === undefined) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <>
         <Stack.Screen options={{ title: "Shelf" }} />
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-      </View>
+        <DetailSkeleton />
+      </>
     );
   }
 
@@ -53,7 +53,7 @@ export default function ShelfDetailScreen() {
           <Text className="text-xl font-bold text-foreground" numberOfLines={2}>
             {shelf.name}
           </Text>
-          {!shelf.isPublic && <Lock size={16} color={MUTED_FOREGROUND_COLOR} />}
+          {!shelf.isPublic && <Lock size={16} color={colors.mutedForeground} />}
         </View>
 
         {shelf.description && (
@@ -96,7 +96,7 @@ export default function ShelfDetailScreen() {
         {shelf.books.length === 0 ? (
           /* Empty state */
           <View className="mx-4 items-center rounded-lg border border-border/50 bg-card/50 py-10">
-            <BookOpen size={48} color={MUTED_FOREGROUND_COLOR} strokeWidth={1.5} />
+            <BookOpen size={48} color={colors.mutedForeground} strokeWidth={1.5} />
             <Text className="mt-3 text-sm text-muted-foreground">This shelf is empty</Text>
           </View>
         ) : (

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BookCover } from "@/components/books/BookCover";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
+import { hapticLight } from "@/lib/haptics";
 
 const TAB_BAR_HEIGHT = 49;
 
@@ -71,7 +72,10 @@ function MiniPlayer() {
         {/* Controls */}
         <View className="flex-row items-center gap-3">
           <Pressable
-            onPress={() => skipBackward()}
+            onPress={() => {
+              hapticLight();
+              skipBackward();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Skip back 15 seconds"
             className="active:opacity-70"
@@ -83,7 +87,10 @@ function MiniPlayer() {
             <ActivityIndicator size="small" className="text-foreground" />
           ) : (
             <Pressable
-              onPress={togglePlayPause}
+              onPress={() => {
+                hapticLight();
+                togglePlayPause();
+              }}
               accessibilityRole="button"
               accessibilityLabel={isPlaying ? "Pause" : "Play"}
               className="active:opacity-70"
@@ -97,7 +104,10 @@ function MiniPlayer() {
           )}
 
           <Pressable
-            onPress={() => skipForward()}
+            onPress={() => {
+              hapticLight();
+              skipForward();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Skip forward 15 seconds"
             className="active:opacity-70"

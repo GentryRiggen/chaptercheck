@@ -23,6 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BookCover } from "@/components/books/BookCover";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
+import { hapticLight, hapticMedium } from "@/lib/haptics";
 
 const MIN_SPEED = 0.5;
 const MAX_SPEED = 3;
@@ -220,7 +221,10 @@ function ExpandedPlayer() {
         {/* Playback controls */}
         <View className="flex-row items-center justify-center gap-8 py-6">
           <Pressable
-            onPress={() => skipBackward()}
+            onPress={() => {
+              hapticLight();
+              skipBackward();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Skip back 15 seconds"
             className="active:opacity-70"
@@ -229,7 +233,10 @@ function ExpandedPlayer() {
           </Pressable>
 
           <Pressable
-            onPress={togglePlayPause}
+            onPress={() => {
+              hapticMedium();
+              togglePlayPause();
+            }}
             accessibilityRole="button"
             accessibilityLabel={isPlaying ? "Pause" : "Play"}
             className={cn(
@@ -248,7 +255,10 @@ function ExpandedPlayer() {
           </Pressable>
 
           <Pressable
-            onPress={() => skipForward()}
+            onPress={() => {
+              hapticLight();
+              skipForward();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Skip forward 15 seconds"
             className="active:opacity-70"
@@ -260,11 +270,12 @@ function ExpandedPlayer() {
         {/* Playback speed */}
         <View className="flex-row items-center justify-center px-6 pb-4" style={{ gap: 16 }}>
           <Pressable
-            onPress={() =>
+            onPress={() => {
+              hapticLight();
               setPlaybackRate(
                 Math.max(MIN_SPEED, Math.round((playbackRate - SPEED_STEP) * 100) / 100)
-              )
-            }
+              );
+            }}
             disabled={playbackRate <= MIN_SPEED}
             accessibilityRole="button"
             accessibilityLabel="Decrease speed"
@@ -281,11 +292,12 @@ function ExpandedPlayer() {
           </Text>
 
           <Pressable
-            onPress={() =>
+            onPress={() => {
+              hapticLight();
               setPlaybackRate(
                 Math.min(MAX_SPEED, Math.round((playbackRate + SPEED_STEP) * 100) / 100)
-              )
-            }
+              );
+            }}
             disabled={playbackRate >= MAX_SPEED}
             accessibilityRole="button"
             accessibilityLabel="Increase speed"

@@ -3,6 +3,8 @@ import { Pressable, Text, type ViewStyle } from "react-native";
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
+import { hapticLight } from "@/lib/haptics";
+
 const buttonVariants = {
   default: "bg-primary active:opacity-80",
   destructive: "bg-destructive active:opacity-80",
@@ -61,6 +63,7 @@ function Button({
 }: ButtonProps) {
   const handlePress = useCallback(() => {
     if (!disabled && onPress) {
+      hapticLight();
       onPress();
     }
   }, [disabled, onPress]);

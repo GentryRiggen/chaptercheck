@@ -3,7 +3,7 @@ import { Text, TextInput, type TextInputProps, View } from "react-native";
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
-const MUTED_FOREGROUND = "hsl(220, 9%, 46%)";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface InputProps extends TextInputProps {
   className?: string;
@@ -13,13 +13,14 @@ interface InputProps extends TextInputProps {
 function Input({ className, label, editable = true, onFocus, onBlur, ...props }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const isDisabled = editable === false;
+  const colors = useThemeColors();
 
   return (
     <View className="gap-1.5">
       {label ? <Text className="text-sm font-medium text-foreground">{label}</Text> : null}
       <TextInput
         editable={editable}
-        placeholderTextColor={MUTED_FOREGROUND}
+        placeholderTextColor={colors.mutedForeground}
         onFocus={(e) => {
           setIsFocused(true);
           onFocus?.(e);

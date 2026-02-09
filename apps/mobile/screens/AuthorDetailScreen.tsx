@@ -8,11 +8,14 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 
 import { AuthorImage } from "@/components/authors/AuthorImage";
 import { BookCover } from "@/components/books/BookCover";
+import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Badge } from "@/components/ui/badge";
 
 export default function AuthorDetailScreen() {
   const { authorId } = useLocalSearchParams<{ authorId: string }>();
   const router = useRouter();
+  const colors = useThemeColors();
 
   const id = authorId as Id<"authors">;
 
@@ -23,10 +26,10 @@ export default function AuthorDetailScreen() {
   // Loading state
   if (author === undefined) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <>
         <Stack.Screen options={{ title: "Author" }} />
-        <ActivityIndicator size="large" color="hsl(120, 13%, 60%)" />
-      </View>
+        <DetailSkeleton />
+      </>
     );
   }
 
@@ -117,7 +120,7 @@ export default function AuthorDetailScreen() {
           </Text>
           {books === undefined ? (
             <View className="items-center py-8">
-              <ActivityIndicator size="small" color="hsl(120, 13%, 60%)" />
+              <ActivityIndicator size="small" color={colors.primary} />
             </View>
           ) : books.length === 0 ? (
             <View className="items-center py-8">

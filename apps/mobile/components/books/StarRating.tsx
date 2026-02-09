@@ -3,6 +3,9 @@ import { Star } from "lucide-react-native";
 import { useCallback } from "react";
 import { Pressable, View } from "react-native";
 
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { hapticMedium } from "@/lib/haptics";
+
 interface StarRatingProps {
   value: number;
   onChange?: (value: number) => void;
@@ -19,16 +22,17 @@ const ICON_SIZES: Record<StarRatingSize, number> = {
 };
 
 const FILLED_COLOR = "#D4A76A";
-const UNFILLED_COLOR = "hsl(120, 5%, 50%)";
 
 /** 3-star rating component. Tapping the current star clears the rating. */
 export function StarRating({ value, onChange, readonly = false, size = "md" }: StarRatingProps) {
+  const colors = useThemeColors();
   const iconSize = ICON_SIZES[size];
 
   const handleStarPress = useCallback(
     (starIndex: number) => {
       if (readonly || !onChange) return;
 
+      hapticMedium();
       const newValue = starIndex + 1;
       // Tapping the same star that is already the current value clears the rating
       if (newValue === value) {
@@ -56,7 +60,7 @@ export function StarRating({ value, onChange, readonly = false, size = "md" }: S
           >
             <Star
               size={iconSize}
-              color={isFilled ? FILLED_COLOR : UNFILLED_COLOR}
+              color={isFilled ? FILLED_COLOR : colors.mutedForeground}
               fill={isFilled ? FILLED_COLOR : "transparent"}
               strokeWidth={2}
             />

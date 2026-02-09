@@ -12,9 +12,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useThemeColors } from "@/hooks/useThemeColors";
+
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
+  const colors = useThemeColors();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
@@ -85,7 +88,7 @@ export default function SignInScreen() {
             <TextInput
               className="mb-4 rounded-lg border border-input bg-card px-4 py-3 text-foreground"
               placeholder="Email address"
-              placeholderTextColor="hsl(220, 9%, 46%)"
+              placeholderTextColor={colors.mutedForeground}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -101,7 +104,7 @@ export default function SignInScreen() {
               className="rounded-lg bg-primary px-4 py-3 disabled:opacity-50"
             >
               {loading ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator color={colors.primaryForeground} />
               ) : (
                 <Text className="text-center font-semibold text-primary-foreground">
                   Continue with Email
@@ -115,7 +118,7 @@ export default function SignInScreen() {
             <TextInput
               className="mb-4 rounded-lg border border-input bg-card px-4 py-3 text-center text-2xl tracking-widest text-foreground"
               placeholder="000000"
-              placeholderTextColor="hsl(220, 9%, 46%)"
+              placeholderTextColor={colors.mutedForeground}
               value={code}
               onChangeText={(text) => {
                 const digits = text.replace(/\D/g, "").slice(0, 6);
@@ -136,7 +139,7 @@ export default function SignInScreen() {
               className="rounded-lg bg-primary px-4 py-3 disabled:opacity-50"
             >
               {loading ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator color={colors.primaryForeground} />
               ) : (
                 <Text className="text-center font-semibold text-primary-foreground">
                   Verify Code

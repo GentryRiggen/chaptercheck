@@ -73,10 +73,10 @@
 
 ## Phase 4f: Polish
 
-- [ ] Dark/light mode
-- [ ] Read status tracking
-- [ ] Error boundaries + loading skeletons
-- [ ] Haptic feedback
+- [x] Dark/light mode
+- [x] Read status tracking + review writing
+- [x] Error boundaries + loading skeletons
+- [x] Haptic feedback
 
 ## Phase 5: CI/CD
 

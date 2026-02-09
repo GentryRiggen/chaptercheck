@@ -18,8 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StarRating } from "@/components/books/StarRating";
-
-const MUTED_FOREGROUND = "hsl(220, 9%, 46%)";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type ReviewFormValues = z.infer<typeof reviewSchema>;
 
@@ -43,6 +42,7 @@ export function BookReviewDialog({
   isMarkingAsRead = false,
   initialData,
 }: BookReviewDialogProps) {
+  const colors = useThemeColors();
   const saveReview = useMutation(api.bookUserData.mutations.saveReview);
 
   const form = useForm<ReviewFormValues>({
@@ -129,7 +129,7 @@ export function BookReviewDialog({
               value={form.watch("reviewText")}
               onChangeText={(text) => form.setValue("reviewText", text)}
               placeholder="Share your thoughts..."
-              placeholderTextColor={MUTED_FOREGROUND}
+              placeholderTextColor={colors.mutedForeground}
               multiline
               maxLength={2000}
               textAlignVertical="top"

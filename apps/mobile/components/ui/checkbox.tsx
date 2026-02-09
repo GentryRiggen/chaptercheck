@@ -3,6 +3,9 @@ import { Pressable, View } from "react-native";
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { hapticLight } from "@/lib/haptics";
+
 interface CheckboxProps {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
@@ -11,9 +14,14 @@ interface CheckboxProps {
 }
 
 function Checkbox({ checked, onCheckedChange, disabled = false, className }: CheckboxProps) {
+  const colors = useThemeColors();
+
   return (
     <Pressable
-      onPress={() => onCheckedChange(!checked)}
+      onPress={() => {
+        hapticLight();
+        onCheckedChange(!checked);
+      }}
       disabled={disabled}
       className={cn(disabled && "opacity-50", className)}
     >
@@ -23,7 +31,7 @@ function Checkbox({ checked, onCheckedChange, disabled = false, className }: Che
           checked && "bg-primary"
         )}
       >
-        {checked ? <Check size={14} color="#ffffff" /> : null}
+        {checked ? <Check size={14} color={colors.primaryForeground} /> : null}
       </View>
     </Pressable>
   );

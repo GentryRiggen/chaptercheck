@@ -10,6 +10,8 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 import { useQuery } from "convex/react";
 
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
+import { BookDetailSkeleton } from "@/components/skeletons/BookDetailSkeleton";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { BookCover } from "@/components/books/BookCover";
 import { BookReadStatus } from "@/components/books/BookReadStatus";
 import { BookReviewDialog } from "@/components/books/BookReviewDialog";
@@ -20,7 +22,6 @@ import { Select, type SelectOption } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const PAGE_SIZE = 10;
-const PRIMARY_COLOR = "hsl(120, 13%, 60%)";
 
 const SORT_OPTIONS: SelectOption[] = [
   { label: "Most recent", value: "recent" },
@@ -50,10 +51,10 @@ export default function BookDetailScreen() {
   // Loading state
   if (book === undefined) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <>
         <Stack.Screen options={{ title: "Book" }} />
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-      </View>
+        <BookDetailSkeleton />
+      </>
     );
   }
 
@@ -219,6 +220,7 @@ interface ReviewsTabProps {
 }
 
 function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
+  const colors = useThemeColors();
   const { user } = useUser();
   const [sortBy, setSortBy] = useState<ReviewSortOption>("recent");
   const [cursor, setCursor] = useState<string | null>(null);
@@ -320,7 +322,7 @@ function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
       {/* Loading state */}
       {isInitialLoading && (
         <View className="items-center py-8">
-          <ActivityIndicator size="small" color={PRIMARY_COLOR} />
+          <ActivityIndicator size="small" color={colors.primary} />
         </View>
       )}
 
@@ -350,7 +352,7 @@ function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
               accessibilityLabel="Edit your review"
               accessibilityRole="button"
             >
-              <Pencil size={14} color={PRIMARY_COLOR} />
+              <Pencil size={14} color={colors.primary} />
             </Pressable>
           </View>
           <ReviewItem
@@ -502,12 +504,13 @@ function AudioTab({
   seriesName,
   seriesOrder,
 }: AudioTabProps) {
+  const colors = useThemeColors();
   const { currentTrack, isPlaying, isLoading, play, togglePlayPause } = useAudioPlayerContext();
 
   if (audioFiles === undefined) {
     return (
       <View className="items-center py-8">
-        <ActivityIndicator size="small" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   }
@@ -563,14 +566,20 @@ function AudioTab({
               className={`h-10 w-10 items-center justify-center rounded-full ${isCurrentFile ? "bg-primary" : "bg-primary/10"}`}
             >
               {isFileLoading ? (
-                <ActivityIndicator size="small" color={isCurrentFile ? "white" : PRIMARY_COLOR} />
+                <ActivityIndicator
+                  size="small"
+                  color={isCurrentFile ? colors.primaryForeground : colors.primary}
+                />
               ) : isFilePlaying ? (
-                <Pause size={18} color={isCurrentFile ? "white" : PRIMARY_COLOR} />
+                <Pause
+                  size={18}
+                  color={isCurrentFile ? colors.primaryForeground : colors.primary}
+                />
               ) : (
                 <Play
                   size={18}
-                  color={isCurrentFile ? "white" : PRIMARY_COLOR}
-                  fill={isCurrentFile ? "white" : "transparent"}
+                  color={isCurrentFile ? colors.primaryForeground : colors.primary}
+                  fill={isCurrentFile ? colors.primaryForeground : "transparent"}
                 />
               )}
             </View>

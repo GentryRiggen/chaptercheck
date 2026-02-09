@@ -8,8 +8,8 @@ import { useMutation } from "convex/react";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/books/StarRating";
 import { BookReviewDialog } from "@/components/books/BookReviewDialog";
-
-const PRIMARY_COLOR = "hsl(120, 13%, 60%)";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { hapticMedium } from "@/lib/haptics";
 
 interface BookReadStatusProps {
   bookId: Id<"books">;
@@ -28,6 +28,7 @@ interface BookReadStatusProps {
 }
 
 export function BookReadStatus({ bookId, myBookData }: BookReadStatusProps) {
+  const colors = useThemeColors();
   const markAsRead = useMutation(api.bookUserData.mutations.markAsRead);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
@@ -38,11 +39,13 @@ export function BookReadStatus({ bookId, myBookData }: BookReadStatusProps) {
     (myBookData?.reviewText && myBookData.reviewText.length > 0);
 
   const handleMarkAsRead = () => {
+    hapticMedium();
     setIsMarkingAsRead(true);
     setReviewDialogOpen(true);
   };
 
   const handleUnmark = () => {
+    hapticMedium();
     const message = hasReview
       ? "This will also remove your rating and review for this book."
       : "Are you sure you want to unmark this book as read?";
@@ -77,7 +80,7 @@ export function BookReadStatus({ bookId, myBookData }: BookReadStatusProps) {
       <>
         <Button variant="outline" onPress={handleMarkAsRead}>
           <View className="flex-row items-center" style={{ gap: 6 }}>
-            <BookCheck size={16} color={PRIMARY_COLOR} />
+            <BookCheck size={16} color={colors.primary} />
             <Text className="text-sm font-medium text-foreground">Mark as Read</Text>
           </View>
         </Button>
@@ -101,7 +104,7 @@ export function BookReadStatus({ bookId, myBookData }: BookReadStatusProps) {
           className="flex-row items-center rounded-full bg-primary px-3 py-1.5 active:opacity-80"
           style={{ gap: 4 }}
         >
-          <Check size={14} color="white" />
+          <Check size={14} color={colors.primaryForeground} />
           <Text className="text-sm font-medium text-primary-foreground">Read</Text>
         </Pressable>
 
@@ -116,7 +119,7 @@ export function BookReadStatus({ bookId, myBookData }: BookReadStatusProps) {
               accessibilityLabel="Edit review"
               accessibilityRole="button"
             >
-              <Pencil size={14} color={PRIMARY_COLOR} />
+              <Pencil size={14} color={colors.primary} />
             </Pressable>
           </View>
         ) : (

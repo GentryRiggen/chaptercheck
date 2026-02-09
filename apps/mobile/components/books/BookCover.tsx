@@ -4,6 +4,8 @@ import { Image } from "expo-image";
 import { BookOpen } from "lucide-react-native";
 import { Text, View } from "react-native";
 
+import { useThemeColors } from "@/hooks/useThemeColors";
+
 interface BookCoverProps {
   coverImageR2Key?: string;
   title: string;
@@ -56,6 +58,7 @@ function getColorFromTitle(title: string): string {
 }
 
 export function BookCover({ coverImageR2Key, title, size = "md", className }: BookCoverProps) {
+  const colors = useThemeColors();
   const { imageUrl, loading } = useImageUrl(coverImageR2Key);
   const isCard = size === "card";
   const dimensions = SIZE_DIMENSIONS[size];
@@ -87,7 +90,7 @@ export function BookCover({ coverImageR2Key, title, size = "md", className }: Bo
           isCard ? { aspectRatio: 2 / 3 } : undefined,
         ]}
       >
-        <BookOpen size={iconSize} color="hsl(120, 5%, 50%)" strokeWidth={1.5} />
+        <BookOpen size={iconSize} color={colors.mutedForeground} strokeWidth={1.5} />
         {isCard && (
           <Text
             className="text-center text-xs font-medium text-muted-foreground/70"

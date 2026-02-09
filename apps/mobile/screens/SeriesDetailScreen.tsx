@@ -8,13 +8,14 @@ import { useMemo } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
 import { BookCover } from "@/components/books/BookCover";
-
-const PRIMARY_COLOR = "hsl(120, 13%, 60%)";
+import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function SeriesDetailScreen() {
   const { seriesId: seriesIdParam } = useLocalSearchParams<{ seriesId: string }>();
   const seriesId = seriesIdParam as Id<"series">;
   const router = useRouter();
+  const colors = useThemeColors();
   const { shouldSkipQuery } = useAuthReady();
 
   const series = useQuery(api.series.queries.getSeries, shouldSkipQuery ? "skip" : { seriesId });
@@ -41,10 +42,10 @@ export default function SeriesDetailScreen() {
   // Loading state
   if (series === undefined) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <>
         <Stack.Screen options={{ title: "Series" }} />
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-      </View>
+        <DetailSkeleton />
+      </>
     );
   }
 
@@ -69,7 +70,7 @@ export default function SeriesDetailScreen() {
       <View className="flex-row gap-4 px-4 pt-4">
         {/* Series icon */}
         <View className="h-24 w-24 items-center justify-center rounded-lg bg-primary/10">
-          <Library size={48} color={PRIMARY_COLOR} />
+          <Library size={48} color={colors.primary} />
         </View>
 
         {/* Series info */}
@@ -121,7 +122,7 @@ export default function SeriesDetailScreen() {
 
         {books === undefined ? (
           <View className="items-center py-8">
-            <ActivityIndicator size="small" color={PRIMARY_COLOR} />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : books.length === 0 ? (
           <View className="mx-4 items-center rounded-lg border border-border/50 bg-card/50 py-8">

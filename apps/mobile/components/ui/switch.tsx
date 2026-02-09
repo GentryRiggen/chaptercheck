@@ -2,9 +2,8 @@ import { Switch as RNSwitch, View } from "react-native";
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
-const TRACK_COLOR_FALSE = "hsl(37, 14%, 89%)";
-const TRACK_COLOR_TRUE = "hsl(120, 13%, 60%)";
-const THUMB_COLOR = "#ffffff";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { hapticLight } from "@/lib/haptics";
 
 interface SwitchProps {
   checked: boolean;
@@ -14,14 +13,19 @@ interface SwitchProps {
 }
 
 function Switch({ checked, onCheckedChange, disabled = false, className }: SwitchProps) {
+  const colors = useThemeColors();
+
   return (
     <View className={cn(disabled && "opacity-50", className)}>
       <RNSwitch
         value={checked}
-        onValueChange={onCheckedChange}
+        onValueChange={(val) => {
+          hapticLight();
+          onCheckedChange(val);
+        }}
         disabled={disabled}
-        trackColor={{ false: TRACK_COLOR_FALSE, true: TRACK_COLOR_TRUE }}
-        thumbColor={THUMB_COLOR}
+        trackColor={{ false: colors.input, true: colors.primary }}
+        thumbColor={colors.primaryForeground}
       />
     </View>
   );

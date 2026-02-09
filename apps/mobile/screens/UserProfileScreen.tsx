@@ -9,9 +9,8 @@ import { Book, BookOpen, Calendar, Lock, MessageSquare, User } from "lucide-reac
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
 import { BookCover } from "@/components/books/BookCover";
-
-const PRIMARY_COLOR = "hsl(120, 13%, 60%)";
-const MUTED_FOREGROUND_COLOR = "hsl(220, 9%, 46%)";
+import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 /** Palette of background colors for avatar fallback, selected by name hash */
 const AVATAR_COLORS = [
@@ -34,6 +33,7 @@ export default function UserProfileScreen() {
   const { userId: userIdParam } = useLocalSearchParams<{ userId: string }>();
   const userId = userIdParam as Id<"users">;
   const router = useRouter();
+  const colors = useThemeColors();
   const { shouldSkipQuery } = useAuthReady();
 
   const profile = useQuery(api.users.queries.getUserProfile, shouldSkipQuery ? "skip" : { userId });
@@ -54,10 +54,10 @@ export default function UserProfileScreen() {
   // Loading state
   if (profile === undefined) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <>
         <Stack.Screen options={{ title: "Profile" }} />
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-      </View>
+        <DetailSkeleton />
+      </>
     );
   }
 
@@ -103,7 +103,7 @@ export default function UserProfileScreen() {
                 {displayName.charAt(0).toUpperCase()}
               </Text>
             ) : (
-              <User size={32} color={MUTED_FOREGROUND_COLOR} />
+              <User size={32} color={colors.mutedForeground} />
             )}
           </View>
         )}
@@ -115,14 +115,14 @@ export default function UserProfileScreen() {
         {profile.stats && (
           <View className="mt-3 flex-row flex-wrap items-center justify-center gap-4">
             <View className="flex-row items-center gap-1.5">
-              <Book size={14} color={MUTED_FOREGROUND_COLOR} />
+              <Book size={14} color={colors.mutedForeground} />
               <Text className="text-xs text-muted-foreground">
                 <Text className="font-medium text-foreground">{profile.stats.booksRead}</Text> read
               </Text>
             </View>
 
             <View className="flex-row items-center gap-1.5">
-              <MessageSquare size={14} color={MUTED_FOREGROUND_COLOR} />
+              <MessageSquare size={14} color={colors.mutedForeground} />
               <Text className="text-xs text-muted-foreground">
                 <Text className="font-medium text-foreground">{profile.stats.reviewsWritten}</Text>{" "}
                 reviews
@@ -130,7 +130,7 @@ export default function UserProfileScreen() {
             </View>
 
             <View className="flex-row items-center gap-1.5">
-              <BookOpen size={14} color={MUTED_FOREGROUND_COLOR} />
+              <BookOpen size={14} color={colors.mutedForeground} />
               <Text className="text-xs text-muted-foreground">
                 <Text className="font-medium text-foreground">{profile.stats.shelvesCount}</Text>{" "}
                 {profile.stats.shelvesCount === 1 ? "shelf" : "shelves"}
@@ -138,7 +138,7 @@ export default function UserProfileScreen() {
             </View>
 
             <View className="flex-row items-center gap-1.5">
-              <Calendar size={14} color={MUTED_FOREGROUND_COLOR} />
+              <Calendar size={14} color={colors.mutedForeground} />
               <Text className="text-xs text-muted-foreground">Joined {memberSince}</Text>
             </View>
           </View>
@@ -148,7 +148,7 @@ export default function UserProfileScreen() {
       {/* Private profile message */}
       {profile.isProfilePrivate && !profile.isOwnProfile && (
         <View className="mx-4 mt-6 items-center rounded-lg border border-border/50 bg-card/50 py-10">
-          <Lock size={48} color={MUTED_FOREGROUND_COLOR} strokeWidth={1.5} />
+          <Lock size={48} color={colors.mutedForeground} strokeWidth={1.5} />
           <Text className="mt-3 text-base font-semibold text-foreground">
             This profile is private
           </Text>
@@ -167,11 +167,11 @@ export default function UserProfileScreen() {
 
           {shelvesData === undefined ? (
             <View className="items-center py-8">
-              <ActivityIndicator size="small" color={PRIMARY_COLOR} />
+              <ActivityIndicator size="small" color={colors.primary} />
             </View>
           ) : shelvesData.shelves.length === 0 ? (
             <View className="items-center rounded-lg border border-border/50 bg-card/50 py-8">
-              <BookOpen size={40} color={MUTED_FOREGROUND_COLOR} strokeWidth={1.5} />
+              <BookOpen size={40} color={colors.mutedForeground} strokeWidth={1.5} />
               <Text className="mt-2 text-sm text-muted-foreground">No shelves yet</Text>
             </View>
           ) : (
@@ -206,11 +206,11 @@ export default function UserProfileScreen() {
 
           {readBooks === undefined ? (
             <View className="items-center py-8">
-              <ActivityIndicator size="small" color={PRIMARY_COLOR} />
+              <ActivityIndicator size="small" color={colors.primary} />
             </View>
           ) : readBooks.length === 0 ? (
             <View className="items-center rounded-lg border border-border/50 bg-card/50 py-8">
-              <Book size={40} color={MUTED_FOREGROUND_COLOR} strokeWidth={1.5} />
+              <Book size={40} color={colors.mutedForeground} strokeWidth={1.5} />
               <Text className="mt-2 text-sm text-muted-foreground">
                 {profile.isOwnProfile
                   ? "You haven't marked any books as read yet."

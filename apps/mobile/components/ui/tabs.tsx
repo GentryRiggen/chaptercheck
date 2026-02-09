@@ -3,6 +3,8 @@ import { Pressable, type PressableProps, ScrollView, Text, View } from "react-na
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
+import { hapticSelection } from "@/lib/haptics";
+
 interface TabsContextValue {
   value: string;
   onValueChange: (value: string) => void;
@@ -78,7 +80,10 @@ function TabsTrigger({ value, children, className }: TabsTriggerProps) {
 
   return (
     <Pressable
-      onPress={() => onValueChange(value)}
+      onPress={() => {
+        hapticSelection();
+        onValueChange(value);
+      }}
       className={cn(
         "items-center justify-center rounded-md px-3 py-1.5",
         isActive ? "bg-card" : "bg-transparent",

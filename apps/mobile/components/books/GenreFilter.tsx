@@ -11,8 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-
-const MUTED_FOREGROUND = "hsl(220, 9%, 46%)";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface GenreFilterProps {
   value: Id<"genres">[];
@@ -20,6 +19,7 @@ interface GenreFilterProps {
 }
 
 function GenreFilter({ value, onChange }: GenreFilterProps) {
+  const colors = useThemeColors();
   const { shouldSkipQuery } = useAuthReady();
   const genres = useQuery(api.genres.queries.getAllGenres, shouldSkipQuery ? "skip" : {});
 
@@ -90,7 +90,7 @@ function GenreFilter({ value, onChange }: GenreFilterProps) {
               value={search}
               onChangeText={setSearch}
               placeholder="Search genres..."
-              placeholderTextColor={MUTED_FOREGROUND}
+              placeholderTextColor={colors.mutedForeground}
               className="h-10 rounded-md border border-input bg-transparent px-3 text-base text-foreground"
               autoCapitalize="none"
               autoCorrect={false}
@@ -100,7 +100,7 @@ function GenreFilter({ value, onChange }: GenreFilterProps) {
           <ScrollView className="max-h-80" bounces={false}>
             {filteredGenres === undefined ? (
               <View className="items-center py-6">
-                <ActivityIndicator size="small" color="hsl(120, 13%, 60%)" />
+                <ActivityIndicator size="small" color={colors.primary} />
               </View>
             ) : filteredGenres.length === 0 ? (
               <View className="py-4">

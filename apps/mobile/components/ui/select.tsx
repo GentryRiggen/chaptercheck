@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
+import { hapticLight, hapticSelection } from "@/lib/haptics";
+
 interface SelectOption {
   label: string;
   value: string;
@@ -38,12 +40,14 @@ function Select({
 
   const handleOpen = useCallback(() => {
     if (!disabled) {
+      hapticLight();
       setIsOpen(true);
     }
   }, [disabled]);
 
   const handleSelect = useCallback(
     (optionValue: string) => {
+      hapticSelection();
       onValueChange(optionValue);
       setIsOpen(false);
     },

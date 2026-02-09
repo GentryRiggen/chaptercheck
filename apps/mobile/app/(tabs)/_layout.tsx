@@ -3,8 +3,11 @@ import { Redirect, Tabs } from "expo-router";
 import { BookOpen, Home, Library, Settings, Users } from "lucide-react-native";
 import React from "react";
 
+import { useThemeColors } from "@/hooks/useThemeColors";
+
 export default function TabsLayout() {
   const { isSignedIn, isLoaded } = useAuth();
+  const colors = useThemeColors();
 
   if (!isLoaded) return null;
   if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
@@ -12,7 +15,9 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "hsl(120, 13%, 60%)",
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
         headerShown: false,
       }}
     >

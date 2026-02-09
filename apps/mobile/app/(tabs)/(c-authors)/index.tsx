@@ -10,9 +10,12 @@ import { useDebounce } from "@chaptercheck/shared/hooks/useDebounce";
 
 import { AuthorCard } from "@/components/authors/AuthorCard";
 import { AuthorSortSelect, type AuthorSortOption } from "@/components/authors/AuthorSortSelect";
+import { ListSkeleton } from "@/components/skeletons/ListSkeleton";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
 export default function AuthorsScreen() {
+  const colors = useThemeColors();
   const { shouldSkipQuery } = useAuthReady();
   const [searchInput, setSearchInput] = useState("");
   const [sort, setSort] = useState<AuthorSortOption>("name_asc");
@@ -67,7 +70,7 @@ export default function AuthorsScreen() {
             value={searchInput}
             onChangeText={setSearchInput}
             placeholder="Search authors..."
-            placeholderTextColor="hsl(120, 5%, 50%)"
+            placeholderTextColor={colors.mutedForeground}
             autoCapitalize="none"
             autoCorrect={false}
             className="ml-2 h-10 flex-1 text-foreground"
@@ -97,7 +100,7 @@ export default function AuthorsScreen() {
     if (!isLoadingMore) return null;
     return (
       <View className="items-center py-4">
-        <ActivityIndicator size="small" color="hsl(120, 13%, 60%)" />
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   }, [isLoadingMore]);
@@ -105,8 +108,8 @@ export default function AuthorsScreen() {
   const listEmpty = useMemo(() => {
     if (isLoading) {
       return (
-        <View className="items-center py-16">
-          <ActivityIndicator size="large" color="hsl(120, 13%, 60%)" />
+        <View className="pt-4">
+          <ListSkeleton />
         </View>
       );
     }

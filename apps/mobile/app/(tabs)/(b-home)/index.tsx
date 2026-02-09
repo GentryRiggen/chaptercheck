@@ -11,12 +11,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BookCard } from "@/components/books/BookCard";
 import { GenreFilter } from "@/components/books/GenreFilter";
 import { SortSelect, type SortOption } from "@/components/books/SortSelect";
+import { ListSkeleton } from "@/components/skeletons/ListSkeleton";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
-const PRIMARY_COLOR = "hsl(120, 13%, 60%)";
-const MUTED_FOREGROUND = "hsl(220, 9%, 46%)";
-
 export default function BooksScreen() {
+  const colors = useThemeColors();
   const { shouldSkipQuery } = useAuthReady();
 
   const [searchInput, setSearchInput] = useState("");
@@ -83,7 +83,7 @@ export default function BooksScreen() {
     if (!isLoadingMore) return null;
     return (
       <View className="items-center py-4">
-        <ActivityIndicator size="small" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   }, [isLoadingMore]);
@@ -119,13 +119,13 @@ export default function BooksScreen() {
         {/* Search bar */}
         <View className="relative">
           <View className="pointer-events-none absolute left-3 top-0 z-10 h-10 justify-center">
-            <Search size={16} color={MUTED_FOREGROUND} />
+            <Search size={16} color={colors.mutedForeground} />
           </View>
           <TextInput
             value={searchInput}
             onChangeText={setSearchInput}
             placeholder="Search books..."
-            placeholderTextColor={MUTED_FOREGROUND}
+            placeholderTextColor={colors.mutedForeground}
             className="h-10 rounded-md border border-input bg-transparent pl-9 pr-9 text-foreground"
             style={{ fontSize: 16, paddingVertical: 0 }}
             autoCapitalize="none"
@@ -140,7 +140,7 @@ export default function BooksScreen() {
               accessibilityLabel="Clear search"
               accessibilityRole="button"
             >
-              <X size={16} color={MUTED_FOREGROUND} />
+              <X size={16} color={colors.mutedForeground} />
             </Pressable>
           )}
         </View>
@@ -158,8 +158,8 @@ export default function BooksScreen() {
 
       {/* Content area */}
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <View className="pt-4">
+          <ListSkeleton />
         </View>
       ) : (
         <FlatList

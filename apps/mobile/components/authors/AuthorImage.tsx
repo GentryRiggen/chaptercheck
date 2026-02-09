@@ -4,6 +4,8 @@ import { Image } from "expo-image";
 import { User } from "lucide-react-native";
 import { Text, View } from "react-native";
 
+import { useThemeColors } from "@/hooks/useThemeColors";
+
 interface AuthorImageProps {
   imageR2Key?: string;
   name: string;
@@ -74,6 +76,7 @@ function getInitials(name: string): string {
 }
 
 export function AuthorImage({ imageR2Key, name, size = "md", className }: AuthorImageProps) {
+  const colors = useThemeColors();
   const { imageUrl, loading } = useImageUrl(imageR2Key);
   const dimension = SIZE_DIMENSIONS[size];
   const iconSize = ICON_SIZES[size];
@@ -106,7 +109,7 @@ export function AuthorImage({ imageR2Key, name, size = "md", className }: Author
             {initials}
           </Text>
         ) : (
-          <User size={iconSize} color="hsl(120, 5%, 50%)" strokeWidth={1.5} />
+          <User size={iconSize} color={colors.mutedForeground} strokeWidth={1.5} />
         )}
       </View>
     );
