@@ -9,6 +9,7 @@ pre-commit:
       run: npx prettier --check {staged_files}
 
     - name: lint
+      glob: "apps/web/**/*.{js,jsx,ts,tsx,mjs,mts}"
       run: yarn workspace @chaptercheck/web lint
 
     - name: typecheck

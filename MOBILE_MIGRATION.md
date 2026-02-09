@@ -80,10 +80,10 @@
 
 ## Phase 5: CI/CD
 
-- [ ] Change detection job (dorny/paths-filter)
-- [ ] Update web jobs (npm → yarn, turbo)
-- [ ] Add mobile deploy job (EAS)
-- [ ] Update lefthook
+- [x] Change detection job (dorny/paths-filter)
+- [x] Update web jobs (npm → yarn, turbo)
+- [x] Add mobile deploy job (EAS)
+- [x] Update lefthook
 - [ ] Verify: conditional deploys work
 
 ## Phase 6: Testing
