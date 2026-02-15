@@ -13,6 +13,7 @@ import { ExpandedPlayer } from "@/components/audio/ExpandedPlayer";
 import { MiniPlayer } from "@/components/audio/MiniPlayer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
+import { DownloadManagerProvider } from "@/contexts/DownloadManagerContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { tokenCache } from "@/lib/tokenCache";
 
@@ -48,9 +49,11 @@ export default function RootLayout() {
       <ClerkLoaded>
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
           <PermissionsProvider>
-            <AudioPlayerProvider>
-              <AppContent />
-            </AudioPlayerProvider>
+            <DownloadManagerProvider>
+              <AudioPlayerProvider>
+                <AppContent />
+              </AudioPlayerProvider>
+            </DownloadManagerProvider>
           </PermissionsProvider>
         </ConvexProviderWithClerk>
       </ClerkLoaded>

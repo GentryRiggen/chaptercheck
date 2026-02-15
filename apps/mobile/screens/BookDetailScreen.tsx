@@ -4,12 +4,24 @@ import { type ReviewSortOption } from "@chaptercheck/convex-backend/bookUserData
 import { formatBytes, formatRelativeDate } from "@chaptercheck/shared/utils";
 import { useUser } from "@clerk/clerk-expo";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowUpDown, MessageSquarePlus, Pause, Pencil, Play } from "lucide-react-native";
+import {
+  ArrowDownToLine,
+  ArrowUpDown,
+  CheckCircle,
+  MessageSquarePlus,
+  Pause,
+  Pencil,
+  Play,
+  Trash2,
+  X,
+} from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 import { useQuery } from "convex/react";
 
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
+import { useDownloadManager } from "@/contexts/DownloadManagerContext";
 import { BookDetailSkeleton } from "@/components/skeletons/BookDetailSkeleton";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { BookCover } from "@/components/books/BookCover";
@@ -505,6 +517,48 @@ interface AudioTabProps {
   seriesOrder?: number;
 }
 
+function DownloadProgressRing({
+  progress,
+  size = 28,
+  strokeWidth = 2.5,
+  color,
+}: {
+  progress: number;
+  size?: number;
+  strokeWidth?: number;
+  color: string;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  return (
+    <Svg width={size} height={size}>
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+        opacity={0.2}
+      />
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeDasharray={`${circumference}`}
+        strokeDashoffset={strokeDashoffset}
+        strokeLinecap="round"
+        transform={`rotate(-90, ${size / 2}, ${size / 2})`}
+      />
+    </Svg>
+  );
+}
+
 function AudioTab({
   audioFiles,
   bookId: bookIdProp,
@@ -515,6 +569,15 @@ function AudioTab({
 }: AudioTabProps) {
   const colors = useThemeColors();
   const { currentTrack, isPlaying, isLoading, play, togglePlayPause } = useAudioPlayerContext();
+  const {
+    downloadFile,
+    downloadAllForBook,
+    cancelDownload,
+    deleteDownload,
+    deleteDownloadsForBook,
+    isDownloaded,
+    getDownloadProgress,
+  } = useDownloadManager();
 
   const savedProgress = useQuery(api.listeningProgress.queries.getProgressForBook, {
     bookId: bookIdProp,
@@ -539,6 +602,10 @@ function AudioTab({
   }
 
   const totalParts = audioFiles.length;
+
+  // Download state
+  const allDownloaded = audioFiles.every((f) => isDownloaded(f._id));
+  const someDownloaded = audioFiles.some((f) => isDownloaded(f._id));
 
   // Find the file matching saved progress
   const savedFile = savedProgress
@@ -597,6 +664,30 @@ function AudioTab({
     );
   };
 
+  const handleDownloadAll = () => {
+    downloadAllForBook(
+      bookIdProp,
+      audioFiles.map((f) => ({
+        _id: f._id,
+        displayName: f.displayName || f.fileName,
+        fileSize: f.fileSize,
+        format: f.format,
+      })),
+      bookTitle
+    );
+  };
+
+  const handleDeleteAllDownloads = () => {
+    Alert.alert("Delete All Downloads", `Remove all downloaded files for "${bookTitle}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => deleteDownloadsForBook(bookIdProp),
+      },
+    ]);
+  };
+
   // Build resume label
   const resumeLabel =
     savedFile && savedProgress
@@ -617,14 +708,65 @@ function AudioTab({
         </Button>
       )}
 
+      {/* Download All / Delete All Downloads */}
+      {!allDownloaded && (
+        <Button variant="outline" size="sm" onPress={handleDownloadAll}>
+          <View className="flex-row items-center gap-2">
+            <ArrowDownToLine size={14} className="text-foreground" />
+            <Text className="text-xs font-medium text-foreground">Download All</Text>
+          </View>
+        </Button>
+      )}
+      {someDownloaded && (
+        <Button variant="outline" size="sm" onPress={handleDeleteAllDownloads}>
+          <View className="flex-row items-center gap-2">
+            <Trash2 size={14} color={colors.destructive} />
+            <Text className="text-xs font-medium" style={{ color: colors.destructive }}>
+              Delete All Downloads
+            </Text>
+          </View>
+        </Button>
+      )}
+
       {audioFiles.map((file) => {
         const isCurrentFile = currentTrack?.audioFileId === file._id;
         const isFileLoading = isCurrentFile && isLoading;
         const isFilePlaying = isCurrentFile && isPlaying;
+        const fileDownloaded = isDownloaded(file._id);
+        const downloadProgress = getDownloadProgress(file._id);
+        const isDownloading = downloadProgress !== null;
 
         // Show saved position indicator for the file with progress (when not currently playing)
         const hasSavedPosition =
           savedProgress && savedProgress.audioFileId === file._id && !isCurrentFile;
+
+        const handleDownloadPress = () => {
+          if (isDownloading) {
+            cancelDownload(file._id);
+          } else if (fileDownloaded) {
+            Alert.alert(
+              "Delete Download",
+              `Delete downloaded file "${file.displayName || file.fileName}"?`,
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => deleteDownload(file._id),
+                },
+              ]
+            );
+          } else {
+            downloadFile(
+              file._id,
+              bookIdProp,
+              bookTitle,
+              file.displayName || file.fileName,
+              file.fileSize,
+              file.format
+            );
+          }
+        };
 
         return (
           <Pressable
@@ -670,6 +812,29 @@ function AudioTab({
                 </Text>
               )}
             </View>
+
+            {/* Download status button */}
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                handleDownloadPress();
+              }}
+              hitSlop={8}
+              className="items-center justify-center active:opacity-70"
+            >
+              {isDownloading ? (
+                <View className="items-center justify-center" style={{ width: 28, height: 28 }}>
+                  <DownloadProgressRing progress={downloadProgress} color={colors.primary} />
+                  <View className="absolute">
+                    <X size={10} color={colors.primary} />
+                  </View>
+                </View>
+              ) : fileDownloaded ? (
+                <CheckCircle size={20} color={colors.primary} />
+              ) : (
+                <ArrowDownToLine size={20} color={colors.mutedForeground} />
+              )}
+            </Pressable>
 
             {/* Part number badge */}
             {file.partNumber !== undefined && (

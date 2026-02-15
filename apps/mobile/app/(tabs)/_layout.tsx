@@ -52,7 +52,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="(e-account)"
         options={{
-          title: "Account",
+          title: "Settings",
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />

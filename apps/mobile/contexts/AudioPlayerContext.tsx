@@ -23,6 +23,8 @@ import TrackPlayer, {
   useProgress,
 } from "react-native-track-player";
 
+import { useDownloadManager } from "@/contexts/DownloadManagerContext";
+
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 
 const PLAYBACK_RATE_KEY = "chaptercheck-playback-rate";
@@ -39,6 +41,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   const generateStreamUrl = useAction(api.audioFiles.actions.generateStreamUrl);
   const saveProgressMutation = useMutation(api.listeningProgress.mutations.saveProgress);
+  const { getLocalPath } = useDownloadManager();
 
   // Keep a ref to the current track so the play callback can read it
   // without a stale closure
@@ -194,14 +197,22 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       lastSavedPositionRef.current = 0;
 
       try {
-        const { streamUrl } = await generateStreamUrl({
-          audioFileId: track.audioFileId,
-        });
+        // Use local file if downloaded, otherwise stream from R2
+        const localPath = getLocalPath(track.audioFileId);
+        let audioUrl: string;
+        if (localPath) {
+          audioUrl = localPath;
+        } else {
+          const { streamUrl } = await generateStreamUrl({
+            audioFileId: track.audioFileId,
+          });
+          audioUrl = streamUrl;
+        }
 
         await TrackPlayer.reset();
         await TrackPlayer.add({
           id: track.audioFileId,
-          url: streamUrl,
+          url: audioUrl,
           title: track.displayName,
           artist: track.bookTitle,
           artwork: undefined,
@@ -228,7 +239,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setIsLoading(false);
       }
     },
-    [isPlayerReady, generateStreamUrl, saveProgress]
+    [isPlayerReady, generateStreamUrl, getLocalPath, saveProgress]
   );
 
   const pause = useCallback(async () => {
