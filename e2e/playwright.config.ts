@@ -49,7 +49,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: process.env.CI ? "npm run build && npm run start" : "npm run dev",
+    command: process.env.CI
+      ? "yarn workspace @chaptercheck/web build && yarn workspace @chaptercheck/web start"
+      : "yarn workspace @chaptercheck/web dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

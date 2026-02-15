@@ -1,0 +1,322 @@
+"use client";
+
+import { api } from "@chaptercheck/convex-backend/_generated/api";
+import { type Doc, type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
+import { useMutation } from "convex/react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Download,
+  GripVertical,
+  Lock,
+  Pause,
+  Play,
+  Trash2,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { AudioFileDeleteDialog } from "@/components/audio/AudioFileDeleteDialog";
+import { RoleGate } from "@/components/permissions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePermissions } from "@/contexts/PermissionsContext";
+import { type BookInfo, type SavedProgress, useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { cn } from "@/lib/utils";
+
+type AudioFileWithNames = Doc<"audioFiles"> & {
+  friendlyName: string | null;
+  displayName: string | null;
+};
+
+interface AudioFileListProps {
+  bookId: Id<"books">;
+  audioFiles: AudioFileWithNames[];
+  bookInfo: BookInfo;
+  savedProgress?: SavedProgress | null;
+}
+
+export function AudioFileList({ bookId, audioFiles, bookInfo, savedProgress }: AudioFileListProps) {
+  const [isReordering, setIsReordering] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<AudioFileWithNames | null>(null);
+
+  const reorderAudioFiles = useMutation(api.audioFiles.mutations.reorderAudioFiles);
+
+  const handleMoveUp = async (index: number) => {
+    if (index === 0) return;
+    const newOrder = [...audioFiles];
+    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    try {
+      await reorderAudioFiles({
+        bookId,
+        orderedFileIds: newOrder.map((f) => f._id),
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reorder files");
+    }
+  };
+
+  const handleMoveDown = async (index: number) => {
+    if (index === audioFiles.length - 1) return;
+    const newOrder = [...audioFiles];
+    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    try {
+      await reorderAudioFiles({
+        bookId,
+        orderedFileIds: newOrder.map((f) => f._id),
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reorder files");
+    }
+  };
+
+  const handleDeleteClick = (file: AudioFileWithNames) => {
+    setFileToDelete(file);
+    setDeleteDialogOpen(true);
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="py-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Audio Files</CardTitle>
+            {audioFiles.length > 1 && (
+              <RoleGate minRole="editor">
+                <Button
+                  variant={isReordering ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsReordering(!isReordering)}
+                >
+                  <GripVertical className="mr-1 h-4 w-4" />
+                  {isReordering ? "Done" : "Reorder"}
+                </Button>
+              </RoleGate>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="py-3">
+          {audioFiles.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No audio files yet. Upload one above to get started.
+            </p>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {audioFiles.map((audioFile, index) => (
+                <AudioFileRow
+                  key={audioFile._id}
+                  audioFile={audioFile}
+                  bookInfo={bookInfo}
+                  savedProgress={savedProgress}
+                  index={index}
+                  totalFiles={audioFiles.length}
+                  isReordering={isReordering}
+                  onMoveUp={() => handleMoveUp(index)}
+                  onMoveDown={() => handleMoveDown(index)}
+                  onDelete={() => handleDeleteClick(audioFile)}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {fileToDelete && (
+        <AudioFileDeleteDialog
+          audioFileId={fileToDelete._id}
+          fileName={fileToDelete.fileName}
+          displayName={fileToDelete.displayName}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onDeleted={() => setFileToDelete(null)}
+        />
+      )}
+    </>
+  );
+}
+
+interface AudioFileRowProps {
+  audioFile: AudioFileWithNames;
+  bookInfo: BookInfo;
+  savedProgress?: SavedProgress | null;
+  index: number;
+  totalFiles: number;
+  isReordering: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDelete: () => void;
+}
+
+function AudioFileRow({
+  audioFile,
+  bookInfo,
+  savedProgress,
+  index,
+  totalFiles,
+  isReordering,
+  onMoveUp,
+  onMoveDown,
+  onDelete,
+}: AudioFileRowProps) {
+  const { hasPremium } = usePermissions();
+  const {
+    isPlaying,
+    isLoading,
+    currentTime,
+    duration,
+    downloadUrl,
+    togglePlayPause,
+    generateDownloadUrl,
+    isCurrentTrack,
+  } = useAudioPlayer(audioFile, bookInfo, savedProgress);
+
+  // Show saved position indicator when this file has saved progress and isn't currently playing
+  const hasSavedPosition =
+    savedProgress &&
+    savedProgress.audioFileId === audioFile._id &&
+    savedProgress.positionSeconds > 0 &&
+    !isCurrentTrack;
+
+  const formatTime = (seconds: number) => {
+    if (!isFinite(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+  };
+
+  const handleDownload = async () => {
+    let url = downloadUrl;
+    if (!url) {
+      url = await generateDownloadUrl();
+    }
+    if (url) {
+      window.open(url, "_blank");
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 py-3 first:pt-0 last:pb-0",
+        isCurrentTrack && "rounded-lg bg-primary/5"
+      )}
+    >
+      {isReordering && (
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={index === 0}
+            className="rounded p-1 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Move up"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={index === totalFiles - 1}
+            className="rounded p-1 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Move down"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Part number badge */}
+      <div
+        className={cn(
+          "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-medium",
+          isCurrentTrack ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+        )}
+      >
+        {audioFile.partNumber ?? index + 1}
+      </div>
+
+      {/* File info */}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">
+          {audioFile.displayName || audioFile.fileName}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {formatFileSize(audioFile.fileSize)} • {audioFile.format.toUpperCase()}
+        </p>
+        {audioFile.displayName && audioFile.displayName !== audioFile.fileName && (
+          <p className="truncate text-[10px] text-muted-foreground/60">{audioFile.fileName}</p>
+        )}
+        {hasSavedPosition && (
+          <p className="text-xs text-primary">
+            Paused at {formatTime(savedProgress.positionSeconds)}
+          </p>
+        )}
+      </div>
+
+      {/* Play/pause controls */}
+      {!isReordering && (
+        <div className="flex items-center gap-2">
+          {isLoading ? (
+            <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+          ) : hasPremium ? (
+            <>
+              <Button
+                size="icon"
+                variant={isCurrentTrack ? "default" : "ghost"}
+                onClick={togglePlayPause}
+                className="h-8 w-8 rounded-full"
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              {isCurrentTrack && duration > 0 && (
+                <span className="min-w-[80px] text-xs text-muted-foreground">
+                  {formatTime(currentTime)} / {formatTime(duration)}
+                </span>
+              )}
+            </>
+          ) : (
+            <Button
+              size="icon"
+              variant="ghost"
+              disabled
+              className="h-8 w-8 cursor-not-allowed rounded-full"
+              title="Premium required to play audio"
+            >
+              <Lock className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-1">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handleDownload}
+          className="h-8 w-8"
+          title="Download"
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+        <RoleGate minRole="editor">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onDelete}
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </RoleGate>
+      </div>
+    </div>
+  );
+}

@@ -45,7 +45,7 @@ async function confirmContinue(message: string): Promise<boolean> {
   });
 }
 
-import type { Id } from "../convex/_generated/dataModel";
+import type { Id } from "../packages/convex-backend/convex/_generated/dataModel";
 
 // ============================================
 // TYPES

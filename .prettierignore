@@ -9,11 +9,12 @@ out/
 dist/
 
 # Convex generated
-convex/_generated/
+packages/convex-backend/convex/_generated/
 
 # Cache and logs
 *.log
 .cache/
+.turbo/
 
 # Environment files
 .env*

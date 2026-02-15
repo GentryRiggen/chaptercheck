@@ -1,0 +1,18 @@
+{
+  "name": "@chaptercheck/tailwind-config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./tailwind.config.ts",
+    "./cn": "./cn.ts",
+    "./colors": "./colors.ts"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "peerDependencies": {
+    "tailwindcss": ">=3.4.0"
+  }
+}

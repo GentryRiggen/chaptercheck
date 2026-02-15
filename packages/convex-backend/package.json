@@ -1,0 +1,34 @@
+{
+  "name": "@chaptercheck/convex-backend",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./_generated/api": "./convex/_generated/api.js",
+    "./_generated/dataModel": "./convex/_generated/dataModel.d.ts",
+    "./_generated/server": "./convex/_generated/server.js",
+    "./*": "./convex/*.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "_generated/api": [
+        "./convex/_generated/api.d.ts"
+      ],
+      "_generated/dataModel": [
+        "./convex/_generated/dataModel.d.ts"
+      ],
+      "_generated/server": [
+        "./convex/_generated/server.d.ts"
+      ],
+      "*": [
+        "./convex/*.ts"
+      ]
+    }
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.965.0",
+    "@aws-sdk/s3-request-presigner": "^3.965.0",
+    "@clerk/nextjs": "^6.22.0",
+    "convex": "^1.31.3",
+    "svix": "^1.84.1"
+  }
+}

@@ -23,7 +23,7 @@ import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import * as readline from "readline";
 
-import { api } from "../../convex/_generated/api";
+import { api } from "../../packages/convex-backend/convex/_generated/api";
 import {
   generateAuthors,
   generateBooks,

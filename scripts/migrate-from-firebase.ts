@@ -30,7 +30,7 @@ import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import * as readline from "readline";
 
-import type { Id } from "../convex/_generated/dataModel";
+import type { Id } from "../packages/convex-backend/convex/_generated/dataModel";
 
 // ============================================
 // TYPES

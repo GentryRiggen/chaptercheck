@@ -9,9 +9,8 @@ pre-commit:
       run: npx prettier --check {staged_files}
 
     - name: lint
-      glob: "*.{js,jsx,ts,tsx,mjs,mts}"
-      exclude: "_generated"
-      run: npx eslint {staged_files} --max-warnings=0 --no-warn-ignored
+      glob: "apps/web/**/*.{js,jsx,ts,tsx,mjs,mts}"
+      run: yarn workspace @chaptercheck/web lint
 
     - name: typecheck
-      run: npx convex codegen && npm run type-check
+      run: npx convex codegen && yarn turbo type-check

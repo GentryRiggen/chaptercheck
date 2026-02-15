@@ -1,20 +1,28 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
+
+# yarn
+.yarn/*
+!.yarn/releases
 .yarn/install-state.gz
 
+# turbo
+.turbo/
+
 # testing
-/coverage
+coverage/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
+dist/
 
 # misc
 .DS_Store
@@ -48,3 +56,8 @@ e2e/.clerk/
 e2e/test-results/
 e2e/playwright-report/
 test-results/
+
+# expo (prevent accidental root-level generation)
+/.expo/
+/ios/
+/android/

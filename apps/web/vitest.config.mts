@@ -1,0 +1,26 @@
+import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "url";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: "happy-dom",
+    globals: true,
+    setupFiles: ["./vitest.setup.ts"],
+    include: ["**/*.test.{ts,tsx}"],
+    exclude: ["node_modules", ".next"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      exclude: ["node_modules", ".next", "**/*.config.*", "**/*.d.ts"],
+    },
+  },
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./", import.meta.url)),
+      react: fileURLToPath(new URL("./node_modules/react", import.meta.url)),
+      "react-dom": fileURLToPath(new URL("./node_modules/react-dom", import.meta.url)),
+    },
+  },
+});

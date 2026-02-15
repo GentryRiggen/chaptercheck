@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "ChapterCheck",
+    "slug": "chaptercheck",
+    "owner": "gentryriggen",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "chaptercheck",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f5f3ef"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.chaptercheck.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "android": {
+      "package": "com.chaptercheck.app"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "40ab43bc-6a6a-45ab-9ce1-f33cd23dbb12"
+      }
+    }
+  }
+}
