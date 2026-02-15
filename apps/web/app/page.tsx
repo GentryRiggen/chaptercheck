@@ -1,5 +1,5 @@
 "use client";
-// temp: trigger deploy
+// temp: trigger deploy v2
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
