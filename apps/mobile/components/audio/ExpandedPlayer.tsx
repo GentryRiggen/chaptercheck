@@ -1,11 +1,11 @@
 import { cn } from "@chaptercheck/tailwind-config/cn";
 import { ChevronDown, Minus, Pause, Play, Plus, Square } from "lucide-react-native";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  type GestureResponderEvent,
   type LayoutChangeEvent,
   Modal,
+  PanResponder,
   Pressable,
   Text,
   View,
@@ -65,61 +65,130 @@ function buildContextLine(track: {
 }
 
 /**
- * A pressable seek bar that allows tapping to seek to a position.
+ * Draggable seek bar: pauses on drag start, seeks only on release.
+ * Uses PanResponder for smooth, jank-free scrubbing.
  */
 function SeekBar({
   currentTime,
   duration,
+  isPlaying,
+  onPause,
   onSeek,
+  onResume,
 }: {
   currentTime: number;
   duration: number;
+  isPlaying: boolean;
+  onPause: () => void;
   onSeek: (time: number) => void;
+  onResume: () => void;
 }) {
-  const trackWidth = useRef(0);
+  const trackWidthRef = useRef(0);
+  const [scrubTime, setScrubTime] = useState<number | null>(null);
+  const scrubTimeRef = useRef<number | null>(null);
+  const wasPlayingRef = useRef(false);
 
-  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  // Keep latest values in refs for PanResponder handlers (avoids stale closures)
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+  const durationRef = useRef(duration);
+  durationRef.current = duration;
+  const onPauseRef = useRef(onPause);
+  onPauseRef.current = onPause;
+  const onSeekRef = useRef(onSeek);
+  onSeekRef.current = onSeek;
+  const onResumeRef = useRef(onResume);
+  onResumeRef.current = onResume;
 
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    trackWidth.current = event.nativeEvent.layout.width;
+  const timeFromLocationX = useCallback((locationX: number) => {
+    const w = trackWidthRef.current;
+    const d = durationRef.current;
+    if (w <= 0 || d <= 0) return 0;
+    return Math.max(0, Math.min(1, locationX / w)) * d;
   }, []);
 
-  const handlePress = useCallback(
-    (event: GestureResponderEvent) => {
-      if (duration <= 0 || trackWidth.current <= 0) return;
+  const updateScrub = useCallback((time: number) => {
+    scrubTimeRef.current = time;
+    setScrubTime(time);
+  }, []);
 
-      const locationX = event.nativeEvent.locationX;
-      const ratio = Math.max(0, Math.min(1, locationX / trackWidth.current));
-      onSeek(ratio * duration);
-    },
-    [duration, onSeek]
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (evt) => {
+          wasPlayingRef.current = isPlayingRef.current;
+          if (isPlayingRef.current) {
+            onPauseRef.current();
+          }
+          updateScrub(timeFromLocationX(evt.nativeEvent.locationX));
+        },
+        onPanResponderMove: (evt) => {
+          updateScrub(timeFromLocationX(evt.nativeEvent.locationX));
+        },
+        onPanResponderRelease: () => {
+          const finalTime = Math.max(0, Math.min(durationRef.current, scrubTimeRef.current ?? 0));
+          onSeekRef.current(finalTime);
+          // Only resume if we were playing AND playback is currently paused,
+          // to avoid accidentally pausing if state changed during the scrub
+          if (wasPlayingRef.current && !isPlayingRef.current) {
+            onResumeRef.current();
+          }
+          scrubTimeRef.current = null;
+          setScrubTime(null);
+        },
+        onPanResponderTerminate: () => {
+          // Touch was interrupted — don't seek, just reset
+          scrubTimeRef.current = null;
+          setScrubTime(null);
+        },
+      }),
+    [timeFromLocationX, updateScrub]
   );
 
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    trackWidthRef.current = event.nativeEvent.layout.width;
+  }, []);
+
+  const displayTime = scrubTime ?? currentTime;
+  const progressPercent = duration > 0 ? (displayTime / duration) * 100 : 0;
+  const remainingTime = Math.max(0, duration - displayTime);
+
   return (
-    <Pressable
-      onPress={handlePress}
-      onLayout={handleLayout}
-      className="py-2"
-      accessibilityRole="adjustable"
-      accessibilityLabel="Seek position"
-      accessibilityValue={{
-        min: 0,
-        max: Math.floor(duration),
-        now: Math.floor(currentTime),
-      }}
-    >
-      {/* Track background */}
-      <View className="h-1 w-full rounded-full bg-muted">
-        {/* Filled portion */}
-        <View className="h-full rounded-full bg-primary" style={{ width: `${progressPercent}%` }} />
-        {/* Thumb indicator — centered on the 4px track: (4 - 20) / 2 = -8 */}
-        <View
-          className="absolute h-5 w-5 rounded-full bg-primary"
-          style={{ left: `${progressPercent}%`, top: -8, marginLeft: -10 }}
-          pointerEvents="none"
-        />
+    <View>
+      <View
+        onLayout={handleLayout}
+        {...panResponder.panHandlers}
+        className="py-2"
+        accessibilityRole="adjustable"
+        accessibilityLabel="Seek position"
+        accessibilityValue={{
+          min: 0,
+          max: Math.floor(duration),
+          now: Math.floor(displayTime),
+        }}
+      >
+        {/* Track background */}
+        <View className="h-1 w-full rounded-full bg-muted">
+          {/* Filled portion */}
+          <View
+            className="h-full rounded-full bg-primary"
+            style={{ width: `${progressPercent}%` }}
+          />
+          {/* Thumb indicator — centered on the 4px track: (4 - 20) / 2 = -8 */}
+          <View
+            className="absolute h-5 w-5 rounded-full bg-primary"
+            style={{ left: `${progressPercent}%`, top: -8, marginLeft: -10 }}
+            pointerEvents="none"
+          />
+        </View>
       </View>
-    </Pressable>
+      <View className="mt-1 flex-row justify-between">
+        <Text className="text-xs text-muted-foreground">{formatTime(displayTime)}</Text>
+        <Text className="text-xs text-muted-foreground">-{formatTime(remainingTime)}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -133,6 +202,7 @@ function ExpandedPlayer() {
     playbackRate,
     isExpanded,
     togglePlayPause,
+    pause,
     skipForward,
     skipBackward,
     seek,
@@ -145,7 +215,6 @@ function ExpandedPlayer() {
   if (!currentTrack) return null;
 
   const contextLine = buildContextLine(currentTrack);
-  const remainingTime = Math.max(0, duration - currentTime);
 
   return (
     <Modal
@@ -205,12 +274,14 @@ function ExpandedPlayer() {
 
         {/* Seek slider */}
         <View className="px-6">
-          <SeekBar currentTime={currentTime} duration={duration} onSeek={seek} />
-
-          <View className="mt-1 flex-row justify-between">
-            <Text className="text-xs text-muted-foreground">{formatTime(currentTime)}</Text>
-            <Text className="text-xs text-muted-foreground">-{formatTime(remainingTime)}</Text>
-          </View>
+          <SeekBar
+            currentTime={currentTime}
+            duration={duration}
+            isPlaying={isPlaying}
+            onPause={pause}
+            onSeek={seek}
+            onResume={togglePlayPause}
+          />
         </View>
 
         {/* Playback controls */}
