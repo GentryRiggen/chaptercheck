@@ -43,16 +43,10 @@ test.describe("Navigation", () => {
     }
   });
 
-  test("Dashboard View All links work", async ({ page, dashboardPage }) => {
+  test("Dashboard View All books link works", async ({ page, dashboardPage }) => {
     await dashboardPage.goto();
 
-    // View all books
     await dashboardPage.goToAllBooks();
     await expect(page).toHaveURL("/books");
-
-    // Go back and view all authors
-    await page.goto("/");
-    await dashboardPage.goToAllAuthors();
-    await expect(page).toHaveURL("/authors");
   });
 });

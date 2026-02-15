@@ -5,20 +5,12 @@ import { waitForConvexData } from "../helpers/convex-wait";
 export class DashboardPage {
   constructor(private page: Page) {}
 
-  get recentBooksHeading() {
-    return this.page.getByRole("heading", { name: "Recent Books" });
-  }
-
-  get recentAuthorsHeading() {
-    return this.page.getByRole("heading", { name: "Recent Authors" });
+  get recentlyAddedHeading() {
+    return this.page.getByRole("heading", { name: "Recently Added" });
   }
 
   get viewAllBooksLink() {
-    return this.recentBooksHeading.locator("..").getByRole("link", { name: /View all/ });
-  }
-
-  get viewAllAuthorsLink() {
-    return this.recentAuthorsHeading.locator("..").getByRole("link", { name: /View all/ });
+    return this.recentlyAddedHeading.locator("..").getByRole("link", { name: /View all/ });
   }
 
   /** Landing page elements (unauthenticated) */
@@ -38,10 +30,5 @@ export class DashboardPage {
   async goToAllBooks() {
     await this.viewAllBooksLink.click();
     await this.page.waitForURL("/books");
-  }
-
-  async goToAllAuthors() {
-    await this.viewAllAuthorsLink.click();
-    await this.page.waitForURL("/authors");
   }
 }

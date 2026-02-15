@@ -3,8 +3,7 @@ import { expect, test } from "../fixtures/base";
 test.describe("Smoke tests", () => {
   test("authenticated user sees dashboard", async ({ dashboardPage }) => {
     await dashboardPage.goto();
-    await expect(dashboardPage.recentBooksHeading).toBeVisible();
-    await expect(dashboardPage.recentAuthorsHeading).toBeVisible();
+    await expect(dashboardPage.recentlyAddedHeading).toBeVisible();
   });
 
   test("nav bar has Books and Authors links", async ({ page, nav }) => {

@@ -23,7 +23,7 @@ export const test = base.extend<Fixtures>({
     // This ensures the Clerk → Convex auth sync completes before
     // tests navigate to pages with auth-gated queries.
     await page.goto("/");
-    await page.getByRole("heading", { name: "Recent Books" }).waitFor({ timeout: 15000 });
+    await page.getByRole("heading", { name: "Recently Added" }).waitFor({ timeout: 15000 });
 
     await use(page);
   },
