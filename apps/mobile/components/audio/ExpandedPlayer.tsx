@@ -224,7 +224,7 @@ function ExpandedPlayer() {
             accessibilityLabel="Skip back 15 seconds"
             className="active:opacity-70"
           >
-            <ReplayBackwardIcon size={28} color={colors.foreground} />
+            <ReplayBackwardIcon size={36} color={colors.foreground} />
           </Pressable>
 
           <Pressable
@@ -258,7 +258,7 @@ function ExpandedPlayer() {
             accessibilityLabel="Skip forward 30 seconds"
             className="active:opacity-70"
           >
-            <ReplayForwardIcon size={28} color={colors.foreground} />
+            <ReplayForwardIcon size={36} color={colors.foreground} />
           </Pressable>
         </View>
 

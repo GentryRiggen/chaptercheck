@@ -12,7 +12,7 @@ interface ReplayBackwardIconProps {
  */
 function ReplayBackwardIcon({ size = 24, color, strokeWidth = 2 }: ReplayBackwardIconProps) {
   // Scale font size relative to icon size (24 = base)
-  const fontSize = (size / 24) * 9;
+  const fontSize = (size / 24) * 6;
 
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -33,11 +33,11 @@ function ReplayBackwardIcon({ size = 24, color, strokeWidth = 2 }: ReplayBackwar
       />
       {/* Seconds label */}
       <SvgText
-        x="13"
-        y="15.5"
+        x="12.5"
+        y="14.5"
         textAnchor="middle"
         fontSize={fontSize}
-        fontWeight="bold"
+        fontWeight="600"
         fill={color}
       >
         15

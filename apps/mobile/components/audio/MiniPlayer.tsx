@@ -84,7 +84,7 @@ function MiniPlayer() {
             accessibilityLabel="Skip back 15 seconds"
             className="active:opacity-70"
           >
-            <ReplayBackwardIcon size={20} color={colors.foreground} />
+            <ReplayBackwardIcon size={24} color={colors.foreground} />
           </Pressable>
 
           {isLoading ? (
@@ -116,7 +116,7 @@ function MiniPlayer() {
             accessibilityLabel="Skip forward 30 seconds"
             className="active:opacity-70"
           >
-            <ReplayForwardIcon size={20} color={colors.foreground} />
+            <ReplayForwardIcon size={24} color={colors.foreground} />
           </Pressable>
         </View>
       </View>
