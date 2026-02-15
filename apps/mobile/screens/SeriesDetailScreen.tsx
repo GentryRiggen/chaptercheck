@@ -67,7 +67,7 @@ export default function SeriesDetailScreen() {
       <Stack.Screen options={{ title: series.name }} />
 
       {/* Hero section */}
-      <View className="flex-row gap-4 px-4 pt-4">
+      <View className="flex-row gap-5 px-4 pt-5">
         {/* Series icon */}
         <View className="h-24 w-24 items-center justify-center rounded-lg bg-primary/10">
           <Library size={48} color={colors.primary} />
@@ -85,29 +85,30 @@ export default function SeriesDetailScreen() {
 
           {/* Unique authors list */}
           {uniqueAuthors.length > 0 && (
-            <View className="mt-1 flex-row flex-wrap items-center">
-              <Text className="text-sm text-muted-foreground">by </Text>
+            <Text className="mt-1 text-sm text-muted-foreground">
+              by{" "}
               {uniqueAuthors.map((author, index) => (
-                <View key={author._id} className="flex-row">
-                  {index > 0 && <Text className="text-sm text-muted-foreground">, </Text>}
-                  <Pressable
+                <Text key={author._id}>
+                  {index > 0 && ", "}
+                  <Text
+                    className="font-medium text-primary"
                     onPress={() => router.push(`/authors/${author._id}`)}
                     accessibilityRole="button"
                     accessibilityLabel={`View ${author.name}`}
                   >
-                    <Text className="text-sm font-medium text-primary">{author.name}</Text>
-                  </Pressable>
-                </View>
+                    {author.name}
+                  </Text>
+                </Text>
               ))}
-            </View>
+            </Text>
           )}
         </View>
       </View>
 
       {/* Description */}
       {series.description && (
-        <View className="mt-5 px-4">
-          <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <View className="mt-7 px-4">
+          <Text className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             About
           </Text>
           <Text className="text-sm leading-relaxed text-foreground">{series.description}</Text>
@@ -115,8 +116,8 @@ export default function SeriesDetailScreen() {
       )}
 
       {/* Books in Series */}
-      <View className="mt-5 pb-8">
-        <Text className="mb-3 px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <View className="mt-7 pb-8">
+        <Text className="mb-4 px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Books in Series
         </Text>
 
@@ -134,7 +135,7 @@ export default function SeriesDetailScreen() {
               <Pressable
                 key={book._id}
                 onPress={() => router.push(`/books/${book._id}`)}
-                className="flex-row items-center gap-3 border-b border-border/50 px-3 py-3 active:bg-muted/50"
+                className="flex-row items-center gap-3 border-b border-border/50 px-3 py-3.5 active:bg-muted/50"
                 style={index === books.length - 1 ? { borderBottomWidth: 0 } : undefined}
                 accessibilityRole="button"
                 accessibilityLabel={`View ${book.title}`}
