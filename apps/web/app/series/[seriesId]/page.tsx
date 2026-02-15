@@ -9,6 +9,8 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BookCover } from "@/components/books/BookCover";
+import { RoleGate } from "@/components/permissions";
+import { SeriesEditDialog } from "@/components/series/SeriesEditDialog";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -19,6 +21,7 @@ export default function SeriesDetailPage({
 }) {
   const [seriesId, setSeriesId] = useState<Id<"series"> | null>(null);
   const [isReordering, setIsReordering] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const searchParams = useSearchParams();
   const fromBook = searchParams.get("fromBook");
 
@@ -140,6 +143,14 @@ export default function SeriesDetailPage({
                 })()}
               </>
             )}
+
+            <RoleGate minRole="editor">
+              <div className="mt-3">
+                <Button size="sm" variant="secondary" onClick={() => setEditDialogOpen(true)}>
+                  Edit
+                </Button>
+              </div>
+            </RoleGate>
           </div>
         </div>
 
@@ -245,6 +256,8 @@ export default function SeriesDetailPage({
           )}
         </div>
       </main>
+
+      <SeriesEditDialog series={series} open={editDialogOpen} onOpenChange={setEditDialogOpen} />
     </div>
   );
 }
