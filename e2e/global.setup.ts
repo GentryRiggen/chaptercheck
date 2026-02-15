@@ -21,7 +21,7 @@ setup("authenticate", async ({ page }) => {
 
   // Verify we're authenticated — dashboard should show
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Recent Books" })).toBeVisible({
+  await expect(page.getByRole("heading", { name: "Recently Added" })).toBeVisible({
     timeout: 15000,
   });
 
