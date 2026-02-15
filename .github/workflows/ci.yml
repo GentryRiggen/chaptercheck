@@ -176,7 +176,7 @@ jobs:
   deploy:
     name: 🚀 Deploy
     needs: [changes, quality, build, test, e2e]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.backend == 'true')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.ci == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout code
