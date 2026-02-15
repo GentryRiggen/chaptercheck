@@ -26,6 +26,10 @@
       "typedRoutes": true
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#88a384"
+      },
       "package": "com.chaptercheck.app"
     },
     "extra": {
