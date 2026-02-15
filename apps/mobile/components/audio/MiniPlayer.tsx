@@ -1,9 +1,12 @@
-import { Pause, Play, SkipBack, SkipForward } from "lucide-react-native";
+import { Pause, Play } from "lucide-react-native";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BookCover } from "@/components/books/BookCover";
+import { ReplayBackwardIcon } from "@/components/icons/ReplayBackwardIcon";
+import { ReplayForwardIcon } from "@/components/icons/ReplayForwardIcon";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { hapticLight } from "@/lib/haptics";
 
 const TAB_BAR_HEIGHT = 49;
@@ -20,6 +23,7 @@ function MiniPlayer() {
     skipBackward,
     expand,
   } = useAudioPlayerContext();
+  const colors = useThemeColors();
 
   const insets = useSafeAreaInsets();
 
@@ -80,11 +84,11 @@ function MiniPlayer() {
             accessibilityLabel="Skip back 15 seconds"
             className="active:opacity-70"
           >
-            <SkipBack size={20} className="text-foreground" fill="currentColor" />
+            <ReplayBackwardIcon size={20} color={colors.foreground} />
           </Pressable>
 
           {isLoading ? (
-            <ActivityIndicator size="small" className="text-foreground" />
+            <ActivityIndicator size="small" color={colors.foreground} />
           ) : (
             <Pressable
               onPress={() => {
@@ -96,9 +100,9 @@ function MiniPlayer() {
               className="active:opacity-70"
             >
               {isPlaying ? (
-                <Pause size={28} className="text-foreground" fill="currentColor" />
+                <Pause size={28} color={colors.foreground} fill={colors.foreground} />
               ) : (
-                <Play size={28} className="text-foreground" fill="currentColor" />
+                <Play size={28} color={colors.foreground} fill={colors.foreground} />
               )}
             </Pressable>
           )}
@@ -109,10 +113,10 @@ function MiniPlayer() {
               skipForward();
             }}
             accessibilityRole="button"
-            accessibilityLabel="Skip forward 15 seconds"
+            accessibilityLabel="Skip forward 30 seconds"
             className="active:opacity-70"
           >
-            <SkipForward size={20} className="text-foreground" fill="currentColor" />
+            <ReplayForwardIcon size={20} color={colors.foreground} />
           </Pressable>
         </View>
       </View>

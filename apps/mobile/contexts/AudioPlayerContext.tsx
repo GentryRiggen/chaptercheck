@@ -28,7 +28,8 @@ import { useDownloadManager } from "@/contexts/DownloadManagerContext";
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 
 const PLAYBACK_RATE_KEY = "chaptercheck-playback-rate";
-const DEFAULT_SKIP_SECONDS = 15;
+const SKIP_FORWARD_SECONDS = 30;
+const SKIP_BACKWARD_SECONDS = 15;
 const SAVE_INTERVAL_MS = 10_000;
 const MIN_POSITION_CHANGE = 1; // seconds
 
@@ -79,8 +80,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
           Capability.JumpBackward,
         ],
         compactCapabilities: [Capability.Play, Capability.Pause],
-        forwardJumpInterval: DEFAULT_SKIP_SECONDS,
-        backwardJumpInterval: DEFAULT_SKIP_SECONDS,
+        forwardJumpInterval: SKIP_FORWARD_SECONDS,
+        backwardJumpInterval: SKIP_BACKWARD_SECONDS,
       });
 
       setIsPlayerReady(true);
@@ -268,7 +269,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   );
 
   const skipForward = useCallback(
-    async (seconds = DEFAULT_SKIP_SECONDS) => {
+    async (seconds = SKIP_FORWARD_SECONDS) => {
       if (!isPlayerReady) return;
       const current = await TrackPlayer.getPosition();
       const trackDuration = await TrackPlayer.getDuration();
@@ -278,7 +279,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   );
 
   const skipBackward = useCallback(
-    async (seconds = DEFAULT_SKIP_SECONDS) => {
+    async (seconds = SKIP_BACKWARD_SECONDS) => {
       if (!isPlayerReady) return;
       const current = await TrackPlayer.getPosition();
       await TrackPlayer.seekTo(Math.max(current - seconds, 0));

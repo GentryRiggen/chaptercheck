@@ -1,14 +1,5 @@
 import { cn } from "@chaptercheck/tailwind-config/cn";
-import {
-  ChevronDown,
-  Minus,
-  Pause,
-  Play,
-  Plus,
-  SkipBack,
-  SkipForward,
-  Square,
-} from "lucide-react-native";
+import { ChevronDown, Minus, Pause, Play, Plus, Square } from "lucide-react-native";
 import { useCallback, useRef } from "react";
 import {
   ActivityIndicator,
@@ -22,7 +13,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BookCover } from "@/components/books/BookCover";
+import { ReplayBackwardIcon } from "@/components/icons/ReplayBackwardIcon";
+import { ReplayForwardIcon } from "@/components/icons/ReplayForwardIcon";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { hapticLight, hapticMedium } from "@/lib/haptics";
 
 const MIN_SPEED = 0.5;
@@ -146,6 +140,7 @@ function ExpandedPlayer() {
     collapse,
     stop,
   } = useAudioPlayerContext();
+  const colors = useThemeColors();
 
   if (!currentTrack) return null;
 
@@ -168,7 +163,7 @@ function ExpandedPlayer() {
             accessibilityLabel="Collapse player"
             className="active:opacity-70"
           >
-            <ChevronDown size={28} className="text-foreground" />
+            <ChevronDown size={28} color={colors.foreground} />
           </Pressable>
 
           <Text className="font-semibold text-foreground">Now Playing</Text>
@@ -179,7 +174,7 @@ function ExpandedPlayer() {
             accessibilityLabel="Stop playback"
             className="active:opacity-70"
           >
-            <Square size={22} className="text-muted-foreground" fill="currentColor" />
+            <Square size={22} color={colors.mutedForeground} fill={colors.mutedForeground} />
           </Pressable>
         </View>
 
@@ -229,7 +224,7 @@ function ExpandedPlayer() {
             accessibilityLabel="Skip back 15 seconds"
             className="active:opacity-70"
           >
-            <SkipBack size={28} className="text-foreground" fill="currentColor" />
+            <ReplayBackwardIcon size={28} color={colors.foreground} />
           </Pressable>
 
           <Pressable
@@ -246,11 +241,11 @@ function ExpandedPlayer() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator size="small" className="text-primary-foreground" />
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
             ) : isPlaying ? (
-              <Pause size={32} className="text-primary-foreground" fill="currentColor" />
+              <Pause size={32} color={colors.primaryForeground} fill={colors.primaryForeground} />
             ) : (
-              <Play size={32} className="text-primary-foreground" fill="currentColor" />
+              <Play size={32} color={colors.primaryForeground} fill={colors.primaryForeground} />
             )}
           </Pressable>
 
@@ -260,10 +255,10 @@ function ExpandedPlayer() {
               skipForward();
             }}
             accessibilityRole="button"
-            accessibilityLabel="Skip forward 15 seconds"
+            accessibilityLabel="Skip forward 30 seconds"
             className="active:opacity-70"
           >
-            <SkipForward size={28} className="text-foreground" fill="currentColor" />
+            <ReplayForwardIcon size={28} color={colors.foreground} />
           </Pressable>
         </View>
 
@@ -284,7 +279,7 @@ function ExpandedPlayer() {
               playbackRate <= MIN_SPEED && "opacity-30"
             )}
           >
-            <Minus size={16} className="text-foreground" />
+            <Minus size={16} color={colors.foreground} />
           </Pressable>
 
           <Text className="w-14 text-center text-base font-semibold text-foreground">
@@ -306,7 +301,7 @@ function ExpandedPlayer() {
               playbackRate >= MAX_SPEED && "opacity-30"
             )}
           >
-            <Plus size={16} className="text-foreground" />
+            <Plus size={16} color={colors.foreground} />
           </Pressable>
         </View>
       </SafeAreaView>
