@@ -56,3 +56,8 @@ e2e/.clerk/
 e2e/test-results/
 e2e/playwright-report/
 test-results/
+
+# expo (prevent accidental root-level generation)
+/.expo/
+/ios/
+/android/

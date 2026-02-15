@@ -24,6 +24,12 @@
     },
     "android": {
       "package": "com.chaptercheck.app"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "40ab43bc-6a6a-45ab-9ce1-f33cd23dbb12"
+      }
     }
   }
 }
