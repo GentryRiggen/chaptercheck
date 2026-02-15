@@ -56,6 +56,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          corepack: true
           cache: "yarn"
 
       - name: 📚 Install dependencies
@@ -83,6 +84,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          corepack: true
           cache: "yarn"
 
       - name: 📚 Install dependencies
@@ -107,6 +109,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          corepack: true
           cache: "yarn"
 
       - name: 📚 Install dependencies
@@ -134,6 +137,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          corepack: true
           cache: "yarn"
 
       - name: 📚 Install dependencies
@@ -175,6 +179,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          corepack: true
           cache: "yarn"
 
       - name: 📚 Install dependencies
@@ -234,6 +239,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          corepack: true
           cache: "yarn"
 
       - name: 📚 Install dependencies
@@ -255,6 +261,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          corepack: true
           cache: "yarn"
 
       - name: 📚 Install dependencies
@@ -283,6 +290,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          corepack: true
           cache: "yarn"
 
       - name: 📚 Install dependencies
