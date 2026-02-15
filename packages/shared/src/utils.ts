@@ -1,4 +1,26 @@
 /**
+ * Get a time-of-day greeting string based on the current hour.
+ */
+export function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+/**
+ * Format a duration in seconds to a compact human-readable string (e.g., "3 hrs", "45 mins").
+ */
+export function formatListeningTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  if (hours < 1) {
+    const mins = Math.round(seconds / 60);
+    return `${mins} min${mins !== 1 ? "s" : ""}`;
+  }
+  return `${hours} hr${hours !== 1 ? "s" : ""}`;
+}
+
+/**
  * Format bytes to a human-readable string (KB, MB, GB, TB)
  */
 export function formatBytes(bytes: number, decimals = 1): string {

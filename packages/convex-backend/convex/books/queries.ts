@@ -266,6 +266,84 @@ export const filterBooksByGenres = query({
   },
 });
 
+// Get top-rated books (for home page)
+export const getTopRatedBooks = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+    const limit = args.limit ?? 6;
+
+    // Query by averageRating index descending, then filter to rated books
+    const books = await ctx.db
+      .query("books")
+      .withIndex("by_averageRating")
+      .order("desc")
+      .filter((q) => q.gt(q.field("ratingCount"), 0))
+      .take(limit);
+
+    // Enrich with authors and series
+    const booksWithDetails = await Promise.all(
+      books.map(async (book) => {
+        const bookAuthors = await ctx.db
+          .query("bookAuthors")
+          .withIndex("by_book", (q) => q.eq("bookId", book._id))
+          .collect();
+
+        const authors = await Promise.all(
+          bookAuthors.map(async (ba) => {
+            const author = await ctx.db.get(ba.authorId);
+            return author ? { _id: author._id, name: author.name } : null;
+          })
+        );
+
+        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
+
+        return {
+          ...book,
+          authors: authors.filter((a) => a !== null),
+          series: series ? { _id: series._id, name: series.name } : null,
+        };
+      })
+    );
+
+    return booksWithDetails;
+  },
+});
+
+// Get aggregate library stats (for home page)
+export const getHomeStats = query({
+  handler: async (ctx) => {
+    const { user } = await requireAuth(ctx);
+
+    // Count all books
+    const allBooks = await ctx.db.query("books").collect();
+    const totalBooks = allBooks.length;
+
+    // Count all authors
+    const allAuthors = await ctx.db.query("authors").collect();
+    const totalAuthors = allAuthors.length;
+
+    // Sum positionSeconds from user's listeningProgress
+    const progressRecords = await ctx.db
+      .query("listeningProgress")
+      .withIndex("by_user_and_lastListened", (q) => q.eq("userId", user._id))
+      .collect();
+    const totalListeningSeconds = progressRecords.reduce(
+      (sum, record) => sum + record.positionSeconds,
+      0
+    );
+
+    // Count books marked as read by current user
+    const userData = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    const booksRead = userData.filter((d) => d.isRead).length;
+
+    return { totalBooks, totalAuthors, totalListeningSeconds, booksRead };
+  },
+});
+
 // Get recent books (for home page)
 export const getRecentBooks = query({
   args: { limit: v.optional(v.number()) },

@@ -23,6 +23,7 @@ interface ListeningCardProps {
   progressFraction: number;
   totalParts: number;
   lastListenedAt: number;
+  className?: string;
 }
 
 export function ListeningCard({
@@ -32,12 +33,14 @@ export function ListeningCard({
   progressFraction,
   totalParts,
   lastListenedAt,
+  className,
 }: ListeningCardProps) {
   return (
     <Link
       href={`/books/${bookId}`}
       className={cn(
-        "group relative overflow-hidden rounded-xl bg-card/50 p-3 shadow-sm ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 hover:ring-primary/30"
+        "group relative overflow-hidden rounded-xl bg-card/50 p-3 shadow-sm ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 hover:ring-primary/30",
+        className
       )}
     >
       <div className="relative mb-3 overflow-hidden rounded-lg">
