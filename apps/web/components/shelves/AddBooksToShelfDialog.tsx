@@ -57,7 +57,7 @@ export function AddBooksToShelfDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add Books</DialogTitle>
         </DialogHeader>
@@ -73,7 +73,7 @@ export function AddBooksToShelfDialog({
           />
         </div>
 
-        <div className="max-h-[50vh] overflow-y-auto">
+        <div>
           {!debouncedSearch.trim() ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               Search for books to add to this shelf
