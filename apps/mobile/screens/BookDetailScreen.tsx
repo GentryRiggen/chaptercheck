@@ -568,7 +568,8 @@ function AudioTab({
   seriesOrder,
 }: AudioTabProps) {
   const colors = useThemeColors();
-  const { currentTrack, isPlaying, isLoading, play, togglePlayPause } = useAudioPlayerContext();
+  const { currentTrack, isPlaying, isLoading, play, togglePlayPause, expand } =
+    useAudioPlayerContext();
   const {
     downloadFile,
     downloadAllForBook,
@@ -640,6 +641,7 @@ function AudioTab({
             }
           : undefined
       );
+      expand();
     }
   };
 
@@ -662,6 +664,7 @@ function AudioTab({
         initialPlaybackRate: savedProgress.playbackRate,
       }
     );
+    expand();
   };
 
   const handleDownloadAll = () => {
