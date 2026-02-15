@@ -22,7 +22,6 @@ out/
 
 # production
 build/
-!.eas/build/
 dist/
 
 # misc
