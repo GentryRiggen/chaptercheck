@@ -178,7 +178,6 @@ jobs:
     needs: [changes, quality, build, test, e2e]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.backend == 'true')
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
