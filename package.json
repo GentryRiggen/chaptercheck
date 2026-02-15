@@ -7,7 +7,6 @@
     "packages/*"
   ],
   "scripts": {
-    "eas-build-pre-install": "corepack enable",
     "prepare": "lefthook install",
     "dev": "turbo dev",
     "build": "turbo build",
