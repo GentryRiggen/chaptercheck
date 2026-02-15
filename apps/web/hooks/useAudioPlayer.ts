@@ -1,5 +1,5 @@
 import { api } from "@chaptercheck/convex-backend/_generated/api";
-import { type Doc } from "@chaptercheck/convex-backend/_generated/dataModel";
+import { type Doc, type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { type TrackInfo } from "@chaptercheck/shared/types/audio";
 import { useAction } from "convex/react";
 import { useCallback, useState } from "react";
@@ -19,7 +19,17 @@ export interface BookInfo {
   totalParts: number;
 }
 
-export function useAudioPlayer(audioFile: AudioFileWithNames, bookInfo: BookInfo) {
+export interface SavedProgress {
+  audioFileId: Id<"audioFiles">;
+  positionSeconds: number;
+  playbackRate: number;
+}
+
+export function useAudioPlayer(
+  audioFile: AudioFileWithNames,
+  bookInfo: BookInfo,
+  savedProgress?: SavedProgress | null
+) {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   const {
@@ -59,38 +69,35 @@ export function useAudioPlayer(audioFile: AudioFileWithNames, bookInfo: BookInfo
   }, [audioFile._id, audioFile.friendlyName, audioFile.fileName, downloadUrl, generateStreamUrl]);
 
   const togglePlayPause = useCallback(async () => {
+    const trackInfo: TrackInfo = {
+      audioFileId: audioFile._id,
+      displayName: audioFile.displayName || audioFile.fileName,
+      bookId: audioFile.bookId,
+      bookTitle: bookInfo.bookTitle,
+      coverImageR2Key: bookInfo.coverImageR2Key,
+      seriesName: bookInfo.seriesName,
+      seriesOrder: bookInfo.seriesOrder,
+      partNumber: audioFile.partNumber ?? undefined,
+      totalParts: bookInfo.totalParts,
+    };
+
     if (isCurrentTrack) {
       // This track is current - toggle play/pause
       if (globalIsPlaying) {
         pause();
       } else {
-        const trackInfo: TrackInfo = {
-          audioFileId: audioFile._id,
-          displayName: audioFile.displayName || audioFile.fileName,
-          bookId: audioFile.bookId,
-          bookTitle: bookInfo.bookTitle,
-          coverImageR2Key: bookInfo.coverImageR2Key,
-          seriesName: bookInfo.seriesName,
-          seriesOrder: bookInfo.seriesOrder,
-          partNumber: audioFile.partNumber ?? undefined,
-          totalParts: bookInfo.totalParts,
-        };
         await play(trackInfo);
       }
     } else {
-      // Start playing this track
-      const trackInfo: TrackInfo = {
-        audioFileId: audioFile._id,
-        displayName: audioFile.displayName || audioFile.fileName,
-        bookId: audioFile.bookId,
-        bookTitle: bookInfo.bookTitle,
-        coverImageR2Key: bookInfo.coverImageR2Key,
-        seriesName: bookInfo.seriesName,
-        seriesOrder: bookInfo.seriesOrder,
-        partNumber: audioFile.partNumber ?? undefined,
-        totalParts: bookInfo.totalParts,
-      };
-      await play(trackInfo);
+      // Start playing this track, with saved progress if this file matches
+      const options =
+        savedProgress && savedProgress.audioFileId === audioFile._id
+          ? {
+              initialPosition: savedProgress.positionSeconds,
+              initialPlaybackRate: savedProgress.playbackRate,
+            }
+          : undefined;
+      await play(trackInfo, options);
     }
   }, [
     isCurrentTrack,
@@ -103,6 +110,7 @@ export function useAudioPlayer(audioFile: AudioFileWithNames, bookInfo: BookInfo
     audioFile.bookId,
     audioFile.partNumber,
     bookInfo,
+    savedProgress,
   ]);
 
   return {

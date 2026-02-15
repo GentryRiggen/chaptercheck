@@ -192,6 +192,20 @@ export default defineSchema({
     .index("by_book", ["bookId"])
     .index("by_shelf_and_book", ["shelfId", "bookId"]),
 
+  // Listening Progress (playback position & per-book speed)
+  listeningProgress: defineTable({
+    userId: v.id("users"),
+    bookId: v.id("books"),
+    audioFileId: v.id("audioFiles"), // Current file being listened to
+    positionSeconds: v.number(), // Position within that file
+    playbackRate: v.number(), // Per-book speed (e.g., 1.5)
+    lastListenedAt: v.number(), // Timestamp of last save
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_and_book", ["userId", "bookId"])
+    .index("by_user_and_lastListened", ["userId", "lastListenedAt"]),
+
   // Book User Data (read status, ratings, reviews)
   bookUserData: defineTable({
     userId: v.id("users"),

@@ -12,6 +12,11 @@ export interface TrackInfo {
   totalParts: number;
 }
 
+export interface PlayOptions {
+  initialPosition?: number;
+  initialPlaybackRate?: number;
+}
+
 export interface AudioPlayerContextValue {
   // Current track info
   currentTrack: TrackInfo | null;
@@ -27,7 +32,7 @@ export interface AudioPlayerContextValue {
   isExpanded: boolean;
 
   // Controls
-  play: (track: TrackInfo) => Promise<void>;
+  play: (track: TrackInfo, options?: PlayOptions) => Promise<void>;
   pause: () => void;
   togglePlayPause: () => void;
   seek: (time: number) => void;

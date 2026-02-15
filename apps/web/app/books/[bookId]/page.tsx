@@ -2,10 +2,12 @@
 
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
+import { type TrackInfo } from "@chaptercheck/shared/types/audio";
 import { useQuery } from "convex/react";
+import { Play } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AudioFileList } from "@/components/audio/AudioFileList";
 import { AudioUpload } from "@/components/audio/AudioUpload";
@@ -24,13 +26,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
+function formatTime(seconds: number) {
+  if (!isFinite(seconds)) return "0:00";
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
 export default function BookDetailPage({ params }: { params: Promise<{ bookId: Id<"books"> }> }) {
   const router = useRouter();
   const [bookId, setBookId] = useState<Id<"books"> | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const { currentTrack, isPlaying } = useAudioPlayerContext();
+  const { currentTrack, isPlaying, play } = useAudioPlayerContext();
 
   useEffect(() => {
     params.then((p) => setBookId(p.bookId));
@@ -39,6 +52,10 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
   const book = useQuery(api.books.queries.getBook, bookId ? { bookId } : "skip");
   const audioFiles = useQuery(
     api.audioFiles.queries.getAudioFilesForBook,
+    bookId ? { bookId } : "skip"
+  );
+  const savedProgress = useQuery(
+    api.listeningProgress.queries.getProgressForBook,
     bookId ? { bookId } : "skip"
   );
 
@@ -57,6 +74,41 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
       totalParts: audioFiles.length,
     };
   }, [book, audioFiles]);
+
+  // Build savedProgress for AudioFileList
+  const savedProgressForList = useMemo(() => {
+    if (!savedProgress) return null;
+    return {
+      audioFileId: savedProgress.audioFileId,
+      positionSeconds: savedProgress.positionSeconds,
+      playbackRate: savedProgress.playbackRate,
+    };
+  }, [savedProgress]);
+
+  // Resume handler
+  const handleResume = useCallback(async () => {
+    if (!savedProgress || !audioFiles || !book) return;
+
+    const matchingFile = audioFiles.find((f) => f._id === savedProgress.audioFileId);
+    if (!matchingFile) return;
+
+    const trackInfo: TrackInfo = {
+      audioFileId: matchingFile._id,
+      displayName: matchingFile.displayName || matchingFile.fileName,
+      bookId: book._id,
+      bookTitle: book.title,
+      coverImageR2Key: book.coverImageR2Key,
+      seriesName: book.series?.name,
+      seriesOrder: book.seriesOrder,
+      partNumber: matchingFile.partNumber ?? undefined,
+      totalParts: audioFiles.length,
+    };
+
+    await play(trackInfo, {
+      initialPosition: savedProgress.positionSeconds,
+      initialPlaybackRate: savedProgress.playbackRate,
+    });
+  }, [savedProgress, audioFiles, book, play]);
 
   if (book === undefined || bookId === null) {
     return (
@@ -80,6 +132,19 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
   }
 
   const hasAudioFiles = audioFiles && audioFiles.length > 0;
+
+  // Build resume button label
+  const resumeLabel = (() => {
+    if (!savedProgress || !audioFiles) return null;
+    const matchingFile = audioFiles.find((f) => f._id === savedProgress.audioFileId);
+    if (!matchingFile) return null;
+
+    const timeStr = formatTime(savedProgress.positionSeconds);
+    if (audioFiles.length > 1 && matchingFile.partNumber) {
+      return `Resume from Part ${matchingFile.partNumber} at ${timeStr}`;
+    }
+    return `Resume at ${timeStr}`;
+  })();
 
   // Reviews Section Component
   const ReviewsSection = (
@@ -107,7 +172,12 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
           </CardContent>
         </Card>
       ) : hasAudioFiles ? (
-        <AudioFileList bookId={bookId} audioFiles={audioFiles} bookInfo={bookInfo} />
+        <AudioFileList
+          bookId={bookId}
+          audioFiles={audioFiles}
+          bookInfo={bookInfo}
+          savedProgress={savedProgressForList}
+        />
       ) : null}
     </div>
   );
@@ -194,6 +264,18 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: I
             <div className="mt-3">
               <BookRatingStats bookId={bookId} />
             </div>
+
+            {/* Resume button */}
+            {resumeLabel && (
+              <PremiumGate hideWhenLocked>
+                <div className="mt-3">
+                  <Button size="sm" onClick={handleResume} className="gap-2">
+                    <Play className="h-4 w-4" />
+                    {resumeLabel}
+                  </Button>
+                </div>
+              </PremiumGate>
+            )}
 
             {/* Action buttons */}
             <RoleGate minRole="editor">

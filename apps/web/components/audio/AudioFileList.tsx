@@ -21,7 +21,7 @@ import { RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePermissions } from "@/contexts/PermissionsContext";
-import { type BookInfo, useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { type BookInfo, type SavedProgress, useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { cn } from "@/lib/utils";
 
 type AudioFileWithNames = Doc<"audioFiles"> & {
@@ -33,9 +33,10 @@ interface AudioFileListProps {
   bookId: Id<"books">;
   audioFiles: AudioFileWithNames[];
   bookInfo: BookInfo;
+  savedProgress?: SavedProgress | null;
 }
 
-export function AudioFileList({ bookId, audioFiles, bookInfo }: AudioFileListProps) {
+export function AudioFileList({ bookId, audioFiles, bookInfo, savedProgress }: AudioFileListProps) {
   const [isReordering, setIsReordering] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<AudioFileWithNames | null>(null);
@@ -107,6 +108,7 @@ export function AudioFileList({ bookId, audioFiles, bookInfo }: AudioFileListPro
                   key={audioFile._id}
                   audioFile={audioFile}
                   bookInfo={bookInfo}
+                  savedProgress={savedProgress}
                   index={index}
                   totalFiles={audioFiles.length}
                   isReordering={isReordering}
@@ -137,6 +139,7 @@ export function AudioFileList({ bookId, audioFiles, bookInfo }: AudioFileListPro
 interface AudioFileRowProps {
   audioFile: AudioFileWithNames;
   bookInfo: BookInfo;
+  savedProgress?: SavedProgress | null;
   index: number;
   totalFiles: number;
   isReordering: boolean;
@@ -148,6 +151,7 @@ interface AudioFileRowProps {
 function AudioFileRow({
   audioFile,
   bookInfo,
+  savedProgress,
   index,
   totalFiles,
   isReordering,
@@ -165,7 +169,14 @@ function AudioFileRow({
     togglePlayPause,
     generateDownloadUrl,
     isCurrentTrack,
-  } = useAudioPlayer(audioFile, bookInfo);
+  } = useAudioPlayer(audioFile, bookInfo, savedProgress);
+
+  // Show saved position indicator when this file has saved progress and isn't currently playing
+  const hasSavedPosition =
+    savedProgress &&
+    savedProgress.audioFileId === audioFile._id &&
+    savedProgress.positionSeconds > 0 &&
+    !isCurrentTrack;
 
   const formatTime = (seconds: number) => {
     if (!isFinite(seconds)) return "0:00";
@@ -240,6 +251,11 @@ function AudioFileRow({
         </p>
         {audioFile.displayName && audioFile.displayName !== audioFile.fileName && (
           <p className="truncate text-[10px] text-muted-foreground/60">{audioFile.fileName}</p>
+        )}
+        {hasSavedPosition && (
+          <p className="text-xs text-primary">
+            Paused at {formatTime(savedProgress.positionSeconds)}
+          </p>
         )}
       </div>
 

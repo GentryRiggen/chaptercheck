@@ -8,9 +8,38 @@ import Link from "next/link";
 
 import { AuthorCard } from "@/components/authors/AuthorCard";
 import { BookCard } from "@/components/books/BookCard";
+import { ListeningCard } from "@/components/books/ListeningCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePageTitle } from "@/hooks/usePageTitle";
+
+function ContinueListening() {
+  const items = useQuery(api.listeningProgress.queries.getRecentlyListening, { limit: 6 });
+
+  // Don't render section at all if empty or loading
+  if (!items || items.length === 0) return null;
+
+  return (
+    <section>
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Continue Listening</h2>
+      </div>
+      <div className="grid grid-cols-3 gap-4 md:grid-cols-6">
+        {items.map((item) => (
+          <ListeningCard
+            key={item._id}
+            bookId={item.bookId}
+            book={item.book}
+            audioFile={item.audioFile}
+            progressFraction={item.progressFraction}
+            totalParts={item.totalParts}
+            lastListenedAt={item.lastListenedAt}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function RecentBooks() {
   const books = useQuery(api.books.queries.getRecentBooks, { limit: 6 });
@@ -151,6 +180,8 @@ function Dashboard() {
     <div className="min-h-screen">
       <main className="mx-auto max-w-7xl px-4 py-12 pb-24 sm:px-6 lg:px-8">
         <div className="space-y-12">
+          <ContinueListening />
+
           <section>
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold">Recent Books</h2>
