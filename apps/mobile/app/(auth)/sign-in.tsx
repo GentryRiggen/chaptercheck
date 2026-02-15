@@ -31,7 +31,7 @@ export default function SignInScreen() {
 
     try {
       const result = await signIn.create({
-        identifier: email,
+        identifier: email.trim(),
         strategy: "email_code",
       });
       if (result.status === "needs_first_factor") {
