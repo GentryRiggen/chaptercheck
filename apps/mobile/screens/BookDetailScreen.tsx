@@ -30,6 +30,15 @@ const SORT_OPTIONS: SelectOption[] = [
   { label: "Lowest rated", value: "lowest" },
 ];
 
+function formatTime(seconds: number): string {
+  const s = Math.floor(seconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+
 export default function BookDetailScreen() {
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
   const router = useRouter();
@@ -507,6 +516,10 @@ function AudioTab({
   const colors = useThemeColors();
   const { currentTrack, isPlaying, isLoading, play, togglePlayPause } = useAudioPlayerContext();
 
+  const savedProgress = useQuery(api.listeningProgress.queries.getProgressForBook, {
+    bookId: bookIdProp,
+  });
+
   if (audioFiles === undefined) {
     return (
       <View className="items-center py-8">
@@ -527,6 +540,11 @@ function AudioTab({
 
   const totalParts = audioFiles.length;
 
+  // Find the file matching saved progress
+  const savedFile = savedProgress
+    ? audioFiles.find((f) => f._id === savedProgress.audioFileId)
+    : null;
+
   const handlePlay = (
     file: AudioTabProps["audioFiles"] extends Array<infer T> | undefined ? T : never
   ) => {
@@ -534,26 +552,79 @@ function AudioTab({
     if (isCurrentFile) {
       togglePlayPause();
     } else {
-      play({
-        audioFileId: file._id,
-        displayName: file.displayName || file.fileName,
+      // If this file has saved progress, resume from it
+      const hasProgress = savedProgress && savedProgress.audioFileId === file._id;
+      play(
+        {
+          audioFileId: file._id,
+          displayName: file.displayName || file.fileName,
+          bookId: bookIdProp,
+          bookTitle,
+          coverImageR2Key,
+          seriesName,
+          seriesOrder,
+          partNumber: file.partNumber,
+          totalParts,
+        },
+        hasProgress
+          ? {
+              initialPosition: savedProgress.positionSeconds,
+              initialPlaybackRate: savedProgress.playbackRate,
+            }
+          : undefined
+      );
+    }
+  };
+
+  const handleResume = () => {
+    if (!savedFile || !savedProgress) return;
+    play(
+      {
+        audioFileId: savedFile._id,
+        displayName: savedFile.displayName || savedFile.fileName,
         bookId: bookIdProp,
         bookTitle,
         coverImageR2Key,
         seriesName,
         seriesOrder,
-        partNumber: file.partNumber,
+        partNumber: savedFile.partNumber,
         totalParts,
-      });
-    }
+      },
+      {
+        initialPosition: savedProgress.positionSeconds,
+        initialPlaybackRate: savedProgress.playbackRate,
+      }
+    );
   };
+
+  // Build resume label
+  const resumeLabel =
+    savedFile && savedProgress
+      ? totalParts > 1 && savedFile.partNumber !== undefined
+        ? `Resume from Part ${savedFile.partNumber} at ${formatTime(savedProgress.positionSeconds)}`
+        : `Resume at ${formatTime(savedProgress.positionSeconds)}`
+      : null;
 
   return (
     <View className="gap-2 pt-2">
+      {/* Resume button */}
+      {savedFile && resumeLabel && currentTrack?.audioFileId !== savedFile._id && (
+        <Button onPress={handleResume} className="mb-1">
+          <View className="flex-row items-center gap-2">
+            <Play size={16} color={colors.primaryForeground} fill={colors.primaryForeground} />
+            <Text className="text-sm font-medium text-primary-foreground">{resumeLabel}</Text>
+          </View>
+        </Button>
+      )}
+
       {audioFiles.map((file) => {
         const isCurrentFile = currentTrack?.audioFileId === file._id;
         const isFileLoading = isCurrentFile && isLoading;
         const isFilePlaying = isCurrentFile && isPlaying;
+
+        // Show saved position indicator for the file with progress (when not currently playing)
+        const hasSavedPosition =
+          savedProgress && savedProgress.audioFileId === file._id && !isCurrentFile;
 
         return (
           <Pressable
@@ -593,6 +664,11 @@ function AudioTab({
                 {file.displayName || file.fileName}
               </Text>
               <Text className="text-xs text-muted-foreground">{formatBytes(file.fileSize)}</Text>
+              {hasSavedPosition && (
+                <Text className="text-xs text-primary">
+                  Paused at {formatTime(savedProgress.positionSeconds)}
+                </Text>
+              )}
             </View>
 
             {/* Part number badge */}

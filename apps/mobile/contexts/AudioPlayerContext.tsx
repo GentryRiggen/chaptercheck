@@ -1,7 +1,11 @@
 import { api } from "@chaptercheck/convex-backend/_generated/api";
-import type { AudioPlayerContextValue, TrackInfo } from "@chaptercheck/shared/types/audio";
+import type {
+  AudioPlayerContextValue,
+  PlayOptions,
+  TrackInfo,
+} from "@chaptercheck/shared/types/audio";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useAction } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import {
   createContext,
   useCallback,
@@ -11,6 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { AppState } from "react-native";
 import TrackPlayer, {
   Capability,
   State,
@@ -22,6 +27,8 @@ const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 
 const PLAYBACK_RATE_KEY = "chaptercheck-playback-rate";
 const DEFAULT_SKIP_SECONDS = 15;
+const SAVE_INTERVAL_MS = 10_000;
+const MIN_POSITION_CHANGE = 1; // seconds
 
 export function AudioPlayerProvider({ children }: { children: React.ReactNode }) {
   const [isPlayerReady, setIsPlayerReady] = useState(false);
@@ -31,6 +38,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const [isExpanded, setIsExpanded] = useState(false);
 
   const generateStreamUrl = useAction(api.audioFiles.actions.generateStreamUrl);
+  const saveProgressMutation = useMutation(api.listeningProgress.mutations.saveProgress);
 
   // Keep a ref to the current track so the play callback can read it
   // without a stale closure
@@ -40,6 +48,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   // Keep a ref to the playback rate for use inside async callbacks
   const playbackRateRef = useRef(playbackRate);
   playbackRateRef.current = playbackRate;
+
+  const lastSavedPositionRef = useRef(0);
+  const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ---------------------------------------------------------------------------
   // Initialize TrackPlayer on mount
@@ -111,18 +122,76 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const isBuffering = playerState === State.Buffering || playerState === State.Loading;
 
   // ---------------------------------------------------------------------------
+  // Progress saving
+  // ---------------------------------------------------------------------------
+  const saveProgress = useCallback(async () => {
+    const track = currentTrackRef.current;
+    if (!track) return;
+
+    try {
+      const pos = await TrackPlayer.getPosition();
+      if (Math.abs(pos - lastSavedPositionRef.current) < MIN_POSITION_CHANGE) return;
+
+      lastSavedPositionRef.current = pos;
+      await saveProgressMutation({
+        bookId: track.bookId,
+        audioFileId: track.audioFileId,
+        positionSeconds: pos,
+        playbackRate: playbackRateRef.current,
+      });
+    } catch (err) {
+      if (__DEV__) console.warn("Failed to save progress:", err);
+    }
+  }, [saveProgressMutation]);
+
+  // Periodic save interval — starts when playing, clears when paused/stopped
+  useEffect(() => {
+    if (isPlaying) {
+      saveIntervalRef.current = setInterval(() => {
+        saveProgress();
+      }, SAVE_INTERVAL_MS);
+    } else {
+      if (saveIntervalRef.current) {
+        clearInterval(saveIntervalRef.current);
+        saveIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (saveIntervalRef.current) {
+        clearInterval(saveIntervalRef.current);
+        saveIntervalRef.current = null;
+      }
+    };
+  }, [isPlaying, saveProgress]);
+
+  // Save when app goes to background/inactive (replaces web's beforeunload)
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "background" || nextState === "inactive") {
+        saveProgress();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [saveProgress]);
+
+  // ---------------------------------------------------------------------------
   // Controls
   // ---------------------------------------------------------------------------
   const play = useCallback(
-    async (track: TrackInfo) => {
+    async (track: TrackInfo, options?: PlayOptions) => {
       // If the same track is already loaded, just resume
       if (currentTrackRef.current?.audioFileId === track.audioFileId && isPlayerReady) {
         await TrackPlayer.play();
         return;
       }
 
+      // Save progress for the track we're leaving
+      await saveProgress();
+
       setIsLoading(true);
       setCurrentTrack(track);
+      lastSavedPositionRef.current = 0;
 
       try {
         const { streamUrl } = await generateStreamUrl({
@@ -138,8 +207,20 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
           artwork: undefined,
         });
 
-        await TrackPlayer.setRate(playbackRateRef.current);
+        // Apply per-book playback rate if provided, otherwise use current rate
+        if (options?.initialPlaybackRate) {
+          setPlaybackRateState(options.initialPlaybackRate);
+          await TrackPlayer.setRate(options.initialPlaybackRate);
+        } else {
+          await TrackPlayer.setRate(playbackRateRef.current);
+        }
+
         await TrackPlayer.play();
+
+        // Seek to saved position after starting playback
+        if (options?.initialPosition && options.initialPosition > 0) {
+          await TrackPlayer.seekTo(options.initialPosition);
+        }
       } catch (err) {
         console.error("Failed to load audio:", err);
         setCurrentTrack(null);
@@ -147,22 +228,25 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setIsLoading(false);
       }
     },
-    [isPlayerReady, generateStreamUrl]
+    [isPlayerReady, generateStreamUrl, saveProgress]
   );
 
   const pause = useCallback(async () => {
     if (!isPlayerReady) return;
     await TrackPlayer.pause();
-  }, [isPlayerReady]);
+    // Save on pause
+    await saveProgress();
+  }, [isPlayerReady, saveProgress]);
 
   const togglePlayPause = useCallback(async () => {
     if (!isPlayerReady) return;
     if (isPlaying) {
       await TrackPlayer.pause();
+      await saveProgress();
     } else {
       await TrackPlayer.play();
     }
-  }, [isPlayerReady, isPlaying]);
+  }, [isPlayerReady, isPlaying, saveProgress]);
 
   const seek = useCallback(
     async (time: number) => {
@@ -203,20 +287,26 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       if (isPlayerReady) {
         await TrackPlayer.setRate(rate);
       }
+
+      // Save rate change to server immediately
+      await saveProgress();
     },
-    [isPlayerReady]
+    [isPlayerReady, saveProgress]
   );
 
   const expand = useCallback(() => setIsExpanded(true), []);
   const collapse = useCallback(() => setIsExpanded(false), []);
 
   const stop = useCallback(async () => {
+    // Save before clearing state
+    await saveProgress();
+
     if (isPlayerReady) {
       await TrackPlayer.reset();
     }
     setCurrentTrack(null);
     setIsExpanded(false);
-  }, [isPlayerReady]);
+  }, [isPlayerReady, saveProgress]);
 
   // ---------------------------------------------------------------------------
   // Context value
