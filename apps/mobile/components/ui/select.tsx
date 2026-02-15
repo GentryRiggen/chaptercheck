@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { hapticLight, hapticSelection } from "@/lib/haptics";
 
 interface SelectOption {
@@ -33,6 +34,7 @@ function Select({
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
 
   const selectedOption = options.find((option) => option.value === value);
   const displayText = selectedOption?.label ?? placeholder;
@@ -73,7 +75,7 @@ function Select({
           <Text className={cn("text-base text-foreground", isSelected && "font-semibold")}>
             {item.label}
           </Text>
-          {isSelected && <Check size={18} className="text-primary" />}
+          {isSelected && <Check size={18} color={colors.primary} />}
         </Pressable>
       );
     },

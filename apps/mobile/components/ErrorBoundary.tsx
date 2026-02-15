@@ -4,6 +4,12 @@ import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
+import { useThemeColors } from "@/hooks/useThemeColors";
+
+function DestructiveIcon({ size }: { size: number }) {
+  const colors = useThemeColors();
+  return <AlertTriangle size={size} color={colors.destructive} />;
+}
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -36,7 +42,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     if (this.state.hasError) {
       return (
         <SafeAreaView className="flex-1 items-center justify-center bg-background px-6">
-          <AlertTriangle size={48} className="text-destructive" />
+          <DestructiveIcon size={48} />
           <Text className="mt-4 text-center text-lg font-bold text-foreground">
             Something went wrong
           </Text>

@@ -68,7 +68,7 @@ function GenreFilter({ value, onChange }: GenreFilterProps) {
         accessibilityRole="button"
         accessibilityLabel={`Genre filter${hasActiveFilters ? `, ${value.length} selected` : ""}`}
       >
-        <SlidersHorizontal size={16} className="text-muted-foreground" />
+        <SlidersHorizontal size={16} color={colors.mutedForeground} />
         <Text className="text-sm text-foreground">Genre</Text>
         {hasActiveFilters && (
           <Badge className="ml-0.5 min-w-[18px] rounded-full px-1.5 py-0">

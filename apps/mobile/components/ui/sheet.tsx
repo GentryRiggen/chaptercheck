@@ -4,6 +4,8 @@ import { Animated, Dimensions, Modal, Pressable, Text, View } from "react-native
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
 
+import { useThemeColors } from "@/hooks/useThemeColors";
+
 interface SheetContextValue {
   onOpenChange: (open: boolean) => void;
 }
@@ -178,6 +180,7 @@ interface SheetCloseProps {
 
 function SheetClose({ className }: SheetCloseProps) {
   const { onOpenChange } = useSheetContext();
+  const colors = useThemeColors();
 
   const handleClose = () => {
     onOpenChange(false);
@@ -194,7 +197,7 @@ function SheetClose({ className }: SheetCloseProps) {
       accessibilityLabel="Close sheet"
       accessibilityRole="button"
     >
-      <X size={18} className="text-muted-foreground" />
+      <X size={18} color={colors.mutedForeground} />
     </Pressable>
   );
 }

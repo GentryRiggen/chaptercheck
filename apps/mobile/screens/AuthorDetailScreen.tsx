@@ -97,7 +97,7 @@ export default function AuthorDetailScreen() {
                 className="flex-row items-center gap-3 px-4 py-3 active:bg-muted/50"
               >
                 <View className="h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Library size={20} className="text-primary" />
+                  <Library size={20} color={colors.primary} />
                 </View>
                 <View className="min-w-0 flex-1">
                   <Text className="text-base font-semibold text-foreground" numberOfLines={2}>

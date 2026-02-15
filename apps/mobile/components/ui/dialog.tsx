@@ -1,5 +1,6 @@
 import { X } from "lucide-react-native";
 import { createContext, type ReactNode, useContext } from "react";
+
 import {
   KeyboardAvoidingView,
   Modal,
@@ -12,6 +13,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { cn } from "@chaptercheck/tailwind-config/cn";
+
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface DialogContextValue {
   onOpenChange: (open: boolean) => void;
@@ -123,6 +126,7 @@ interface DialogCloseProps {
 
 function DialogClose({ className, style }: DialogCloseProps) {
   const { onOpenChange } = useDialogContext();
+  const colors = useThemeColors();
 
   return (
     <Pressable
@@ -136,7 +140,7 @@ function DialogClose({ className, style }: DialogCloseProps) {
       accessibilityLabel="Close dialog"
       accessibilityRole="button"
     >
-      <X size={18} className="text-muted-foreground" />
+      <X size={18} color={colors.mutedForeground} />
     </Pressable>
   );
 }

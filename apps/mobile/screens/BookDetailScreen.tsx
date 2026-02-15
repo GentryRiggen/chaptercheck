@@ -334,7 +334,7 @@ function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
           }}
         >
           <View className="flex-row items-center gap-1.5">
-            <MessageSquarePlus size={14} className="text-foreground" />
+            <MessageSquarePlus size={14} color={colors.foreground} />
             <Text className="text-xs font-medium text-foreground">Write a Review</Text>
           </View>
         </Button>
@@ -401,7 +401,7 @@ function ReviewsTab({ bookId, myBookData }: ReviewsTabProps) {
               onValueChange={handleSortChange}
               options={SORT_OPTIONS}
               className="w-36"
-              icon={<ArrowUpDown size={14} className="ml-2 text-muted-foreground" />}
+              icon={<ArrowUpDown size={14} color={colors.mutedForeground} className="ml-2" />}
             />
           </View>
           {communityReviews.map((review) => (
@@ -712,7 +712,7 @@ function AudioTab({
       {!allDownloaded && (
         <Button variant="outline" size="sm" onPress={handleDownloadAll}>
           <View className="flex-row items-center gap-2">
-            <ArrowDownToLine size={14} className="text-foreground" />
+            <ArrowDownToLine size={14} color={colors.foreground} />
             <Text className="text-xs font-medium text-foreground">Download All</Text>
           </View>
         </Button>
