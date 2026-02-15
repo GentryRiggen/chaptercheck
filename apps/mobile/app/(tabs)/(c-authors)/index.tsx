@@ -65,7 +65,7 @@ export default function AuthorsScreen() {
 
         {/* Search bar */}
         <View className="h-10 flex-row items-center rounded-lg border border-input bg-transparent px-3">
-          <Search size={18} className="text-muted-foreground" />
+          <Search size={18} color={colors.mutedForeground} />
           <TextInput
             value={searchInput}
             onChangeText={setSearchInput}
@@ -78,7 +78,7 @@ export default function AuthorsScreen() {
           />
           {searchInput.length > 0 && (
             <Pressable onPress={handleClearSearch} hitSlop={8}>
-              <X size={18} className="text-muted-foreground" />
+              <X size={18} color={colors.mutedForeground} />
             </Pressable>
           )}
         </View>
