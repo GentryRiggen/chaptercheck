@@ -103,7 +103,7 @@ function Select({
         >
           {displayText}
         </Text>
-        {icon ?? <ChevronDown size={16} className="ml-2 text-muted-foreground" />}
+        {icon ?? <ChevronDown size={16} color={colors.mutedForeground} />}
       </Pressable>
 
       <Modal
