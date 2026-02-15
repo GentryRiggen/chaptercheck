@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { Redirect, Tabs } from "expo-router";
-import { BookOpen, Home, Library, Settings, Users } from "lucide-react-native";
+import { BookOpen, Home, Settings, Users } from "lucide-react-native";
 import React from "react";
 
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -45,8 +45,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="(d-shelves)"
         options={{
-          title: "Shelves",
-          tabBarIcon: ({ color, size }) => <Library size={size} color={color} />,
+          href: null,
         }}
       />
       <Tabs.Screen
