@@ -1,6 +1,7 @@
 import Combine
 import ConvexMobile
 import Foundation
+import os
 
 /// View model for the home screen.
 ///
@@ -22,6 +23,7 @@ final class HomeViewModel {
 
     // MARK: - Dependencies
 
+    private let logger = Logger(subsystem: "com.chaptercheck", category: "HomeViewModel")
     private let bookRepository = BookRepository()
     private let progressRepository = ProgressRepository()
     private var cancellables = Set<AnyCancellable>()
@@ -34,6 +36,7 @@ final class HomeViewModel {
 
     func subscribe() {
         guard cancellables.isEmpty else { return }
+        logger.info("Subscribing to all home sections")
         subscribeToRecentlyListening()
         subscribeToRecentBooks()
         subscribeToTopRatedBooks()
@@ -52,10 +55,12 @@ final class HomeViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
+                        self?.logger.error("recentlyListening FAILED: \(error)")
                         self?.error = error.localizedDescription
                     }
                 },
                 receiveValue: { [weak self] items in
+                    self?.logger.info("recentlyListening: received \(items.count) items")
                     self?.recentlyListening = items
                     self?.markLoaded("recentlyListening")
                 }
@@ -69,10 +74,12 @@ final class HomeViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
+                        self?.logger.error("recentBooks FAILED: \(error)")
                         self?.error = error.localizedDescription
                     }
                 },
                 receiveValue: { [weak self] books in
+                    self?.logger.info("recentBooks: received \(books.count) books")
                     self?.recentBooks = books
                     self?.markLoaded("recentBooks")
                 }
@@ -86,10 +93,12 @@ final class HomeViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
+                        self?.logger.error("topRatedBooks FAILED: \(error)")
                         self?.error = error.localizedDescription
                     }
                 },
                 receiveValue: { [weak self] books in
+                    self?.logger.info("topRatedBooks: received \(books.count) books")
                     self?.topRatedBooks = books
                     self?.markLoaded("topRatedBooks")
                 }
@@ -103,10 +112,12 @@ final class HomeViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
+                        self?.logger.error("homeStats FAILED: \(error)")
                         self?.error = error.localizedDescription
                     }
                 },
                 receiveValue: { [weak self] stats in
+                    self?.logger.info("homeStats: received stats")
                     self?.stats = stats
                     self?.markLoaded("stats")
                 }

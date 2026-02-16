@@ -34,7 +34,7 @@ final class ProgressRepository {
     ) -> AnyPublisher<[RecentListeningProgress], ClientError>? {
         convex.subscribe(
             to: "listeningProgress/queries:getRecentlyListening",
-            with: ["limit": limit]
+            with: ["limit": Double(limit)]
         )
     }
 

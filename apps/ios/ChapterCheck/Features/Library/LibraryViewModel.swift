@@ -1,6 +1,7 @@
 import Combine
 import ConvexMobile
 import Foundation
+import os
 
 /// View model for the library (book browsing) screen.
 ///
@@ -29,6 +30,7 @@ final class LibraryViewModel {
 
     // MARK: - Dependencies
 
+    private let logger = Logger(subsystem: "com.chaptercheck", category: "LibraryViewModel")
     private let bookRepository = BookRepository()
     private var cancellables = Set<AnyCancellable>()
 
@@ -45,6 +47,7 @@ final class LibraryViewModel {
     // MARK: - Lifecycle
 
     func subscribe() {
+        logger.info("subscribe() called, isSearchMode=\(self.isSearchMode), sort=\(self.sortOption.rawValue)")
         loadFirstPage()
     }
 
@@ -120,16 +123,21 @@ final class LibraryViewModel {
             return
         }
 
-        bookRepository.subscribeToBookSearch(query: query)?
+        let pub = bookRepository.subscribeToBookSearch(query: query)
+        logger.info("performSearch: query='\(query)', publisher=\(pub != nil ? "created" : "nil")")
+
+        pub?
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
+                        self?.logger.error("search FAILED: \(error)")
                         self?.error = error.localizedDescription
                         self?.isLoading = false
                     }
                 },
                 receiveValue: { [weak self] results in
+                    self?.logger.info("search: received \(results.count) results")
                     self?.books = results
                     self?.isLoading = false
                 }
@@ -138,15 +146,21 @@ final class LibraryViewModel {
     }
 
     private func subscribeToPage(cursor: String?) {
-        bookRepository.subscribeToBookList(
+        logger.info("subscribeToPage: sort=\(self.sortOption.rawValue), cursor=\(cursor ?? "nil")")
+
+        let pub = bookRepository.subscribeToBookList(
             sort: sortOption.rawValue,
             numItems: 20,
             cursor: cursor
-        )?
+        )
+        logger.info("subscribeToPage: publisher=\(pub != nil ? "created" : "nil")")
+
+        pub?
         .receive(on: DispatchQueue.main)
         .sink(
             receiveCompletion: { [weak self] completion in
                 if case .failure(let error) = completion {
+                    self?.logger.error("bookList FAILED: \(error)")
                     self?.error = error.localizedDescription
                     self?.isLoading = false
                     self?.isLoadingMore = false
@@ -154,6 +168,8 @@ final class LibraryViewModel {
             },
             receiveValue: { [weak self] result in
                 guard let self else { return }
+
+                self.logger.info("bookList: received page with \(result.page.count) books, isDone=\(result.isDone)")
 
                 if cursor == nil {
                     // First page -- replace

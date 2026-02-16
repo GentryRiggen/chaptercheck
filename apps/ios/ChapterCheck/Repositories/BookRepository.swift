@@ -30,7 +30,7 @@ final class BookRepository {
     func subscribeToRecentBooks(limit: Int = 6) -> AnyPublisher<[BookWithDetails], ClientError>? {
         convex.subscribe(
             to: "books/queries:getRecentBooks",
-            with: ["limit": limit]
+            with: ["limit": Double(limit)]
         )
     }
 
@@ -38,7 +38,7 @@ final class BookRepository {
     func subscribeToTopRatedBooks(limit: Int = 6) -> AnyPublisher<[BookWithDetails], ClientError>? {
         convex.subscribe(
             to: "books/queries:getTopRatedBooks",
-            with: ["limit": limit]
+            with: ["limit": Double(limit)]
         )
     }
 
@@ -62,7 +62,7 @@ final class BookRepository {
         numItems: Int = 20,
         cursor: String? = nil
     ) -> AnyPublisher<PaginatedResult<BookWithDetails>, ClientError>? {
-        var paginationOpts: [String: ConvexEncodable?] = ["numItems": numItems]
+        var paginationOpts: [String: ConvexEncodable?] = ["numItems": Double(numItems)]
         if let cursor {
             paginationOpts["cursor"] = cursor
         }

@@ -36,7 +36,7 @@ final class AuthorRepository {
         numItems: Int = 20,
         cursor: String? = nil
     ) -> AnyPublisher<PaginatedResult<AuthorWithCounts>, ClientError>? {
-        var paginationOpts: [String: ConvexEncodable?] = ["numItems": numItems]
+        var paginationOpts: [String: ConvexEncodable?] = ["numItems": Double(numItems)]
         if let cursor {
             paginationOpts["cursor"] = cursor
         }

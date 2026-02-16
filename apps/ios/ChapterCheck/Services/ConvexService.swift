@@ -1,6 +1,7 @@
 import Combine
 import ConvexMobile
 import Foundation
+import os
 
 /// Application-wide singleton that owns the authenticated Convex client.
 ///
@@ -24,6 +25,7 @@ final class ConvexService: ObservableObject {
 
     // MARK: - Private
 
+    private let logger = Logger(subsystem: "com.chaptercheck", category: "ConvexService")
     private var cancellables = Set<AnyCancellable>()
     private var tokenRefreshTask: Task<Void, Never>?
 
@@ -57,8 +59,14 @@ final class ConvexService: ObservableObject {
         tokenRefreshTask?.cancel()
         tokenRefreshTask = nil
 
-        if case .authenticated = state {
+        switch state {
+        case .authenticated(let token):
+            logger.info("Auth state: authenticated (token length: \(token.count))")
             startTokenRefresh()
+        case .unauthenticated:
+            logger.info("Auth state: unauthenticated")
+        case .loading:
+            logger.info("Auth state: loading")
         }
     }
 
@@ -114,7 +122,8 @@ final class ConvexService: ObservableObject {
         to name: String,
         with args: [String: ConvexEncodable?]? = nil
     ) -> AnyPublisher<T, ClientError> {
-        client.subscribe(to: name, with: args, yielding: T.self)
+        logger.debug("Subscribe: \(name) args=\(String(describing: args)) -> \(String(describing: T.self))")
+        return client.subscribe(to: name, with: args, yielding: T.self)
     }
 
     /// Execute a Convex mutation that returns a decoded value.

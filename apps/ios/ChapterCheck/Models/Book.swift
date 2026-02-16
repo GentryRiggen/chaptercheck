@@ -49,17 +49,18 @@ struct BookWithDetails: Decodable, Identifiable, Hashable, Sendable {
 }
 
 /// An author attached to a book, including the optional role (author, narrator, etc.).
-/// Matches the enriched author shape from book queries that spread the full author
-/// document and add the `role` field from the `bookAuthors` join table.
+/// Fields are mostly optional because different queries return different shapes:
+/// - `listBooks` spreads the full author document + role from the join table.
+/// - `getRecentBooks`/`getTopRatedBooks` return only `{ _id, name }`.
 struct BookAuthor: Decodable, Identifiable, Hashable, Sendable {
     let _id: String
-    let _creationTime: Double
+    let _creationTime: Double?
     let name: String
     let bio: String?
     let imageR2Key: String?
     let role: String?
-    let createdAt: Double
-    let updatedAt: Double
+    let createdAt: Double?
+    let updatedAt: Double?
 
     var id: String { _id }
 }
