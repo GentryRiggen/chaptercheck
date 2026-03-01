@@ -7,11 +7,10 @@
 [![CI/CD](https://github.com/griggen/chaptercheck/actions/workflows/ci.yml/badge.svg)](https://github.com/griggen/chaptercheck/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
-[![Expo](https://img.shields.io/badge/Expo-54-000020?logo=expo&logoColor=white)](https://expo.dev/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 
-[Features](#features) · [Tech Stack](#tech-stack) · [Getting Started](#getting-started) · [Running the Web App](#running-the-web-app) · [Running the Mobile App](#running-the-mobile-app) · [Testing](#testing) · [Deployment](#deployment)
+[Features](#features) · [Tech Stack](#tech-stack) · [Getting Started](#getting-started) · [Running the Web App](#running-the-web-app) · [Testing](#testing) · [Deployment](#deployment)
 
 </div>
 
@@ -23,7 +22,7 @@
 - **Author Tracking** — Author profiles with photos, support for narrators and translators
 - **Audio Player** — Stream MP3/M4A/M4B files with progress tracking and playback speed control
 - **Series Organization** — Group books into series with decimal position numbering (e.g., 2.5 for novellas)
-- **Cross-platform** — Web app (Next.js) and iOS app (Expo/React Native) sharing backend and business logic
+- **Real-time** — Powered by Convex for instant updates across all connected clients
 
 ---
 
@@ -33,9 +32,8 @@
 | ------------------ | ---------------------------------------------------- |
 | **Monorepo**       | [Turborepo](https://turbo.build) + Yarn 4 workspaces |
 | **Web**            | Next.js 15 (App Router), React 19                    |
-| **Mobile**         | Expo 54, React Native 0.81, NativeWind               |
 | **Database**       | [Convex](https://convex.dev) (real-time)             |
-| **Authentication** | [Clerk](https://clerk.com) (web + mobile)            |
+| **Authentication** | [Clerk](https://clerk.com)                           |
 | **Storage**        | Cloudflare R2 (S3-compatible)                        |
 | **Web UI**         | [shadcn/ui](https://ui.shadcn.com) + Radix UI        |
 | **Styling**        | Tailwind CSS + CSS Variables                         |
@@ -51,7 +49,7 @@
 chaptercheck/
 ├── apps/
 │   ├── web/                    # Next.js web application
-│   └── mobile/                 # Expo React Native app (iOS)
+│   └── ios/                    # Native SwiftUI iOS app
 ├── packages/
 │   ├── convex-backend/         # Convex schema, queries, mutations
 │   ├── shared/                 # Shared hooks, validations, utils, types
@@ -71,7 +69,6 @@ chaptercheck/
 
 - **Node.js** 20+
 - **Yarn** 4 (the repo uses `packageManager: yarn@4.12.0` — Corepack will auto-install it)
-- **Xcode** (for iOS simulator — mobile app only)
 - A [Convex](https://convex.dev) account
 - A [Clerk](https://clerk.com) account (with a dev instance for local development)
 - A [Cloudflare](https://cloudflare.com) account (for R2 storage)
@@ -116,16 +113,9 @@ R2_ACCESS_KEY_ID=your-access-key
 R2_SECRET_ACCESS_KEY=your-secret-key
 ```
 
-For the **mobile app**, create `apps/mobile/.env.local` with Expo-prefixed keys:
-
-```env
-EXPO_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
-EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-```
-
 ### Start the Convex Backend
 
-The Convex dev server must be running for both web and mobile. Run this from the repo root:
+The Convex dev server must be running. Run this from the repo root:
 
 ```bash
 npx convex dev
@@ -149,37 +139,6 @@ yarn dev
 ```
 
 Then open [http://localhost:3000](http://localhost:3000).
-
----
-
-## Running the Mobile App
-
-### First-time setup
-
-1. Make sure Xcode is installed with iOS simulator support
-2. Create `apps/mobile/.env.local` with the env vars described above
-3. Generate native project files:
-
-```bash
-cd apps/mobile
-yarn prebuild
-```
-
-### Running on iOS Simulator
-
-```bash
-# From apps/mobile/
-yarn ios
-```
-
-Or start the Expo dev server and choose a target:
-
-```bash
-# From apps/mobile/
-yarn start
-```
-
-Then press `i` to open in iOS Simulator.
 
 ---
 
@@ -260,7 +219,7 @@ All scripts are run from the repo root via Turborepo unless noted otherwise.
 
 | Script              | Description                               |
 | ------------------- | ----------------------------------------- |
-| `yarn dev`          | Start all dev servers (web + mobile)      |
+| `yarn dev`          | Start all dev servers                     |
 | `yarn build`        | Build all packages and apps               |
 | `yarn lint`         | Run ESLint across all packages            |
 | `yarn type-check`   | TypeScript check across all packages      |
@@ -273,14 +232,6 @@ All scripts are run from the repo root via Turborepo unless noted otherwise.
 | `yarn seed`         | Seed the Convex database with sample data |
 | `yarn seed:nuke`    | Wipe and re-seed the database             |
 
-### Mobile-specific (run from `apps/mobile/`)
-
-| Script          | Description                          |
-| --------------- | ------------------------------------ |
-| `yarn start`    | Start Expo dev server                |
-| `yarn ios`      | Build and run on iOS Simulator       |
-| `yarn prebuild` | Generate native iOS/Android projects |
-
 ---
 
 ## License
@@ -291,6 +242,6 @@ This project is private and not licensed for public use.
 
 <div align="center">
 
-**Built with Next.js, Expo, Convex, and Cloudflare**
+**Built with Next.js, Convex, and Cloudflare**
 
 </div>
