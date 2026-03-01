@@ -87,6 +87,8 @@ export function BookCover({ coverImageR2Key, title, size = "md", className }: Bo
     <img
       src={imageUrl}
       alt={title}
+      loading="lazy"
+      decoding="async"
       className={cn("flex-shrink-0 rounded-lg object-cover", sizeClasses[size], className)}
     />
   );

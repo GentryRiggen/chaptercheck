@@ -6,8 +6,8 @@ import { type TrackInfo } from "@chaptercheck/shared/types/audio";
 import { useQuery } from "convex/react";
 import { Play } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
 
 import { AudioFileList } from "@/components/audio/AudioFileList";
 import { AudioUpload } from "@/components/audio/AudioUpload";
@@ -37,17 +37,14 @@ function formatTime(seconds: number) {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-export default function BookDetailPage({ params }: { params: Promise<{ bookId: Id<"books"> }> }) {
+export default function BookDetailPage() {
   const router = useRouter();
-  const [bookId, setBookId] = useState<Id<"books"> | null>(null);
+  const params = useParams<{ bookId: string }>();
+  const bookId = (params?.bookId as Id<"books"> | undefined) ?? null;
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { currentTrack, isPlaying, play } = useAudioPlayerContext();
-
-  useEffect(() => {
-    params.then((p) => setBookId(p.bookId));
-  }, [params]);
 
   const book = useQuery(api.books.queries.getBook, bookId ? { bookId } : "skip");
   const audioFiles = useQuery(

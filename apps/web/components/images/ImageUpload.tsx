@@ -76,6 +76,8 @@ export function ImageUpload({
           <img
             src={preview || previewUrl || ""}
             alt="Preview"
+            loading="lazy"
+            decoding="async"
             className="h-32 w-32 rounded-lg border object-cover"
           />
           {!uploading && (

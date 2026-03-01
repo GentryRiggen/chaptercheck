@@ -109,6 +109,8 @@ export function BookSuggestions({
               <img
                 src={suggestion.coverUrl}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className="h-[60px] w-[40px] flex-shrink-0 rounded object-cover"
               />
             ) : (
@@ -221,6 +223,8 @@ export function AuthorSuggestions({
               <img
                 src={suggestion.photoUrl}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className="h-[40px] w-[40px] flex-shrink-0 rounded-full object-cover"
                 onError={(e) => {
                   // Hide broken images (Open Library returns placeholder for missing photos)

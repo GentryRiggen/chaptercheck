@@ -10,6 +10,10 @@ function isExternalUrl(value: string): boolean {
   return value.startsWith("http://") || value.startsWith("https://");
 }
 
+const IMAGE_URL_CACHE_TTL_MS = 45 * 60 * 1000; // 45 minutes (URLs currently expire after 60)
+const imageUrlCache = new Map<string, { value: string; expiresAt: number }>();
+const inflightRequests = new Map<string, Promise<string>>();
+
 export const useImageUrl = (r2Key: string | undefined) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,11 +42,33 @@ export const useImageUrl = (r2Key: string | undefined) => {
       setError(null);
 
       try {
-        const { imageUrl } = await generateImageUrl({ r2Key });
+        const cached = imageUrlCache.get(r2Key);
+        if (cached && cached.expiresAt > Date.now()) {
+          if (!cancelled) {
+            setImageUrl(cached.value);
+            setLoading(false);
+          }
+          return;
+        }
+
+        let request = inflightRequests.get(r2Key);
+        if (!request) {
+          request = generateImageUrl({ r2Key }).then(({ imageUrl }) => imageUrl);
+          inflightRequests.set(r2Key, request);
+        }
+
+        const nextUrl = await request;
+        imageUrlCache.set(r2Key, {
+          value: nextUrl,
+          expiresAt: Date.now() + IMAGE_URL_CACHE_TTL_MS,
+        });
+        inflightRequests.delete(r2Key);
+
         if (!cancelled) {
-          setImageUrl(imageUrl);
+          setImageUrl(nextUrl);
         }
       } catch (err) {
+        inflightRequests.delete(r2Key);
         if (!cancelled) {
           console.error("Failed to get image URL:", err);
           setError(err instanceof Error ? err.message : "Failed to load image");

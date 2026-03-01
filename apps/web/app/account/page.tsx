@@ -79,6 +79,12 @@ export default function AccountPage() {
     }
   }, [user, form]);
 
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.replace("/sign-in");
+    }
+  }, [isLoaded, user, router]);
+
   if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -87,10 +93,7 @@ export default function AccountPage() {
     );
   }
 
-  if (!user) {
-    router.push("/sign-in");
-    return null;
-  }
+  if (!user) return null;
 
   const handleProfileSubmit = async (data: AccountSettingsFormValues) => {
     setIsUpdatingProfile(true);

@@ -6,7 +6,8 @@ import { formatRelativeDate } from "@chaptercheck/shared/utils";
 import { useQuery } from "convex/react";
 import { Book, BookOpen, Calendar, Lock, MessageSquare, Plus, Settings } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { useState } from "react";
 
 import { LibraryBookCard } from "@/components/books/LibraryBookCard";
 import { ShelfCard } from "@/components/shelves/ShelfCard";
@@ -15,12 +16,9 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-export default function UserProfilePage({ params }: { params: Promise<{ userId: Id<"users"> }> }) {
-  const [userId, setUserId] = useState<Id<"users"> | null>(null);
-
-  useEffect(() => {
-    params.then((p) => setUserId(p.userId));
-  }, [params]);
+export default function UserProfilePage() {
+  const params = useParams<{ userId: string }>();
+  const userId = (params?.userId as Id<"users"> | undefined) ?? null;
 
   const profile = useQuery(api.users.queries.getUserProfile, userId ? { userId } : "skip");
 

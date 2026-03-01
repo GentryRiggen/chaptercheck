@@ -5,8 +5,8 @@ import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { ArrowDown, ArrowUp, GripVertical, Library } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 import { BookCover } from "@/components/books/BookCover";
 import { RoleGate } from "@/components/permissions";
@@ -14,22 +14,15 @@ import { SeriesEditDialog } from "@/components/series/SeriesEditDialog";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-export default function SeriesDetailPage({
-  params,
-}: {
-  params: Promise<{ seriesId: Id<"series"> }>;
-}) {
-  const [seriesId, setSeriesId] = useState<Id<"series"> | null>(null);
+export default function SeriesDetailPage() {
+  const params = useParams<{ seriesId: string }>();
+  const seriesId = (params?.seriesId as Id<"series"> | undefined) ?? null;
   const [isReordering, setIsReordering] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const searchParams = useSearchParams();
   const fromBook = searchParams.get("fromBook");
 
   const reorderBooks = useMutation(api.series.mutations.reorderBooks);
-
-  useEffect(() => {
-    params.then((p) => setSeriesId(p.seriesId));
-  }, [params]);
 
   const series = useQuery(api.series.queries.getSeries, seriesId ? { seriesId } : "skip");
   const books = useQuery(

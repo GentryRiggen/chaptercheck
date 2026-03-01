@@ -97,6 +97,8 @@ export function AuthorImage({ imageR2Key, name, size = "md", className }: Author
     <img
       src={imageUrl}
       alt={name}
+      loading="lazy"
+      decoding="async"
       className={cn("rounded-full object-cover", sizeClasses[size], className)}
     />
   );

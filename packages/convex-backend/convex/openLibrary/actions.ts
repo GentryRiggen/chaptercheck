@@ -5,6 +5,29 @@ import { action } from "../_generated/server";
 import { getR2Client, getStoragePrefix } from "../lib/r2Client";
 import type { OpenLibraryAuthorSuggestion, OpenLibraryBookSuggestion } from "./types";
 
+const ALLOWED_IMAGE_HOSTS = new Set(["covers.openlibrary.org"]);
+const ALLOWED_IMAGE_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_IMPORT_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
+
+function validateImportImageUrl(imageUrl: string): URL {
+  let parsed: URL;
+  try {
+    parsed = new URL(imageUrl);
+  } catch {
+    throw new Error("Invalid image URL");
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw new Error("Only HTTPS image URLs are allowed");
+  }
+
+  if (!ALLOWED_IMAGE_HOSTS.has(parsed.hostname)) {
+    throw new Error("Image host is not allowed");
+  }
+
+  return parsed;
+}
+
 // Search books on Open Library
 export const searchBooks = action({
   args: {
@@ -128,14 +151,34 @@ export const uploadImageFromUrl = action({
     }
 
     try {
+      const validatedUrl = validateImportImageUrl(args.imageUrl);
+
       // Fetch the image
-      const response = await fetch(args.imageUrl);
+      const response = await fetch(validatedUrl.toString());
       if (!response.ok) {
         console.log(`Failed to fetch image from ${args.imageUrl}: ${response.status}`);
         return null;
       }
 
-      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const contentType = (response.headers.get("content-type") || "image/jpeg").toLowerCase();
+      const normalizedContentType = contentType.split(";")[0]?.trim() || "image/jpeg";
+
+      if (!ALLOWED_IMAGE_CONTENT_TYPES.has(normalizedContentType)) {
+        console.log(`Rejected unsupported content type: ${normalizedContentType}`);
+        return null;
+      }
+
+      const contentLengthHeader = response.headers.get("content-length");
+      const contentLength = contentLengthHeader ? Number(contentLengthHeader) : null;
+      if (
+        contentLength !== null &&
+        Number.isFinite(contentLength) &&
+        contentLength > MAX_IMPORT_IMAGE_BYTES
+      ) {
+        console.log(`Image too large (${contentLength} bytes): ${args.imageUrl}`);
+        return null;
+      }
+
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
 
@@ -144,6 +187,11 @@ export const uploadImageFromUrl = action({
         console.log(
           `Image too small (${uint8Array.length} bytes), likely a placeholder: ${args.imageUrl}`
         );
+        return null;
+      }
+
+      if (uint8Array.length > MAX_IMPORT_IMAGE_BYTES) {
+        console.log(`Image exceeds max size (${uint8Array.length} bytes): ${args.imageUrl}`);
         return null;
       }
 
@@ -162,7 +210,7 @@ export const uploadImageFromUrl = action({
         Bucket: bucketName,
         Key: r2Key,
         Body: uint8Array,
-        ContentType: contentType,
+        ContentType: normalizedContentType,
       });
 
       await r2Client.send(command);

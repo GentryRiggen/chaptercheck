@@ -5,8 +5,8 @@ import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { Library, Plus } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { AuthorDeleteDialog } from "@/components/authors/AuthorDeleteDialog";
 import { AuthorEditDialog } from "@/components/authors/AuthorEditDialog";
@@ -17,20 +17,13 @@ import { RoleGate } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-export default function AuthorDetailPage({
-  params,
-}: {
-  params: Promise<{ authorId: Id<"authors"> }>;
-}) {
+export default function AuthorDetailPage() {
   const router = useRouter();
-  const [authorId, setAuthorId] = useState<Id<"authors"> | null>(null);
+  const params = useParams<{ authorId: string }>();
+  const authorId = (params?.authorId as Id<"authors"> | undefined) ?? null;
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
-
-  useEffect(() => {
-    params.then((p) => setAuthorId(p.authorId));
-  }, [params]);
 
   const author = useQuery(api.authors.queries.getAuthor, authorId ? { authorId } : "skip");
   const books = useQuery(api.authors.queries.getAuthorBooks, authorId ? { authorId } : "skip");

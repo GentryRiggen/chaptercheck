@@ -8,6 +8,22 @@ import { action } from "../_generated/server";
 import { getR2Client } from "../lib/r2Client";
 import { generateAudioFileR2Key } from "../lib/r2Keys";
 
+const MAX_AUDIO_FILE_BYTES = 1024 * 1024 * 1024; // 1GB
+const STORAGE_LIMIT_BYTES = 2 * 1024 * 1024 * 1024 * 1024; // 2TB
+const ALLOWED_AUDIO_CONTENT_TYPES = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/m4a",
+  "audio/x-m4a",
+  "audio/aac",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/webm",
+  "audio/ogg",
+  "application/octet-stream",
+]);
+
 // Generate a presigned URL for uploading an audio file
 // Requires premium access
 export const generateUploadUrl = action({
@@ -32,15 +48,36 @@ export const generateUploadUrl = action({
     }
 
     // Verify user has premium access before allowing upload
-    await ctx.runQuery(internal.audioFiles.internal.verifyPremiumAccess, {
+    const { user } = await ctx.runQuery(internal.audioFiles.internal.verifyPremiumAccess, {
       clerkId: identity.subject,
     });
+
+    if (!Number.isFinite(args.fileSize) || args.fileSize <= 0) {
+      throw new Error("Invalid file size");
+    }
+
+    if (args.fileSize > MAX_AUDIO_FILE_BYTES) {
+      throw new Error("Audio file exceeds maximum size of 1GB");
+    }
+
+    const normalizedContentType = args.contentType.toLowerCase().split(";")[0]?.trim() ?? "";
+    if (!ALLOWED_AUDIO_CONTENT_TYPES.has(normalizedContentType)) {
+      throw new Error("Unsupported audio content type");
+    }
 
     // Get or create storage account for this user
     const storageAccount = await ctx.runMutation(
       internal.storageAccounts.internal.getOrCreateStorageAccountInternal,
       { clerkId: identity.subject }
     );
+
+    if (user.storageAccountId && user.storageAccountId !== storageAccount._id) {
+      throw new Error("Storage account mismatch");
+    }
+
+    if (storageAccount.totalBytesUsed + args.fileSize > STORAGE_LIMIT_BYTES) {
+      throw new Error("Storage limit exceeded");
+    }
 
     const r2Client = getR2Client();
     const bucketName = process.env.R2_BUCKET_NAME;
@@ -55,7 +92,7 @@ export const generateUploadUrl = action({
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: r2Key,
-      ContentType: args.contentType,
+      ContentType: normalizedContentType,
       ContentLength: args.fileSize,
     });
 

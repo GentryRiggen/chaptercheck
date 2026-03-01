@@ -1,8 +1,52 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
-import { query } from "../_generated/server";
+import { type Doc } from "../_generated/dataModel";
+import { query, type QueryCtx } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
+
+type EnrichedBook = Doc<"books"> & {
+  authors: Array<Doc<"authors"> & { role?: string }>;
+  series: { _id: Doc<"series">["_id"]; name: string } | null;
+};
+
+function createBookEnricher(ctx: QueryCtx): (book: Doc<"books">) => Promise<EnrichedBook> {
+  const authorCache = new Map<string, Doc<"authors"> | null>();
+  const seriesCache = new Map<string, Doc<"series"> | null>();
+
+  return async (book) => {
+    const bookAuthors = await ctx.db
+      .query("bookAuthors")
+      .withIndex("by_book", (q) => q.eq("bookId", book._id))
+      .collect();
+
+    const authors = await Promise.all(
+      bookAuthors.map(async (ba) => {
+        const cacheKey = String(ba.authorId);
+        if (!authorCache.has(cacheKey)) {
+          authorCache.set(cacheKey, await ctx.db.get(ba.authorId));
+        }
+        const author = authorCache.get(cacheKey);
+        return author ? { ...author, role: ba.role } : null;
+      })
+    );
+
+    let series = null;
+    if (book.seriesId) {
+      const seriesCacheKey = String(book.seriesId);
+      if (!seriesCache.has(seriesCacheKey)) {
+        seriesCache.set(seriesCacheKey, await ctx.db.get(book.seriesId));
+      }
+      series = seriesCache.get(seriesCacheKey) ?? null;
+    }
+
+    return {
+      ...book,
+      authors: authors.filter((a) => a !== null),
+      series: series ? { _id: series._id, name: series.name } : null,
+    };
+  };
+}
 
 // Get a single book by ID with authors and series
 export const getBook = query({
@@ -12,27 +56,8 @@ export const getBook = query({
     const book = await ctx.db.get(args.bookId);
     if (!book) return null;
 
-    // Get authors for this book
-    const bookAuthors = await ctx.db
-      .query("bookAuthors")
-      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
-      .collect();
-
-    const authors = await Promise.all(
-      bookAuthors.map(async (ba) => {
-        const author = await ctx.db.get(ba.authorId);
-        return author ? { ...author, role: ba.role } : null;
-      })
-    );
-
-    // Get series if book is part of one
-    const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
-
-    return {
-      ...book,
-      authors: authors.filter((a) => a !== null),
-      series,
-    };
+    const enrichBook = createBookEnricher(ctx);
+    return await enrichBook(book);
   },
 });
 
@@ -69,30 +94,8 @@ export const listBooks = query({
     }
     const results = await q.paginate(args.paginationOpts);
 
-    // Enrich with authors and series
-    const booksWithDetails = await Promise.all(
-      results.page.map(async (book) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = await Promise.all(
-          bookAuthors.map(async (ba) => {
-            const author = await ctx.db.get(ba.authorId);
-            return author ? { ...author, role: ba.role } : null;
-          })
-        );
-
-        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
-
-        return {
-          ...book,
-          authors: authors.filter((a) => a !== null),
-          series: series ? { _id: series._id, name: series.name } : null,
-        };
-      })
-    );
+    const enrichBook = createBookEnricher(ctx);
+    const booksWithDetails = await Promise.all(results.page.map((book) => enrichBook(book)));
 
     return {
       ...results,
@@ -145,30 +148,8 @@ export const searchBooks = query({
     }
     const cappedBooks = mergedBooks.slice(0, 50);
 
-    // Enrich with authors and series
-    const booksWithDetails = await Promise.all(
-      cappedBooks.map(async (book) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = await Promise.all(
-          bookAuthors.map(async (ba) => {
-            const author = await ctx.db.get(ba.authorId);
-            return author ? { ...author, role: ba.role } : null;
-          })
-        );
-
-        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
-
-        return {
-          ...book,
-          authors: authors.filter((a) => a !== null),
-          series: series ? { _id: series._id, name: series.name } : null,
-        };
-      })
-    );
+    const enrichBook = createBookEnricher(ctx);
+    const booksWithDetails = await Promise.all(cappedBooks.map((book) => enrichBook(book)));
 
     return booksWithDetails;
   },
@@ -237,30 +218,8 @@ export const filterBooksByGenres = query({
 
     const capped = books.slice(0, 50);
 
-    // Enrich with authors and series
-    const booksWithDetails = await Promise.all(
-      capped.map(async (book) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = await Promise.all(
-          bookAuthors.map(async (ba) => {
-            const author = await ctx.db.get(ba.authorId);
-            return author ? { ...author, role: ba.role } : null;
-          })
-        );
-
-        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
-
-        return {
-          ...book,
-          authors: authors.filter((a) => a !== null),
-          series: series ? { _id: series._id, name: series.name } : null,
-        };
-      })
-    );
+    const enrichBook = createBookEnricher(ctx);
+    const booksWithDetails = await Promise.all(capped.map((book) => enrichBook(book)));
 
     return booksWithDetails;
   },
@@ -281,30 +240,8 @@ export const getTopRatedBooks = query({
       .filter((q) => q.gt(q.field("ratingCount"), 0))
       .take(limit);
 
-    // Enrich with authors and series
-    const booksWithDetails = await Promise.all(
-      books.map(async (book) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = await Promise.all(
-          bookAuthors.map(async (ba) => {
-            const author = await ctx.db.get(ba.authorId);
-            return author ? { _id: author._id, name: author.name } : null;
-          })
-        );
-
-        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
-
-        return {
-          ...book,
-          authors: authors.filter((a) => a !== null),
-          series: series ? { _id: series._id, name: series.name } : null,
-        };
-      })
-    );
+    const enrichBook = createBookEnricher(ctx);
+    const booksWithDetails = await Promise.all(books.map((book) => enrichBook(book)));
 
     return booksWithDetails;
   },
@@ -352,30 +289,8 @@ export const getRecentBooks = query({
     const limit = args.limit ?? 6;
     const books = await ctx.db.query("books").order("desc").take(limit);
 
-    // Enrich with authors and series
-    const booksWithDetails = await Promise.all(
-      books.map(async (book) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = await Promise.all(
-          bookAuthors.map(async (ba) => {
-            const author = await ctx.db.get(ba.authorId);
-            return author ? { _id: author._id, name: author.name } : null;
-          })
-        );
-
-        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
-
-        return {
-          ...book,
-          authors: authors.filter((a) => a !== null),
-          series: series ? { _id: series._id, name: series.name } : null,
-        };
-      })
-    );
+    const enrichBook = createBookEnricher(ctx);
+    const booksWithDetails = await Promise.all(books.map((book) => enrichBook(book)));
 
     return booksWithDetails;
   },

@@ -5,8 +5,8 @@ import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { BookOpen, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 
 import { AddBooksToShelfDialog } from "@/components/shelves/AddBooksToShelfDialog";
 import { ShelfBookList } from "@/components/shelves/ShelfBookList";
@@ -17,20 +17,13 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-export default function ShelfDetailPage({
-  params,
-}: {
-  params: Promise<{ shelfId: Id<"shelves"> }>;
-}) {
+export default function ShelfDetailPage() {
   const router = useRouter();
-  const [shelfId, setShelfId] = useState<Id<"shelves"> | null>(null);
+  const params = useParams<{ shelfId: string }>();
+  const shelfId = (params?.shelfId as Id<"shelves"> | undefined) ?? null;
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addBooksOpen, setAddBooksOpen] = useState(false);
-
-  useEffect(() => {
-    params.then((p) => setShelfId(p.shelfId));
-  }, [params]);
 
   const shelf = useQuery(api.shelves.queries.getShelf, shelfId ? { shelfId } : "skip");
 

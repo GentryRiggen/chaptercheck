@@ -1,6 +1,10 @@
+import { createRequire } from "node:module";
 import path from "node:path";
 
 import type { NextConfig } from "next";
+
+const require = createRequire(import.meta.url);
+const convexModulePath = path.dirname(require.resolve("convex/package.json"));
 
 const nextConfig: NextConfig = {
   images: {
@@ -16,7 +20,7 @@ const nextConfig: NextConfig = {
     // to avoid "Could not find Convex client" errors from duplicate modules
     config.resolve.alias = {
       ...config.resolve.alias,
-      convex: path.resolve(__dirname, "node_modules/convex"),
+      convex: convexModulePath,
     };
     return config;
   },
