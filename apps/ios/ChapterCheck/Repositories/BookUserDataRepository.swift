@@ -2,6 +2,11 @@ import Combine
 import ConvexMobile
 import Foundation
 
+/// The result returned by the `markAsRead` mutation.
+struct MarkAsReadResult: Decodable, Sendable {
+    let isRead: Bool
+}
+
 /// Repository for per-user book data: ratings, reviews, and read status.
 ///
 /// Wraps the `bookUserData` Convex queries. All review queries return
@@ -39,6 +44,62 @@ final class BookUserDataRepository {
         convex.subscribe(
             to: "bookUserData/queries:getBookRatingStats",
             with: ["bookId": bookId]
+        )
+    }
+
+    /// Subscribe to books a user has marked as read.
+    ///
+    /// For the caller's own profile: includes private reads.
+    /// For other users: only non-private reads are returned (filtered server-side).
+    func subscribeToUserReadBooks(userId: String) -> AnyPublisher<[UserReadBook], ClientError>? {
+        convex.subscribe(
+            to: "bookUserData/queries:getUserReadBooks",
+            with: ["userId": userId]
+        )
+    }
+
+    // MARK: - Mutations
+
+    /// Toggle the read status for a book.
+    ///
+    /// - Parameter bookId: The `_id` of the book.
+    /// - Returns: A result containing the new `isRead` state.
+    func markAsRead(bookId: String) async throws -> MarkAsReadResult {
+        try await convex.mutation(
+            "bookUserData/mutations:markAsRead",
+            with: ["bookId": bookId]
+        )
+    }
+
+    /// Save or update a review for a book. Also marks the book as read.
+    ///
+    /// - Parameters:
+    ///   - bookId: The `_id` of the book.
+    ///   - rating: Optional rating (1–3). Pass `nil` to omit.
+    ///   - reviewText: Optional review body text. Pass `nil` or empty to omit.
+    ///   - isReadPrivate: Whether to hide the read status from other users.
+    ///   - isReviewPrivate: Whether to hide the full review from other users.
+    func saveReview(
+        bookId: String,
+        rating: Int?,
+        reviewText: String?,
+        isReadPrivate: Bool,
+        isReviewPrivate: Bool
+    ) async throws {
+        var args: [String: ConvexEncodable?] = [
+            "bookId": bookId,
+            "isReadPrivate": isReadPrivate,
+            "isReviewPrivate": isReviewPrivate,
+        ]
+        if let rating {
+            args["rating"] = Double(rating)
+        }
+        if let reviewText, !reviewText.isEmpty {
+            args["reviewText"] = reviewText
+        }
+        try await convex.mutation(
+            "bookUserData/mutations:saveReview",
+            with: args
         )
     }
 }

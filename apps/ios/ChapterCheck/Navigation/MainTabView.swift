@@ -1,3 +1,4 @@
+import Combine
 import ClerkKit
 import SwiftUI
 
@@ -16,6 +17,7 @@ struct MainTabView: View {
             TabView(selection: $selectedTab) {
                 homeTab
                 libraryTab
+                authorsTab
                 settingsTab
             }
 
@@ -65,9 +67,25 @@ struct MainTabView: View {
         .tag(Tab.library)
     }
 
+    private var authorsTab: some View {
+        NavigationStack {
+            AuthorsView()
+                .navigationDestination(for: AppDestination.self) { destination in
+                    destinationView(for: destination)
+                }
+        }
+        .tabItem {
+            Label("Authors", systemImage: "person.2")
+        }
+        .tag(Tab.authors)
+    }
+
     private var settingsTab: some View {
         NavigationStack {
             SettingsView()
+                .navigationDestination(for: AppDestination.self) { destination in
+                    destinationView(for: destination)
+                }
         }
         .tabItem {
             Label("Settings", systemImage: "gearshape")
@@ -86,6 +104,10 @@ struct MainTabView: View {
             AuthorDetailView(authorId: id)
         case .series(let id):
             SeriesDetailView(seriesId: id)
+        case .shelf(let id):
+            ShelfDetailView(shelfId: id)
+        case .profile(let userId):
+            ProfileView(userId: userId)
         }
     }
 }
@@ -96,18 +118,52 @@ extension MainTabView {
     enum Tab: Hashable {
         case home
         case library
+        case authors
         case settings
     }
 }
 
 // MARK: - Settings View
 
-/// Simple settings screen with account info and sign out.
+/// Settings screen with user profile header, privacy toggle, account info, and sign out.
 private struct SettingsView: View {
     @ObservedObject private var convexService = ConvexService.shared
+    @State private var convexUser: UserWithPermissions?
+    @State private var isProfilePrivate = false
+    @State private var hasInitialized = false
+    @State private var cancellables = Set<AnyCancellable>()
+
+    private let userRepository = UserRepository()
 
     var body: some View {
-        List {
+        Form {
+            // User header section
+            if let user = Clerk.shared.user {
+                Section {
+                    userHeader(user)
+                }
+            }
+
+            // Profile section — only available once the Convex user is loaded
+            if let convexUser {
+                Section {
+                    NavigationLink(value: AppDestination.profile(userId: convexUser._id)) {
+                        Label("View Profile", systemImage: "person.crop.circle")
+                    }
+
+                    Toggle("Private Profile", isOn: $isProfilePrivate)
+                        .onChange(of: isProfilePrivate) { _, newValue in
+                            guard hasInitialized else { return }
+                            updatePrivacy(newValue)
+                        }
+                } header: {
+                    Text("Profile")
+                } footer: {
+                    Text("When enabled, other users won't see your read books, reviews, or shelves.")
+                }
+            }
+
+            // Account details section
             Section {
                 if let user = Clerk.shared.user {
                     LabeledContent(
@@ -125,6 +181,7 @@ private struct SettingsView: View {
                 Text("Account")
             }
 
+            // Sign out
             Section {
                 Button("Sign Out", role: .destructive) {
                     Task {
@@ -134,6 +191,88 @@ private struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .onAppear { subscribeToUser() }
+        .onDisappear { cancellables.removeAll() }
+    }
+
+    // MARK: - User Header
+
+    @ViewBuilder
+    private func userHeader(_ user: User) -> some View {
+        VStack(spacing: 8) {
+            if let url = URL(string: user.imageUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    default:
+                        avatarPlaceholder
+                    }
+                }
+                .frame(width: 60, height: 60)
+                .clipShape(Circle())
+            } else {
+                avatarPlaceholder
+            }
+
+            let fullName = [user.firstName, user.lastName]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            if !fullName.isEmpty {
+                Text(fullName)
+                    .font(.headline)
+            }
+
+            if let email = user.emailAddresses.first?.emailAddress {
+                Text(email)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+    }
+
+    private var avatarPlaceholder: some View {
+        Circle()
+            .fill(.secondary.opacity(0.2))
+            .overlay {
+                Image(systemName: "person.fill")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 60, height: 60)
+    }
+
+    // MARK: - Subscriptions
+
+    private func subscribeToUser() {
+        guard cancellables.isEmpty,
+              let publisher = userRepository.subscribeToCurrentUser() else { return }
+
+        publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { user in
+                    convexUser = user
+                    if !hasInitialized, let user {
+                        isProfilePrivate = user.isProfilePrivate
+                        hasInitialized = true
+                    }
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    // MARK: - Actions
+
+    private func updatePrivacy(_ isPrivate: Bool) {
+        Task {
+            try? await userRepository.updateProfilePrivacy(isPrivate: isPrivate)
+        }
     }
 }
 

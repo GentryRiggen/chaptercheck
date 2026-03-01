@@ -25,4 +25,25 @@ final class UserRepository {
     func subscribeToCurrentUser() -> AnyPublisher<UserWithPermissions?, ClientError>? {
         convex.subscribe(to: "users/queries:getCurrentUserWithPermissions")
     }
+
+    /// Subscribe to a user's public profile.
+    ///
+    /// Returns `nil` when the profile does not exist.
+    /// Stats are `nil` when the profile is private and not the caller's own.
+    func subscribeToUserProfile(userId: String) -> AnyPublisher<UserProfile?, ClientError>? {
+        convex.subscribe(
+            to: "users/queries:getUserProfile",
+            with: ["userId": userId]
+        )
+    }
+
+    // MARK: - Mutations
+
+    /// Update the current user's profile privacy setting.
+    func updateProfilePrivacy(isPrivate: Bool) async throws {
+        try await convex.mutation(
+            "users/mutations:updateProfilePrivacy",
+            with: ["isProfilePrivate": isPrivate]
+        )
+    }
 }

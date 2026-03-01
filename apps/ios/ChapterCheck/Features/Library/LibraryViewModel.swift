@@ -5,13 +5,16 @@ import os
 
 /// View model for the library (book browsing) screen.
 ///
-/// Supports two modes:
+/// Supports three modes:
 /// 1. **Browse mode** (default): Paginated list with sort options, using cursor-based pagination.
 /// 2. **Search mode**: Activated when `searchText` is non-empty. Uses a debounced (300ms)
 ///    subscription to the search query. Non-paginated.
+/// 3. **Genre filter mode**: Activated when `selectedGenreIds` is non-empty and search is inactive.
+///    Uses a non-paginated subscription returning up to 50 results.
 ///
-/// When `searchText` or `sortOption` changes, the current subscription is cancelled
-/// and a new one is created.
+/// Mode priority: search > genre filter > browse.
+/// When `searchText`, `sortOption`, or `selectedGenreIds` changes, the current subscription
+/// is cancelled and a new one is created.
 @Observable
 @MainActor
 final class LibraryViewModel {
@@ -23,6 +26,7 @@ final class LibraryViewModel {
     var isLoadingMore = false
     var searchText: String = ""
     var sortOption: SortOption = .titleAsc
+    var selectedGenreIds: Set<String> = []
     var error: String?
 
     /// Whether more pages are available for infinite scroll.
@@ -38,6 +42,7 @@ final class LibraryViewModel {
 
     private var currentCursor: String?
     private var isSearchMode: Bool { !searchText.trimmingCharacters(in: .whitespaces).isEmpty }
+    var isGenreFilterActive: Bool { !selectedGenreIds.isEmpty }
 
     // MARK: - Debounce
 
@@ -82,11 +87,24 @@ final class LibraryViewModel {
         resetAndReload()
     }
 
+    // MARK: - Genre Filter
+
+    /// Called when the selected genre IDs change. Switches to genre filter mode
+    /// (or back to browse mode when the selection is cleared), unless a search
+    /// is already active — in that case the genre filter takes effect only after
+    /// the search field is cleared.
+    func onGenreFilterChanged() {
+        if !isSearchMode {
+            resetAndReload()
+        }
+    }
+
     // MARK: - Pagination
 
     /// Load the next page of results. Called when the last item appears on screen.
+    /// No-op in search mode or genre filter mode (both are non-paginated).
     func loadNextPage() {
-        guard !isSearchMode, !isLoadingMore, hasMore, currentCursor != nil else { return }
+        guard !isSearchMode, !isGenreFilterActive, !isLoadingMore, hasMore, currentCursor != nil else { return }
         isLoadingMore = true
         subscribeToPage(cursor: currentCursor)
     }
@@ -101,7 +119,13 @@ final class LibraryViewModel {
         isLoading = true
         error = nil
 
-        subscribeToPage(cursor: nil)
+        if isSearchMode {
+            performSearch()
+        } else if isGenreFilterActive {
+            performGenreFilter()
+        } else {
+            subscribeToPage(cursor: nil)
+        }
     }
 
     private func resetAndReload() {
@@ -138,6 +162,32 @@ final class LibraryViewModel {
                 },
                 receiveValue: { [weak self] results in
                     self?.logger.info("search: received \(results.count) results")
+                    self?.books = results
+                    self?.isLoading = false
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func performGenreFilter() {
+        hasMore = false
+        let genreIds = Array(selectedGenreIds)
+
+        let pub = bookRepository.subscribeToFilteredBooks(genreIds: genreIds, sort: sortOption.rawValue)
+        logger.info("performGenreFilter: genreCount=\(genreIds.count), sort=\(self.sortOption.rawValue), publisher=\(pub != nil ? "created" : "nil")")
+
+        pub?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.logger.error("genreFilter FAILED: \(error)")
+                        self?.error = error.localizedDescription
+                        self?.isLoading = false
+                    }
+                },
+                receiveValue: { [weak self] results in
+                    self?.logger.info("genreFilter: received \(results.count) results")
                     self?.books = results
                     self?.isLoading = false
                 }

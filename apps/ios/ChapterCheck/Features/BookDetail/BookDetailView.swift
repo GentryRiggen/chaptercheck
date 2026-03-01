@@ -3,11 +3,13 @@ import SwiftUI
 /// Full book detail screen.
 ///
 /// Shows the book cover, metadata (authors, series, rating), a play/resume button,
-/// audio file list, and reviews section.
+/// read status badge, audio file list, and reviews section.
 struct BookDetailView: View {
     let bookId: String
 
     @State private var viewModel = BookDetailViewModel()
+    @State private var isReviewSheetPresented = false
+    @State private var isAddToShelfPresented = false
     @Environment(AudioPlayerManager.self) private var audioPlayer
 
     var body: some View {
@@ -31,11 +33,38 @@ struct BookDetailView: View {
         }
         .navigationTitle(viewModel.book?.title ?? "Book")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isAddToShelfPresented = true
+                } label: {
+                    Image(systemName: "bookmark")
+                }
+            }
+        }
         .onAppear {
             viewModel.subscribe(bookId: bookId)
         }
         .onDisappear {
             viewModel.unsubscribe()
+        }
+        .sheet(isPresented: $isAddToShelfPresented) {
+            AddToShelfSheet(bookId: bookId)
+        }
+        .sheet(isPresented: $isReviewSheetPresented) {
+            BookReviewSheet(
+                bookId: bookId,
+                existingUserData: viewModel.userData,
+                allGenres: viewModel.allGenres,
+                existingGenreVoteIds: viewModel.myGenreVoteIds,
+                onSave: { formData in
+                    isReviewSheetPresented = false
+                    Task { await viewModel.saveReview(formData) }
+                },
+                onCancel: {
+                    isReviewSheetPresented = false
+                }
+            )
         }
     }
 
@@ -75,6 +104,18 @@ struct BookDetailView: View {
                     playButton(book)
                 }
 
+                // Read Status
+                BookReadStatusView(
+                    userData: viewModel.userData,
+                    isLoading: viewModel.isLoading,
+                    onMarkAsRead: {
+                        Task { await viewModel.markAsRead() }
+                    },
+                    onOpenReview: {
+                        isReviewSheetPresented = true
+                    }
+                )
+
                 // Description
                 if let description = book.description, !description.isEmpty {
                     descriptionSection(description)
@@ -93,11 +134,22 @@ struct BookDetailView: View {
                 }
 
                 // Reviews
-                if !viewModel.reviews.isEmpty {
+                if !viewModel.sortedReviews.isEmpty || viewModel.userData?.isRead == true {
                     Divider()
                         .padding(.horizontal)
 
-                    ReviewsListView(reviews: viewModel.reviews)
+                    ReviewsListView(
+                        reviews: viewModel.sortedReviews,
+                        sortOption: Binding(
+                            get: { viewModel.reviewSortOption },
+                            set: { viewModel.reviewSortOption = $0 }
+                        ),
+                        userHasReview: viewModel.userHasReview,
+                        isOwnReviewPrivate: viewModel.userData?.isReviewPrivate ?? false,
+                        onWriteReview: {
+                            isReviewSheetPresented = true
+                        }
+                    )
                 }
 
                 // Bottom spacing for mini player
@@ -123,7 +175,7 @@ struct BookDetailView: View {
             )
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: hasExistingProgress ? "play.fill" : "play.fill")
+                Image(systemName: "play.fill")
                 Text(hasExistingProgress ? "Resume" : "Play")
                     .fontWeight(.semibold)
             }

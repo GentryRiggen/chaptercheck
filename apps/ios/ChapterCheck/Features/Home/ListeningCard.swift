@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// Compact card (160pt wide) for the horizontal continue listening scroll.
@@ -8,12 +9,24 @@ struct ListeningCard: View {
     let item: RecentListeningProgress
     @Environment(AudioPlayerManager.self) private var audioPlayer
 
+    @State private var isResuming = false
+    @State private var resumeCancellables = Set<AnyCancellable>()
+
     var body: some View {
         Button {
-            Haptics.medium()
+            resumePlayback()
         } label: {
             VStack(alignment: .leading, spacing: 8) {
-                BookCoverView(r2Key: item.book.coverImageR2Key, size: 100)
+                ZStack {
+                    BookCoverView(r2Key: item.book.coverImageR2Key, size: 100)
+
+                    if isResuming {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(.black.opacity(0.35))
+                        ProgressView()
+                            .tint(.white)
+                    }
+                }
 
                 Text(item.book.title)
                     .font(.caption)
@@ -35,5 +48,57 @@ struct ListeningCard: View {
             .frame(width: 160)
         }
         .buttonStyle(.plain)
+        .disabled(isResuming)
+        .onDisappear { resumeCancellables.removeAll() }
+    }
+
+    // MARK: - Actions
+
+    private func resumePlayback() {
+        Haptics.medium()
+        isResuming = true
+
+        let bookRepo = BookRepository()
+        let audioRepo = AudioRepository()
+
+        guard
+            let bookPub = bookRepo.subscribeToBook(id: item.bookId),
+            let filesPub = audioRepo.subscribeToAudioFiles(bookId: item.bookId)
+        else {
+            isResuming = false
+            return
+        }
+
+        let targetFileId = item.audioFile._id
+        let position = item.positionSeconds
+        let rate = item.playbackRate
+
+        bookPub
+            .combineLatest(filesPub)
+            .compactMap { bookOrNil, files -> (BookWithDetails, AudioFile, [AudioFile])? in
+                guard
+                    let book = bookOrNil,
+                    let targetFile = files.first(where: { $0._id == targetFileId })
+                else { return nil }
+                return (book, targetFile, files)
+            }
+            .first()
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in
+                    isResuming = false
+                    resumeCancellables.removeAll()
+                },
+                receiveValue: { book, audioFile, allFiles in
+                    audioPlayer.play(
+                        book: book,
+                        audioFile: audioFile,
+                        allFiles: allFiles,
+                        startPosition: position,
+                        rate: rate
+                    )
+                }
+            )
+            .store(in: &resumeCancellables)
     }
 }

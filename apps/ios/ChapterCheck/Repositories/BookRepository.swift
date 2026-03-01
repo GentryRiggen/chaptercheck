@@ -62,10 +62,10 @@ final class BookRepository {
         numItems: Int = 20,
         cursor: String? = nil
     ) -> AnyPublisher<PaginatedResult<BookWithDetails>, ClientError>? {
-        var paginationOpts: [String: ConvexEncodable?] = ["numItems": Double(numItems)]
-        if let cursor {
-            paginationOpts["cursor"] = cursor
-        }
+        let paginationOpts: [String: ConvexEncodable?] = [
+            "numItems": Double(numItems),
+            "cursor": cursor,
+        ]
 
         return convex.subscribe(
             to: "books/queries:listBooks",
@@ -84,6 +84,25 @@ final class BookRepository {
         convex.subscribe(
             to: "books/queries:searchBooks",
             with: ["search": query]
+        )
+    }
+
+    /// Subscribe to books filtered by one or more genre IDs (non-paginated, max 50 results).
+    ///
+    /// - Parameters:
+    ///   - genreIds: The genre IDs to filter by. Returns an empty array when the list is empty.
+    ///   - sort: Sort order. One of `"title_asc"`, `"title_desc"`, `"recent"`, `"top_rated"`.
+    func subscribeToFilteredBooks(
+        genreIds: [String],
+        sort: String = "title_asc"
+    ) -> AnyPublisher<[BookWithDetails], ClientError>? {
+        let encodableGenreIds: [ConvexEncodable?] = genreIds.map { $0 as ConvexEncodable? }
+        return convex.subscribe(
+            to: "books/queries:filterBooksByGenres",
+            with: [
+                "genreIds": encodableGenreIds,
+                "sort": sort,
+            ]
         )
     }
 }

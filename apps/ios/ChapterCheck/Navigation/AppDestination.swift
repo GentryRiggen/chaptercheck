@@ -9,4 +9,6 @@ enum AppDestination: Hashable {
     case book(id: String)
     case author(id: String)
     case series(id: String)
+    case shelf(id: String)
+    case profile(userId: String)
 }

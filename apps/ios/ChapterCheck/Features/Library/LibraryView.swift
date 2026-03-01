@@ -1,12 +1,16 @@
 import SwiftUI
 
-/// Book library browser with search and infinite scroll.
+/// Book library browser with search, genre filtering, and infinite scroll.
 ///
-/// Displays books in a 2-column grid. Supports two modes:
+/// Displays books in a 2-column grid. Supports three modes:
 /// - **Browse**: Paginated with sort options (A-Z, Z-A, Recent, Top Rated).
 /// - **Search**: Debounced full-text search when the search field is active.
+/// - **Genre filter**: Non-paginated results for the selected genres (up to 50).
+///
+/// Mode priority: search > genre filter > browse.
 struct LibraryView: View {
     @State private var viewModel = LibraryViewModel()
+    @State private var isGenreFilterPresented = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -26,9 +30,7 @@ struct LibraryView: View {
                 EmptyStateView(
                     icon: "books.vertical",
                     title: "No Books Found",
-                    subtitle: viewModel.searchText.isEmpty
-                        ? "Your library is empty."
-                        : "No books match your search."
+                    subtitle: emptyStateSubtitle
                 )
             } else {
                 bookGrid
@@ -45,16 +47,49 @@ struct LibraryView: View {
         .onChange(of: viewModel.sortOption) {
             viewModel.onSortChanged()
         }
+        .onChange(of: viewModel.selectedGenreIds) {
+            viewModel.onGenreFilterChanged()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                SortPicker(selection: $viewModel.sortOption)
+                HStack(spacing: 4) {
+                    Button {
+                        isGenreFilterPresented = true
+                    } label: {
+                        Image(systemName: viewModel.isGenreFilterActive
+                            ? "line.3.horizontal.decrease.circle.fill"
+                            : "line.3.horizontal.decrease.circle"
+                        )
+                        .symbolRenderingMode(.hierarchical)
+                    }
+                    .accessibilityLabel(
+                        viewModel.isGenreFilterActive
+                            ? "Genre filter active (\(viewModel.selectedGenreIds.count) selected)"
+                            : "Filter by genre"
+                    )
+
+                    SortPicker(selection: $viewModel.sortOption)
+                }
             }
+        }
+        .sheet(isPresented: $isGenreFilterPresented) {
+            GenreFilterSheet(selectedGenreIds: $viewModel.selectedGenreIds)
         }
         .onAppear {
             viewModel.subscribe()
         }
         .onDisappear {
             viewModel.unsubscribe()
+        }
+    }
+
+    private var emptyStateSubtitle: String {
+        if !viewModel.searchText.isEmpty {
+            return "No books match your search."
+        } else if viewModel.isGenreFilterActive {
+            return "No books found for the selected genres."
+        } else {
+            return "Your library is empty."
         }
     }
 

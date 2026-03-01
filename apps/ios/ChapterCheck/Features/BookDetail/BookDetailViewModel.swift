@@ -2,11 +2,38 @@ import Combine
 import ConvexMobile
 import Foundation
 
+// MARK: - Supporting Types
+
+/// Sort options for the review list.
+///
+/// Sorting is performed client-side since `getPublicReviewsForBook` returns
+/// all reviews sorted by `reviewedAt` descending. The user's own review is
+/// always pinned to the top regardless of sort order.
+enum ReviewSortOption: String, CaseIterable, Identifiable {
+    case recent = "recent"
+    case oldest = "oldest"
+    case highest = "highest"
+    case lowest = "lowest"
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .recent: return "Most Recent"
+        case .oldest: return "Oldest First"
+        case .highest: return "Highest Rated"
+        case .lowest: return "Lowest Rated"
+        }
+    }
+}
+
+// MARK: - ViewModel
+
 /// View model for the book detail screen.
 ///
-/// Subscribes to five concurrent data sources for a given book:
+/// Subscribes to seven concurrent data sources for a given book:
 /// book details, audio files, listening progress, user data (rating/review),
-/// and rating statistics.
+/// rating statistics, public reviews, all genres, and the user's genre votes.
 @Observable
 @MainActor
 final class BookDetailViewModel {
@@ -19,6 +46,9 @@ final class BookDetailViewModel {
     var userData: BookUserData?
     var ratingStats: RatingStats?
     var reviews: [PublicReview] = []
+    var allGenres: [Genre] = []
+    var myGenreVoteIds: [String] = []
+    var reviewSortOption: ReviewSortOption = .recent
 
     var isLoading = true
     var error: String?
@@ -29,6 +59,7 @@ final class BookDetailViewModel {
     private let audioRepository = AudioRepository()
     private let progressRepository = ProgressRepository()
     private let bookUserDataRepository = BookUserDataRepository()
+    private let genreRepository = GenreRepository()
     private var cancellables = Set<AnyCancellable>()
 
     private var loadedSections: Set<String> = []
@@ -63,6 +94,35 @@ final class BookDetailViewModel {
         book?.formattedDuration
     }
 
+    /// Whether the current user has written a review for this book.
+    var userHasReview: Bool {
+        userData?.isRead == true && (userData?.reviewText != nil || userData?.rating != nil)
+    }
+
+    /// Reviews sorted according to `reviewSortOption`, with the user's own
+    /// review pinned at the top regardless of sort order.
+    var sortedReviews: [PublicReview] {
+        let ownReview = reviews.first(where: { $0.isOwnReview == true })
+        let otherReviews = reviews.filter { $0.isOwnReview != true }
+
+        let sorted: [PublicReview]
+        switch reviewSortOption {
+        case .recent:
+            sorted = otherReviews.sorted { ($0.reviewedAt ?? 0) > ($1.reviewedAt ?? 0) }
+        case .oldest:
+            sorted = otherReviews.sorted { ($0.reviewedAt ?? 0) < ($1.reviewedAt ?? 0) }
+        case .highest:
+            sorted = otherReviews.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
+        case .lowest:
+            sorted = otherReviews.sorted { ($0.rating ?? 0) < ($1.rating ?? 0) }
+        }
+
+        if let own = ownReview {
+            return [own] + sorted
+        }
+        return sorted
+    }
+
     // MARK: - Lifecycle
 
     func subscribe(bookId: String) {
@@ -73,10 +133,64 @@ final class BookDetailViewModel {
         subscribeToUserData(bookId: bookId)
         subscribeToRatingStats(bookId: bookId)
         subscribeToReviews(bookId: bookId)
+        subscribeToAllGenres()
+        subscribeToMyGenreVotes(bookId: bookId)
     }
 
     func unsubscribe() {
         cancellables.removeAll()
+    }
+
+    // MARK: - Mutations
+
+    /// Toggle the read status for this book.
+    ///
+    /// The backend toggles the current `isRead` state. After a successful toggle
+    /// the real-time `userData` subscription will emit the updated value automatically.
+    func markAsRead() async {
+        guard let book else { return }
+        do {
+            _ = try await bookUserDataRepository.markAsRead(bookId: book._id)
+            Haptics.success()
+        } catch {
+            self.error = "Failed to update read status"
+        }
+    }
+
+    /// Save a full review (rating, text, privacy, and genre votes) for this book.
+    ///
+    /// Genre votes are saved independently via `GenreRepository`. If either call
+    /// fails, the error message is surfaced on the view.
+    func saveReview(_ formData: ReviewFormData) async {
+        guard let book else { return }
+        var errors: [String] = []
+
+        do {
+            try await bookUserDataRepository.saveReview(
+                bookId: book._id,
+                rating: formData.rating,
+                reviewText: formData.reviewText.isEmpty ? nil : formData.reviewText,
+                isReadPrivate: formData.isReadPrivate,
+                isReviewPrivate: formData.isReviewPrivate
+            )
+        } catch {
+            errors.append("review")
+        }
+
+        do {
+            try await genreRepository.setGenreVotes(
+                bookId: book._id,
+                genreIds: formData.genreIds
+            )
+        } catch {
+            errors.append("genre votes")
+        }
+
+        if errors.isEmpty {
+            Haptics.success()
+        } else {
+            self.error = "Failed to save \(errors.joined(separator: " and "))"
+        }
     }
 
     // MARK: - Private Subscriptions
@@ -163,6 +277,30 @@ final class BookDetailViewModel {
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] reviews in
                     self?.reviews = reviews
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToAllGenres() {
+        genreRepository.subscribeToAllGenres()?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] genres in
+                    self?.allGenres = genres
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToMyGenreVotes(bookId: String) {
+        genreRepository.subscribeToMyGenreVotes(bookId: bookId)?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] voteIds in
+                    self?.myGenreVoteIds = voteIds
                 }
             )
             .store(in: &cancellables)

@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// Large, full-width card for the most recently listened audiobook.
@@ -7,6 +8,9 @@ import SwiftUI
 struct HeroListeningCard: View {
     let item: RecentListeningProgress
     @Environment(AudioPlayerManager.self) private var audioPlayer
+
+    @State private var isResuming = false
+    @State private var resumeCancellables = Set<AnyCancellable>()
 
     var body: some View {
         Button {
@@ -54,27 +58,70 @@ struct HeroListeningCard: View {
             .padding(12)
             .background(.fill.quaternary)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                if isResuming {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.black.opacity(0.3))
+                    ProgressView()
+                        .tint(.white)
+                }
+            }
         }
         .buttonStyle(.plain)
+        .disabled(isResuming)
+        .onDisappear { resumeCancellables.removeAll() }
     }
 
     // MARK: - Actions
 
     private func resumePlayback() {
         Haptics.medium()
+        isResuming = true
 
-        // Build a minimal BookWithDetails for the player from the listening item.
-        // The full book data will be loaded by the player if needed.
-        Task {
-            // Subscribe to get the full book details and audio files
-            // For now, use the audio player's play method with what we have
-            let audioRepo = AudioRepository()
-            let bookRepo = BookRepository()
+        let bookRepo = BookRepository()
+        let audioRepo = AudioRepository()
 
-            // We need the full book and audio files to start playback.
-            // The AudioPlayerManager needs these to enable part navigation.
-            // Use a one-shot fetch pattern through the repository subscriptions.
+        guard
+            let bookPub = bookRepo.subscribeToBook(id: item.bookId),
+            let filesPub = audioRepo.subscribeToAudioFiles(bookId: item.bookId)
+        else {
+            isResuming = false
+            return
         }
+
+        let targetFileId = item.audioFile._id
+        let position = item.positionSeconds
+        let rate = item.playbackRate
+
+        bookPub
+            .combineLatest(filesPub)
+            .compactMap { bookOrNil, files -> (BookWithDetails, AudioFile, [AudioFile])? in
+                guard
+                    let book = bookOrNil,
+                    let targetFile = files.first(where: { $0._id == targetFileId })
+                else { return nil }
+                return (book, targetFile, files)
+            }
+            .first()
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in
+                    // Finished (success or failure) — always reset loading state.
+                    // The value handler already started playback on success.
+                    isResuming = false
+                    resumeCancellables.removeAll()
+                },
+                receiveValue: { book, audioFile, allFiles in
+                    audioPlayer.play(
+                        book: book,
+                        audioFile: audioFile,
+                        allFiles: allFiles,
+                        startPosition: position,
+                        rate: rate
+                    )
+                }
+            )
+            .store(in: &resumeCancellables)
     }
 }
 
