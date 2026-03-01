@@ -19,31 +19,38 @@ struct NowPlayingView: View {
             // Dismiss handle
             dismissHandle
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    Spacer()
-                        .frame(height: 16)
+            Spacer()
+                .frame(minHeight: 4, maxHeight: 12)
 
-                    // Cover artwork
-                    coverImage
+            // Cover artwork
+            coverImage
+                .padding(.horizontal, 32)
 
-                    // Track info
-                    trackInfo
+            Spacer()
+                .frame(minHeight: 20, maxHeight: 32)
 
-                    // Seek bar
-                    SeekBarView()
-
-                    // Transport controls
-                    transportControls
-
-                    // Bottom controls (speed, parts)
-                    bottomControls
-
-                    Spacer()
-                        .frame(height: 40)
-                }
-                .padding(.horizontal, 24)
+            // Track info + Seek bar (tightly grouped)
+            VStack(spacing: 16) {
+                trackInfo
+                SeekBarView()
             }
+            .padding(.horizontal, 28)
+
+            Spacer()
+                .frame(minHeight: 16, maxHeight: 28)
+
+            // Transport controls
+            transportControls
+
+            Spacer()
+                .frame(minHeight: 16, maxHeight: 32)
+
+            // Bottom controls (speed, parts)
+            bottomControls
+                .padding(.horizontal, 28)
+
+            Spacer()
+                .frame(minHeight: 16, maxHeight: 40)
         }
         .background(.background)
         .sheet(isPresented: $isPartSelectorPresented) {
@@ -61,8 +68,8 @@ struct NowPlayingView: View {
                 dismiss()
             } label: {
                 Image(systemName: "chevron.down")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
+                    .font(.title2.weight(.medium))
+                    .foregroundStyle(.primary)
                     .frame(width: 44, height: 44)
             }
 
@@ -88,7 +95,7 @@ struct NowPlayingView: View {
     private var coverImage: some View {
         BookCoverView(
             r2Key: audioPlayer.currentBook?.coverImageR2Key,
-            size: 280
+            size: 240
         )
         .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
         .frame(maxWidth: .infinity)
@@ -122,16 +129,16 @@ struct NowPlayingView: View {
     // MARK: - Transport Controls
 
     private var transportControls: some View {
-        HStack(spacing: 40) {
+        HStack(spacing: 44) {
             // Skip backward 15s
             Button {
                 Haptics.light()
                 audioPlayer.skipBackward()
             } label: {
                 Image(systemName: "gobackward.15")
-                    .font(.title)
+                    .font(.system(size: 28))
                     .foregroundStyle(.primary)
-                    .frame(width: 56, height: 56)
+                    .frame(width: 60, height: 60)
             }
 
             // Play/Pause (large)
@@ -142,14 +149,14 @@ struct NowPlayingView: View {
                 ZStack {
                     Circle()
                         .fill(Color.accentColor)
-                        .frame(width: 72, height: 72)
+                        .frame(width: 76, height: 76)
 
                     if audioPlayer.isLoading {
                         ProgressView()
                             .tint(.white)
                     } else {
                         Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.title)
+                            .font(.system(size: 28))
                             .foregroundStyle(.white)
                             // Offset play icon slightly right for visual centering
                             .offset(x: audioPlayer.isPlaying ? 0 : 2)
@@ -163,9 +170,9 @@ struct NowPlayingView: View {
                 audioPlayer.skipForward()
             } label: {
                 Image(systemName: "goforward.30")
-                    .font(.title)
+                    .font(.system(size: 28))
                     .foregroundStyle(.primary)
-                    .frame(width: 56, height: 56)
+                    .frame(width: 60, height: 60)
             }
         }
     }
@@ -173,25 +180,27 @@ struct NowPlayingView: View {
     // MARK: - Bottom Controls
 
     private var bottomControls: some View {
-        HStack {
+        ZStack {
             SpeedControlView()
 
-            Spacer()
-
             if audioPlayer.audioFiles.count > 1 {
-                Button {
-                    isPartSelectorPresented = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "list.bullet")
-                        Text("Parts")
-                            .font(.subheadline)
+                HStack {
+                    Spacer()
+
+                    Button {
+                        isPartSelectorPresented = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "list.bullet")
+                            Text("Parts")
+                                .font(.subheadline)
+                        }
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.fill.quaternary)
+                        .clipShape(Capsule())
                     }
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.fill.quaternary)
-                    .clipShape(Capsule())
                 }
             }
         }

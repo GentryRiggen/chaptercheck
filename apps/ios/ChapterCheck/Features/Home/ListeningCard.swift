@@ -9,6 +9,7 @@ struct ListeningCard: View {
     let item: RecentListeningProgress
     @Environment(AudioPlayerManager.self) private var audioPlayer
 
+    @Environment(\.showNowPlaying) private var showNowPlaying
     @State private var isResuming = false
     @State private var resumeCancellables = Set<AnyCancellable>()
 
@@ -20,11 +21,17 @@ struct ListeningCard: View {
                 ZStack {
                     BookCoverView(r2Key: item.book.coverImageR2Key, size: 100)
 
+                    Circle()
+                        .fill(.black.opacity(0.4))
+                        .frame(width: 36, height: 36)
+
                     if isResuming {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.black.opacity(0.35))
                         ProgressView()
                             .tint(.white)
+                    } else {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white)
                     }
                 }
 
@@ -97,6 +104,7 @@ struct ListeningCard: View {
                         startPosition: position,
                         rate: rate
                     )
+                    showNowPlaying()
                 }
             )
             .store(in: &resumeCancellables)

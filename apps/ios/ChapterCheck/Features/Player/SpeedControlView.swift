@@ -1,51 +1,64 @@
 import SwiftUI
 
-/// Horizontal row of playback rate buttons.
+/// Playback speed control with minus/plus buttons and current rate display.
 ///
-/// The current rate is highlighted with a filled background.
-/// Tapping a rate button calls `AudioPlayerManager.setRate()`.
+/// Range: 0.25x – 3.00x in 0.25 increments.
 struct SpeedControlView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
 
-    private static let rates: [Double] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0]
+    private static let minRate = 0.25
+    private static let maxRate = 3.0
+    private static let step = 0.25
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(Self.rates, id: \.self) { rate in
-                    rateButton(rate)
-                }
+        HStack(spacing: 12) {
+            Button {
+                Haptics.selection()
+                let newRate = max(Self.minRate, audioPlayer.playbackRate - Self.step)
+                audioPlayer.setRate(newRate)
+            } label: {
+                Image(systemName: "minus")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(.fill.quaternary)
+                    .clipShape(Circle())
             }
-        }
-    }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Decrease speed")
+            .disabled(audioPlayer.playbackRate <= Self.minRate)
+            .opacity(audioPlayer.playbackRate <= Self.minRate ? 0.35 : 1)
 
-    private func rateButton(_ rate: Double) -> some View {
-        let isSelected = abs(audioPlayer.playbackRate - rate) < 0.01
+            Text(formatRate(audioPlayer.playbackRate))
+                .font(.body)
+                .fontWeight(.semibold)
+                .monospacedDigit()
+                .frame(minWidth: 52)
 
-        return Button {
-            Haptics.selection()
-            audioPlayer.setRate(rate)
-        } label: {
-            Text(formatRate(rate))
-                .font(.caption)
-                .fontWeight(isSelected ? .bold : .regular)
-                .foregroundStyle(isSelected ? .white : .secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    isSelected ? Color.accentColor : Color(.systemFill)
-                )
-                .clipShape(Capsule())
+            Button {
+                Haptics.selection()
+                let newRate = min(Self.maxRate, audioPlayer.playbackRate + Self.step)
+                audioPlayer.setRate(newRate)
+            } label: {
+                Image(systemName: "plus")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(.fill.quaternary)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Increase speed")
+            .disabled(audioPlayer.playbackRate >= Self.maxRate)
+            .opacity(audioPlayer.playbackRate >= Self.maxRate ? 0.35 : 1)
         }
-        .buttonStyle(.plain)
     }
 
     private func formatRate(_ rate: Double) -> String {
         if rate == floor(rate) {
             return "\(Int(rate))x"
         }
-        // Remove trailing zeros: 0.75x, 1.25x
-        let formatted = String(format: "%.2g", rate)
+        let formatted = String(format: "%g", rate)
         return "\(formatted)x"
     }
 }

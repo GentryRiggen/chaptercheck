@@ -2,6 +2,32 @@ import Combine
 import ClerkKit
 import SwiftUI
 
+// MARK: - Show Now Playing Environment Key
+
+/// Callable wrapper so `@Environment(\.showNowPlaying)` works with SwiftUI's key-path init.
+struct ShowNowPlayingAction {
+    private let action: () -> Void
+
+    init(_ action: @escaping () -> Void = {}) {
+        self.action = action
+    }
+
+    func callAsFunction() {
+        action()
+    }
+}
+
+private struct ShowNowPlayingKey: EnvironmentKey {
+    static let defaultValue = ShowNowPlayingAction()
+}
+
+extension EnvironmentValues {
+    var showNowPlaying: ShowNowPlayingAction {
+        get { self[ShowNowPlayingKey.self] }
+        set { self[ShowNowPlayingKey.self] = newValue }
+    }
+}
+
 /// Primary tab-based navigation after authentication.
 ///
 /// Owns the `AudioPlayerManager` as `@State` and injects it into the
@@ -33,6 +59,7 @@ struct MainTabView: View {
             }
         }
         .environment(audioPlayer)
+        .environment(\.showNowPlaying, ShowNowPlayingAction { isNowPlayingPresented = true })
         .sheet(isPresented: $isNowPlayingPresented) {
             NowPlayingView()
                 .environment(audioPlayer)
@@ -62,7 +89,7 @@ struct MainTabView: View {
                 }
         }
         .tabItem {
-            Label("Library", systemImage: "books.vertical")
+            Label("Books", systemImage: "books.vertical")
         }
         .tag(Tab.library)
     }

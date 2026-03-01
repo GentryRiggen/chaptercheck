@@ -9,6 +9,7 @@ struct HeroListeningCard: View {
     let item: RecentListeningProgress
     @Environment(AudioPlayerManager.self) private var audioPlayer
 
+    @Environment(\.showNowPlaying) private var showNowPlaying
     @State private var isResuming = false
     @State private var resumeCancellables = Set<AnyCancellable>()
 
@@ -17,7 +18,22 @@ struct HeroListeningCard: View {
             resumePlayback()
         } label: {
             HStack(spacing: 16) {
-                BookCoverView(r2Key: item.book.coverImageR2Key, size: 100)
+                ZStack {
+                    BookCoverView(r2Key: item.book.coverImageR2Key, size: 100)
+
+                    Circle()
+                        .fill(.black.opacity(0.4))
+                        .frame(width: 40, height: 40)
+
+                    if isResuming {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(.white)
+                    }
+                }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(item.book.title)
@@ -58,14 +74,6 @@ struct HeroListeningCard: View {
             .padding(12)
             .background(.fill.quaternary)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay {
-                if isResuming {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.black.opacity(0.3))
-                    ProgressView()
-                        .tint(.white)
-                }
-            }
         }
         .buttonStyle(.plain)
         .disabled(isResuming)
@@ -119,6 +127,7 @@ struct HeroListeningCard: View {
                         startPosition: position,
                         rate: rate
                     )
+                    showNowPlaying()
                 }
             )
             .store(in: &resumeCancellables)

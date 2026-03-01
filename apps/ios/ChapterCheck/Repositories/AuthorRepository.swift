@@ -36,10 +36,10 @@ final class AuthorRepository {
         numItems: Int = 20,
         cursor: String? = nil
     ) -> AnyPublisher<PaginatedResult<AuthorWithCounts>, ClientError>? {
-        var paginationOpts: [String: ConvexEncodable?] = ["numItems": Double(numItems)]
-        if let cursor {
-            paginationOpts["cursor"] = cursor
-        }
+        let paginationOpts: [String: ConvexEncodable?] = [
+            "numItems": Double(numItems),
+            "cursor": cursor,
+        ]
 
         return convex.subscribe(
             to: "authors/queries:listAuthors",

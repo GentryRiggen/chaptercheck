@@ -36,7 +36,7 @@ struct LibraryView: View {
                 bookGrid
             }
         }
-        .navigationTitle("Library")
+        .navigationTitle("Books")
         .searchable(
             text: $viewModel.searchText,
             prompt: "Search books..."
