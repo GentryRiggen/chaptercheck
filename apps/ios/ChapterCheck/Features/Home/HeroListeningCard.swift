@@ -49,25 +49,6 @@ struct HeroListeningCard: View {
                     }
 
                     Spacer()
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        ProgressView(value: item.progressFraction)
-                            .tint(.accentColor)
-
-                        HStack {
-                            Text(item.formattedProgress)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            Spacer()
-
-                            if item.totalPartsInt > 1 {
-                                Text("Part \(item.audioFile.partNumber.map { Int($0) } ?? 1) of \(item.totalPartsInt)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

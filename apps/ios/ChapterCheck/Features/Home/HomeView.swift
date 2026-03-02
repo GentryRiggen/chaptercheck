@@ -34,9 +34,6 @@ struct HomeView: View {
     private var scrollContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                headerSection
-                    .padding(.horizontal)
-
                 if !viewModel.recentlyListening.isEmpty {
                     ContinueListeningSection(items: viewModel.recentlyListening)
                 }
@@ -57,44 +54,6 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Header
-
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(greetingText)
-                .font(.title2)
-                .fontWeight(.bold)
-
-            if let stats = viewModel.stats {
-                Text(statsText(stats))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 5..<12:
-            return "Good Morning"
-        case 12..<17:
-            return "Good Afternoon"
-        default:
-            return "Good Evening"
-        }
-    }
-
-    private func statsText(_ stats: HomeStats) -> String {
-        var parts: [String] = []
-        parts.append("\(stats.totalBooksInt) books")
-
-        if stats.totalListeningSeconds > 0 {
-            parts.append("\(stats.formattedListeningTime) listened")
-        }
-
-        return parts.joined(separator: " \u{2022} ")
-    }
 }
 
 #Preview {

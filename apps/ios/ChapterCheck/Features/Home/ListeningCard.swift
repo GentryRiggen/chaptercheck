@@ -42,15 +42,6 @@ struct ListeningCard: View {
                     .multilineTextAlignment(.leading)
                     .frame(height: 32, alignment: .top)
 
-                VStack(spacing: 2) {
-                    ProgressView(value: item.progressFraction)
-                        .tint(.accentColor)
-
-                    Text(item.formattedProgress)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
             }
             .frame(width: 160)
         }

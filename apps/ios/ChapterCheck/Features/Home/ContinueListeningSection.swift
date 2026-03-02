@@ -14,20 +14,13 @@ struct ContinueListeningSection: View {
                 .fontWeight(.semibold)
                 .padding(.horizontal)
 
-            if let heroItem = items.first {
-                HeroListeningCard(item: heroItem)
-                    .padding(.horizontal)
-            }
-
-            if items.count > 1 {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 12) {
-                        ForEach(items.dropFirst()) { item in
-                            ListeningCard(item: item)
-                        }
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 12) {
+                    ForEach(items) { item in
+                        ListeningCard(item: item)
                     }
-                    .padding(.horizontal)
                 }
+                .padding(.horizontal)
             }
         }
     }
