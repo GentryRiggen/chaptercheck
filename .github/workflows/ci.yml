@@ -4,8 +4,12 @@ name: 🚀 CI/CD Pipeline
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "apps/ios/**"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "apps/ios/**"
   workflow_dispatch:
 
 concurrency:
