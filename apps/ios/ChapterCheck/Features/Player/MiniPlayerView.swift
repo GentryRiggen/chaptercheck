@@ -32,9 +32,8 @@ struct MiniPlayerView: View {
                     // Cover image
                     BookCoverView(
                         r2Key: audioPlayer.currentBook?.coverImageR2Key,
-                        size: 30
+                        size: 48
                     )
-                    .frame(width: 44, height: 44)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
 
                     // Title and author
@@ -53,15 +52,26 @@ struct MiniPlayerView: View {
                     Spacer()
 
                     // Transport controls
-                    HStack(spacing: 16) {
+                    HStack(spacing: 12) {
+                        Button {
+                            Haptics.light()
+                            audioPlayer.skipBackward()
+                        } label: {
+                            Image(systemName: "gobackward.15")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.primary)
+                                .frame(width: 36, height: 36)
+                        }
+                        .buttonStyle(.plain)
+
                         Button {
                             Haptics.light()
                             audioPlayer.togglePlayPause()
                         } label: {
                             Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.title3)
+                                .font(.system(size: 26))
                                 .foregroundStyle(.primary)
-                                .frame(width: 32, height: 32)
+                                .frame(width: 36, height: 36)
                         }
                         .buttonStyle(.plain)
 
@@ -70,18 +80,18 @@ struct MiniPlayerView: View {
                             audioPlayer.skipForward()
                         } label: {
                             Image(systemName: "goforward.30")
-                                .font(.body)
+                                .font(.system(size: 22))
                                 .foregroundStyle(.primary)
-                                .frame(width: 32, height: 32)
+                                .frame(width: 36, height: 36)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
             }
             .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
             .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
         }
         .buttonStyle(.plain)
