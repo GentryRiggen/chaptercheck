@@ -29,7 +29,6 @@ targets:
         excludes:
           - "*.xcassets"
       - path: ChapterCheck/Assets.xcassets
-        type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.chaptercheck.app
