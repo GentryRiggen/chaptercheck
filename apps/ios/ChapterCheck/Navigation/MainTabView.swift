@@ -80,12 +80,9 @@ struct MainTabView: View {
 
             // Mini player overlay above the tab bar
             if audioPlayer.hasContent {
-                VStack(spacing: 0) {
-                    MiniPlayerView(isNowPlayingPresented: $isNowPlayingPresented)
-                        .padding(.bottom, 2)
-                }
-                // Position above the tab bar (approximately 49pt)
-                .padding(.bottom, 49)
+                MiniPlayerView(isNowPlayingPresented: $isNowPlayingPresented)
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 49)
             }
         }
         .environment(audioPlayer)

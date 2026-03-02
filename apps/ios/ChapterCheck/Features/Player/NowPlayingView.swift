@@ -14,10 +14,16 @@ struct NowPlayingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Drag indicator
+            Capsule()
+                .fill(.tertiary)
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+
             // Top: dismiss + title/author
             topSection
                 .padding(.horizontal, 20)
-                .padding(.top, 28)
+                .padding(.top, 16)
 
             Spacer()
 

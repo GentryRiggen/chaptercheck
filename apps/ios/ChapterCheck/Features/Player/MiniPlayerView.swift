@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Persistent mini player bar shown above the tab bar when audio is loaded.
 ///
@@ -90,9 +91,8 @@ struct MiniPlayerView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
             }
-            .background(.ultraThinMaterial)
+            .background(Color(UIColor.systemBackground).opacity(0.625))
             .clipShape(RoundedRectangle(cornerRadius: 14))
-            .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
         }
         .buttonStyle(.plain)
     }
