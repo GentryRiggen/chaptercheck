@@ -2,12 +2,8 @@ import SwiftUI
 
 /// Full-screen now playing sheet with large artwork and transport controls.
 ///
-/// Presented as a sheet from the mini player. Includes:
-/// - Large cover image
-/// - Title, author, part info
-/// - Seek bar with time labels
-/// - Transport controls (skip back 15s, play/pause, skip forward 30s)
-/// - Speed control and part selector
+/// iOS 26-style layout: left-aligned metadata at top, centered hero artwork
+/// filling available space, and controls anchored at the bottom.
 struct NowPlayingView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(\.dismiss) private var dismiss
@@ -17,44 +13,35 @@ struct NowPlayingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Dismiss handle
-            dismissHandle
+            // Top: dismiss + title/author
+            topSection
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
 
             Spacer()
-                .frame(minHeight: 4, maxHeight: 12)
+                .frame(minHeight: 4, maxHeight: 16)
 
-            // Cover artwork + navigation links
-            VStack(spacing: 12) {
-                coverImage
-                navigationLinks
-            }
-            .padding(.horizontal, 32)
+            // Cover artwork
+            BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, size: 260)
+                .shadow(color: .black.opacity(0.25), radius: 20, y: 10)
 
             Spacer()
-                .frame(minHeight: 16, maxHeight: 24)
 
-            // Track info + Seek bar (tightly grouped)
-            VStack(spacing: 16) {
-                trackInfo
-                SeekBarView()
-            }
-            .padding(.horizontal, 28)
+            // Seek bar
+            SeekBarView()
+                .padding(.horizontal, 24)
 
             Spacer()
-                .frame(minHeight: 16, maxHeight: 28)
 
             // Transport controls
             transportControls
 
             Spacer()
-                .frame(minHeight: 16, maxHeight: 32)
 
-            // Bottom controls (speed, parts)
-            bottomControls
-                .padding(.horizontal, 28)
-
-            Spacer()
-                .frame(minHeight: 16, maxHeight: 40)
+            // Bottom toolbar: parts + speed
+            bottomToolbar
+                .padding(.horizontal, 24)
+                .padding(.bottom, 8)
         }
         .background(.background)
         .sheet(isPresented: $isPartSelectorPresented) {
@@ -64,87 +51,95 @@ struct NowPlayingView: View {
         }
     }
 
-    // MARK: - Dismiss Handle
+    // MARK: - Top Section
 
-    private var dismissHandle: some View {
-        HStack {
+    private var topSection: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Dismiss button
             Button {
                 dismiss()
             } label: {
                 Image(systemName: "chevron.down")
-                    .font(.title2.weight(.medium))
-                    .foregroundStyle(.primary)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.secondary)
                     .frame(width: 44, height: 44)
+                    .modifier(GlassCircleModifier())
+            }
+
+            // Title + author + part — tappable menu for navigation
+            VStack(alignment: .leading, spacing: 2) {
+                if let book = audioPlayer.currentBook {
+                    Menu {
+                        Button {
+                            navigateToDestination(.book(id: book._id))
+                        } label: {
+                            Label("Book Details", systemImage: "book")
+                        }
+
+                        ForEach(book.authors, id: \._id) { author in
+                            Button {
+                                navigateToDestination(.author(id: author._id))
+                            } label: {
+                                Label(author.name, systemImage: "person")
+                            }
+                        }
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: 5) {
+                            Text(book.title)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+
+                            Image(systemName: "chevron.down")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    if let authorName = book.authors.first?.name {
+                        Text(authorName)
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                } else {
+                    Text("Unknown")
+                        .font(.headline)
+                }
+
+                if let partInfo = audioPlayer.partInfo {
+                    Text("Part \(partInfo.current) of \(partInfo.total)")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                } else if let displayName = audioPlayer.currentAudioFile?.displayName,
+                          audioPlayer.audioFiles.count > 1 {
+                    Text(displayName)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
-
-            if let partInfo = audioPlayer.partInfo {
-                Text("Part \(partInfo.current) of \(partInfo.total)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            // Invisible spacer to balance layout
-            Color.clear
-                .frame(width: 44, height: 44)
-        }
-        .padding(.horizontal, 12)
-    }
-
-    // MARK: - Cover
-
-    private var coverImage: some View {
-        BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, size: 200)
-            .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
-            .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Track Info
-
-    private var trackInfo: some View {
-        VStack(spacing: 4) {
-            Text(audioPlayer.currentBook?.title ?? "Unknown")
-                .font(.title3)
-                .fontWeight(.bold)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-
-            if let authorName = audioPlayer.currentBook?.authors.first?.name {
-                Text(authorName)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            if let displayName = audioPlayer.currentAudioFile?.displayName,
-               audioPlayer.audioFiles.count > 1 {
-                Text(displayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
         }
     }
 
     // MARK: - Transport Controls
 
     private var transportControls: some View {
-        HStack(spacing: 44) {
-            // Skip backward 15s
+        HStack(spacing: 40) {
             Button {
                 Haptics.light()
                 audioPlayer.skipBackward()
             } label: {
                 Image(systemName: "gobackward.15")
-                    .font(.system(size: 28))
+                    .font(.system(size: 26))
                     .foregroundStyle(.primary)
-                    .frame(width: 60, height: 60)
+                    .frame(width: 56, height: 56)
             }
 
-            // Play/Pause (large)
             Button {
                 Haptics.medium()
                 audioPlayer.togglePlayPause()
@@ -152,40 +147,40 @@ struct NowPlayingView: View {
                 ZStack {
                     Circle()
                         .fill(Color.accentColor)
-                        .frame(width: 76, height: 76)
+                        .frame(width: 72, height: 72)
 
                     if audioPlayer.isLoading {
                         ProgressView()
                             .tint(.white)
                     } else {
                         Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 28))
+                            .font(.system(size: 26))
                             .foregroundStyle(.white)
-                            // Offset play icon slightly right for visual centering
                             .offset(x: audioPlayer.isPlaying ? 0 : 2)
                     }
                 }
             }
 
-            // Skip forward 30s
             Button {
                 Haptics.light()
                 audioPlayer.skipForward()
             } label: {
                 Image(systemName: "goforward.30")
-                    .font(.system(size: 28))
+                    .font(.system(size: 26))
                     .foregroundStyle(.primary)
-                    .frame(width: 60, height: 60)
+                    .frame(width: 56, height: 56)
             }
         }
     }
 
-    // MARK: - Bottom Controls
+    // MARK: - Bottom Toolbar
 
-    private var bottomControls: some View {
+    private var bottomToolbar: some View {
         ZStack {
+            // Speed control — centered
             SpeedControlView()
 
+            // Parts button — trailing
             if audioPlayer.audioFiles.count > 1 {
                 HStack {
                     Spacer()
@@ -199,55 +194,39 @@ struct NowPlayingView: View {
                                 .font(.subheadline)
                         }
                         .foregroundStyle(.secondary)
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, 14)
                         .padding(.vertical, 8)
-                        .background(.fill.quaternary)
-                        .clipShape(Capsule())
+                        .modifier(GlassCapsuleModifier())
                     }
                 }
             }
         }
     }
 
-    // MARK: - Navigation Links
+}
 
-    private var navigationLinks: some View {
-        VStack(spacing: 8) {
-            if let book = audioPlayer.currentBook {
-                Button {
-                    navigateToDestination(.book(id: book._id))
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "book")
-                        Text("Book Details")
-                            .font(.subheadline)
-                    }
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.fill.quaternary)
-                    .clipShape(Capsule())
-                }
+// MARK: - Glass Modifiers
 
-                ForEach(book.authors, id: \._id) { author in
-                    Button {
-                        navigateToDestination(.author(id: author._id))
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "person")
-                            Text(author.name)
-                                .font(.subheadline)
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(.fill.quaternary)
-                        .clipShape(Capsule())
-                    }
-                }
-            }
+private struct GlassCircleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: .circle)
+        } else {
+            content
+                .background(.ultraThinMaterial, in: Circle())
         }
     }
+}
 
+private struct GlassCapsuleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: .capsule)
+        } else {
+            content
+                .background(.ultraThinMaterial, in: Capsule())
+        }
+    }
 }
