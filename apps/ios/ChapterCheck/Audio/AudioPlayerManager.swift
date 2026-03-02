@@ -113,6 +113,10 @@ final class AudioPlayerManager {
     private let progressRepository: ProgressRepository
     private let logger = Logger(subsystem: "com.chaptercheck", category: "AudioPlayer")
 
+    /// Optional download manager for offline playback. Set after initialization
+    /// from `MainTabView` once the download manager is available.
+    var downloadManager: DownloadManager?
+
     // MARK: - Private State
 
     private var player: AVPlayer?
@@ -325,7 +329,14 @@ final class AudioPlayerManager {
 
     private func loadAndPlay(audioFile: AudioFile, startPosition: Double) async {
         do {
-            let url = try await streamURLCache.getUrl(audioFileId: audioFile._id)
+            // Prefer local file if available (offline playback)
+            let url: URL
+            if let localURL = await downloadManager?.localFileURL(for: audioFile._id) {
+                url = localURL
+                logger.info("Playing from local file: \(audioFile._id)")
+            } else {
+                url = try await streamURLCache.getUrl(audioFileId: audioFile._id)
+            }
 
             teardownPlayer()
 

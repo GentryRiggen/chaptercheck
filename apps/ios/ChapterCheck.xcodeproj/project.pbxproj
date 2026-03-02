@@ -96,6 +96,11 @@
 		BB11111111111111BBBBBBBB /* AuthorsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11111111111111AAAAAAAA /* AuthorsView.swift */; };
 		BB22222222222222BBBBBBBB /* AuthorsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22222222222222AAAAAAAA /* AuthorsViewModel.swift */; };
 		BB33333333333333BBBBBBBB /* AuthorGridCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33333333333333AAAAAAAA /* AuthorGridCard.swift */; };
+		DD11111111111111DDDDDDDD /* Download.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11111111111111CCCCCCCC /* Download.swift */; };
+		DD22222222222222DDDDDDDD /* DownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC22222222222222CCCCCCCC /* DownloadService.swift */; };
+		DD33333333333333DDDDDDDD /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC33333333333333CCCCCCCC /* DownloadManager.swift */; };
+		DD44444444444444DDDDDDDD /* BookDownloadButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC55555555555555CCCCCCCC /* BookDownloadButton.swift */; };
+		DD55555555555555DDDDDDDD /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC66666666666666CCCCCCCC /* DownloadsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -188,6 +193,11 @@
 		AA11111111111111AAAAAAAA /* AuthorsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorsView.swift; sourceTree = "<group>"; };
 		AA22222222222222AAAAAAAA /* AuthorsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorsViewModel.swift; sourceTree = "<group>"; };
 		AA33333333333333AAAAAAAA /* AuthorGridCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorGridCard.swift; sourceTree = "<group>"; };
+		CC11111111111111CCCCCCCC /* Download.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Download.swift; sourceTree = "<group>"; };
+		CC22222222222222CCCCCCCC /* DownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadService.swift; sourceTree = "<group>"; };
+		CC33333333333333CCCCCCCC /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
+		CC55555555555555CCCCCCCC /* BookDownloadButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDownloadButton.swift; sourceTree = "<group>"; };
+		CC66666666666666CCCCCCCC /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -236,6 +246,8 @@
 			isa = PBXGroup;
 			children = (
 				F5A687255BED3850C59E66E9 /* ConvexService.swift */,
+				CC33333333333333CCCCCCCC /* DownloadManager.swift */,
+				CC22222222222222CCCCCCCC /* DownloadService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -261,6 +273,7 @@
 				A165A4A64941E347365EADF2 /* AudioFileRow.swift */,
 				943139F7B8F1450DA4B5722F /* BookReadStatusView.swift */,
 				222B6F3283264A6F9CDC1FF8 /* BookReviewSheet.swift */,
+				CC55555555555555CCCCCCCC /* BookDownloadButton.swift */,
 				D8CC0A0544476EFDC42CD0FC /* BookDetailView.swift */,
 				970B3470E06FC2CB79D92500 /* BookDetailViewModel.swift */,
 				4DD7B441A8A098AF914537C3 /* BookMetadataView.swift */,
@@ -344,6 +357,7 @@
 			children = (
 				CC44444444444444CCCCCCCC /* Authors */,
 				F1CF72C3D111A65CA180F5D6 /* AuthorDetail */,
+				EE77777777777777EEEEEEEE /* Downloads */,
 				421DAE368481EB7F836FAC48 /* BookDetail */,
 				3047AB4B9CBE677984BE3887 /* Home */,
 				FBE667B676E793A2BBBE2532 /* Library */,
@@ -421,6 +435,7 @@
 				3E952FD16545CAD18A1F7E0E /* Author.swift */,
 				19A12A255523680264877FDA /* Book.swift */,
 				6F649495DB626BB5915E48AD /* BookUserData.swift */,
+				CC11111111111111CCCCCCCC /* Download.swift */,
 				8DD717678936486CB9D92099 /* Genre.swift */,
 				4F3BEFECA58449E148582DDB /* HomeStats.swift */,
 				37D67B2546968C8069F63E07 /* ListeningProgress.swift */,
@@ -472,6 +487,14 @@
 				AA22222222222222AAAAAAAA /* AuthorsViewModel.swift */,
 			);
 			path = Authors;
+			sourceTree = "<group>";
+		};
+		EE77777777777777EEEEEEEE /* Downloads */ = {
+			isa = PBXGroup;
+			children = (
+				CC66666666666666CCCCCCCC /* DownloadsView.swift */,
+			);
+			path = Downloads;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -637,6 +660,11 @@
 				BB11111111111111BBBBBBBB /* AuthorsView.swift in Sources */,
 				BB22222222222222BBBBBBBB /* AuthorsViewModel.swift in Sources */,
 				BB33333333333333BBBBBBBB /* AuthorGridCard.swift in Sources */,
+				DD11111111111111DDDDDDDD /* Download.swift in Sources */,
+				DD22222222222222DDDDDDDD /* DownloadService.swift in Sources */,
+				DD33333333333333DDDDDDDD /* DownloadManager.swift in Sources */,
+				DD44444444444444DDDDDDDD /* BookDownloadButton.swift in Sources */,
+				DD55555555555555DDDDDDDD /* DownloadsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

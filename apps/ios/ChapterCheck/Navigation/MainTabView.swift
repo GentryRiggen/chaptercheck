@@ -36,6 +36,7 @@ extension EnvironmentValues {
 struct MainTabView: View {
     @State private var selectedTab: Tab = .home
     @State private var audioPlayer = AudioPlayerManager()
+    @State private var downloadManager = DownloadManager()
     @State private var isNowPlayingPresented = false
 
     var body: some View {
@@ -59,7 +60,12 @@ struct MainTabView: View {
             }
         }
         .environment(audioPlayer)
+        .environment(downloadManager)
         .environment(\.showNowPlaying, ShowNowPlayingAction { isNowPlayingPresented = true })
+        .task {
+            await downloadManager.initialize()
+            audioPlayer.downloadManager = downloadManager
+        }
         .sheet(isPresented: $isNowPlayingPresented) {
             NowPlayingView()
                 .environment(audioPlayer)
@@ -155,6 +161,7 @@ extension MainTabView {
 /// Settings screen with user profile header, privacy toggle, account info, and sign out.
 private struct SettingsView: View {
     @ObservedObject private var convexService = ConvexService.shared
+    @Environment(DownloadManager.self) private var downloadManager
     @State private var convexUser: UserWithPermissions?
     @State private var isProfilePrivate = false
     @State private var hasInitialized = false
@@ -190,6 +197,25 @@ private struct SettingsView: View {
                 }
             }
 
+            // Downloads section
+            Section {
+                NavigationLink {
+                    DownloadsView()
+                } label: {
+                    HStack {
+                        Label("Downloads", systemImage: "arrow.down.circle")
+                        Spacer()
+                        if downloadManager.totalStorageUsed > 0 {
+                            Text(ByteCountFormatter.string(
+                                fromByteCount: downloadManager.totalStorageUsed,
+                                countStyle: .file
+                            ))
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
             // Account details section
             Section {
                 if let user = Clerk.shared.user {
@@ -211,6 +237,7 @@ private struct SettingsView: View {
             // Sign out
             Section {
                 Button("Sign Out", role: .destructive) {
+                    downloadManager.deleteAllDownloads()
                     Task {
                         await convexService.logout()
                     }

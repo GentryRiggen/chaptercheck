@@ -104,6 +104,11 @@ struct BookDetailView: View {
                     playButton(book)
                 }
 
+                // Download Button
+                if viewModel.hasAudioFiles {
+                    BookDownloadButton(book: book, audioFiles: viewModel.audioFiles)
+                }
+
                 // Read Status
                 BookReadStatusView(
                     userData: viewModel.userData,
