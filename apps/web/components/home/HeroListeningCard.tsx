@@ -1,7 +1,7 @@
 "use client";
 
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
-import { formatRelativeDate } from "@chaptercheck/shared/utils";
+import { computeSmartRewind, formatRelativeDate } from "@chaptercheck/shared/utils";
 import { Play } from "lucide-react";
 import Link from "next/link";
 
@@ -54,7 +54,7 @@ export function HeroListeningCard({ item }: HeroListeningCardProps) {
         totalParts: item.totalParts,
       },
       {
-        initialPosition: item.positionSeconds,
+        initialPosition: computeSmartRewind(item.positionSeconds, item.lastListenedAt),
         initialPlaybackRate: item.playbackRate,
       }
     );

@@ -3,6 +3,7 @@
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { type TrackInfo } from "@chaptercheck/shared/types/audio";
+import { computeSmartRewind } from "@chaptercheck/shared/utils";
 import { useQuery } from "convex/react";
 import { Play } from "lucide-react";
 import Link from "next/link";
@@ -79,6 +80,7 @@ export default function BookDetailPage() {
       audioFileId: savedProgress.audioFileId,
       positionSeconds: savedProgress.positionSeconds,
       playbackRate: savedProgress.playbackRate,
+      lastListenedAt: savedProgress.lastListenedAt,
     };
   }, [savedProgress]);
 
@@ -102,7 +104,10 @@ export default function BookDetailPage() {
     };
 
     await play(trackInfo, {
-      initialPosition: savedProgress.positionSeconds,
+      initialPosition: computeSmartRewind(
+        savedProgress.positionSeconds,
+        savedProgress.lastListenedAt
+      ),
       initialPlaybackRate: savedProgress.playbackRate,
     });
   }, [savedProgress, audioFiles, book, play]);

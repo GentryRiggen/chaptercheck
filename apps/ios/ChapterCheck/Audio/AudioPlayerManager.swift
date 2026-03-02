@@ -681,6 +681,35 @@ final class AudioPlayerManager {
 
     // MARK: - Private: Formatting
 
+    /// Compute a smart rewind position when resuming playback.
+    ///
+    /// Based on how long ago the user last listened (AntennaPod-style tiers):
+    ///  - < 1 min pause  → 0s rewind
+    ///  - 1 min – 1 hr   → 2s rewind
+    ///  - 1 hr – 1 day   → 5s rewind
+    ///  - > 1 day        → 10s rewind
+    ///
+    /// - Parameters:
+    ///   - position: The saved position in seconds.
+    ///   - lastListenedAt: Epoch timestamp in milliseconds of the last listen.
+    /// - Returns: Adjusted position in seconds, clamped to ≥ 0.
+    static func smartRewindPosition(from position: Double, lastListenedAt: Double) -> Double {
+        let elapsedMs = max(0, Date().timeIntervalSince1970 * 1000 - lastListenedAt)
+
+        let rewind: Double
+        if elapsedMs < 60_000 {
+            rewind = 0
+        } else if elapsedMs < 3_600_000 {
+            rewind = 2
+        } else if elapsedMs < 86_400_000 {
+            rewind = 5
+        } else {
+            rewind = 10
+        }
+
+        return max(0, position - rewind)
+    }
+
     private static func formatTime(_ totalSeconds: Double) -> String {
         guard totalSeconds.isFinite && totalSeconds >= 0 else { return "0:00" }
         let total = Int(totalSeconds)

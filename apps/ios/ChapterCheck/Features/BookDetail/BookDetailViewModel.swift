@@ -79,9 +79,13 @@ final class BookDetailViewModel {
         return audioFiles.first(where: { $0._id == progress.audioFileId }) ?? audioFiles.first
     }
 
-    /// Position in seconds to resume from.
+    /// Position in seconds to resume from, with smart rewind applied.
     var resumePosition: Double {
-        progress?.positionSeconds ?? 0
+        guard let progress, progress.lastListenedAt > 0 else { return 0 }
+        return AudioPlayerManager.smartRewindPosition(
+            from: progress.positionSeconds,
+            lastListenedAt: progress.lastListenedAt
+        )
     }
 
     /// Playback rate from saved progress.

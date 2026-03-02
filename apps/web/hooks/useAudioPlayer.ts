@@ -1,6 +1,7 @@
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Doc, type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { type TrackInfo } from "@chaptercheck/shared/types/audio";
+import { computeSmartRewind } from "@chaptercheck/shared/utils";
 import { useAction } from "convex/react";
 import { useCallback, useState } from "react";
 
@@ -23,6 +24,7 @@ export interface SavedProgress {
   audioFileId: Id<"audioFiles">;
   positionSeconds: number;
   playbackRate: number;
+  lastListenedAt: number;
 }
 
 export function useAudioPlayer(
@@ -93,7 +95,10 @@ export function useAudioPlayer(
       const options =
         savedProgress && savedProgress.audioFileId === audioFile._id
           ? {
-              initialPosition: savedProgress.positionSeconds,
+              initialPosition: computeSmartRewind(
+                savedProgress.positionSeconds,
+                savedProgress.lastListenedAt
+              ),
               initialPlaybackRate: savedProgress.playbackRate,
             }
           : undefined;

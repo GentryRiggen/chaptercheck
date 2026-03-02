@@ -40,6 +40,33 @@ export function formatBytes(bytes: number, decimals = 1): string {
 }
 
 /**
+ * Compute a smart rewind position when resuming playback.
+ *
+ * Based on how long ago the user last listened, rewinds a few seconds
+ * so they can re-orient (AntennaPod-style discrete tiers):
+ *  - < 1 min pause  → 0s rewind
+ *  - 1 min – 1 hr   → 2s rewind
+ *  - 1 hr – 1 day   → 5s rewind
+ *  - > 1 day        → 10s rewind
+ */
+export function computeSmartRewind(positionSeconds: number, lastListenedAt: number): number {
+  const elapsedMs = Math.max(0, Date.now() - lastListenedAt);
+
+  let rewind: number;
+  if (elapsedMs < 60_000) {
+    rewind = 0;
+  } else if (elapsedMs < 3_600_000) {
+    rewind = 2;
+  } else if (elapsedMs < 86_400_000) {
+    rewind = 5;
+  } else {
+    rewind = 10;
+  }
+
+  return Math.max(0, positionSeconds - rewind);
+}
+
+/**
  * Format a timestamp to a relative date string (e.g., "2 days ago", "1 week ago")
  */
 export function formatRelativeDate(timestamp: number): string {
