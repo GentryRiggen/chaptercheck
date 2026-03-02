@@ -34,6 +34,10 @@ export interface AudioPlayerContextValue {
   // Save status
   lastSavedAt: number;
 
+  // Skip momentum (current skip amounts, reflecting momentum)
+  skipAmountForward: number;
+  skipAmountBackward: number;
+
   // Controls
   play: (track: TrackInfo, options?: PlayOptions) => Promise<void>;
   pause: () => void;

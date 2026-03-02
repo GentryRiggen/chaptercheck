@@ -151,7 +151,8 @@ struct NowPlayingView: View {
                 Haptics.light()
                 audioPlayer.skipBackward()
             } label: {
-                Image(systemName: "gobackward.15")
+                Image(systemName: audioPlayer.skipBackwardSymbol)
+                    .contentTransition(.symbolEffect(.replace))
                     .font(.system(size: 20))
                     .foregroundStyle(.primary)
                     .offset(y: -2)
@@ -193,7 +194,8 @@ struct NowPlayingView: View {
                 Haptics.light()
                 audioPlayer.skipForward()
             } label: {
-                Image(systemName: "goforward.30")
+                Image(systemName: audioPlayer.skipForwardSymbol)
+                    .contentTransition(.symbolEffect(.replace))
                     .font(.system(size: 20))
                     .foregroundStyle(.primary)
                     .offset(y: -2)

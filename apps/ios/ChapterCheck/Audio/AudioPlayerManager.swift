@@ -56,6 +56,12 @@ final class AudioPlayerManager {
     /// Timestamp of the most recent progress save, used to drive UI indicators.
     private(set) var lastSavedAt: Date?
 
+    /// Current skip-forward amount in seconds, reflecting momentum.
+    private(set) var skipAmountForward: Double = 30
+
+    /// Current skip-backward amount in seconds, reflecting momentum.
+    private(set) var skipAmountBackward: Double = 15
+
     // MARK: - Computed Properties
 
     /// Playback progress as a fraction (0.0 to 1.0).
@@ -138,6 +144,37 @@ final class AudioPlayerManager {
     /// Tracks the last saved position to avoid redundant saves.
     private var lastSavedPosition: Double = 0
 
+    // MARK: - Skip Momentum
+
+    /// Tiers for momentum skip: rapid consecutive taps escalate the amount.
+    private static let skipTiers: [Double] = [15, 30, 60, 120]
+
+    /// The forward skip starts at tier index 1 (30s) to match the existing default.
+    private static let forwardBaseTierIndex = 1
+
+    /// Number of rapid consecutive taps before escalating to the next tier.
+    private static let skipMomentumTaps = 4
+
+    /// Maximum time between taps to count as rapid (seconds).
+    private static let skipMomentumWindow: TimeInterval = 0.8
+
+    /// Time after last tap before momentum resets (seconds).
+    private static let skipResetDelay: TimeInterval = 1.5
+
+    private struct SkipDirectionState {
+        var count = 0
+        var lastTime: Date = .distantPast
+        var tierIndex: Int
+    }
+
+    private enum SkipDirection {
+        case forward, backward
+    }
+
+    private var forwardMomentum = SkipDirectionState(tierIndex: forwardBaseTierIndex)
+    private var backwardMomentum = SkipDirectionState(tierIndex: 0)
+    private var skipResetTask: Task<Void, Never>?
+
     // MARK: - Initialization
 
     init() {
@@ -190,6 +227,7 @@ final class AudioPlayerManager {
         playbackRate = rate
         isLoading = true
         error = nil
+        resetMomentum()
 
         // Prefetch the stream URL for the next part so transitions are seamless
         if let nextFile = nextAudioFile(after: audioFile) {
@@ -228,15 +266,17 @@ final class AudioPlayerManager {
         }
     }
 
-    /// Skip forward by the specified number of seconds (default 30).
-    func skipForward(_ seconds: Double = 30) {
-        let target = min(currentPosition + seconds, duration)
+    /// Skip forward. Uses momentum-adjusted amount when called without an explicit value.
+    func skipForward(_ seconds: Double? = nil) {
+        let amount = seconds ?? getSkipAmount(direction: .forward)
+        let target = min(currentPosition + amount, duration)
         seek(to: target)
     }
 
-    /// Skip backward by the specified number of seconds (default 15).
-    func skipBackward(_ seconds: Double = 15) {
-        let target = max(currentPosition - seconds, 0)
+    /// Skip backward. Uses momentum-adjusted amount when called without an explicit value.
+    func skipBackward(_ seconds: Double? = nil) {
+        let amount = seconds ?? getSkipAmount(direction: .backward)
+        let target = max(currentPosition - amount, 0)
         seek(to: target)
     }
 
@@ -313,6 +353,7 @@ final class AudioPlayerManager {
     func stop() {
         saveProgressNow()
         teardownPlayer()
+        resetMomentum()
 
         currentBook = nil
         currentAudioFile = nil
@@ -663,6 +704,70 @@ final class AudioPlayerManager {
         }
     }
 
+    // MARK: - Private: Skip Momentum
+
+    /// Compute the momentum-adjusted skip amount for a direction.
+    ///
+    /// Tracks rapid consecutive taps. Every `skipMomentumTaps` taps within
+    /// `skipMomentumWindow`, the amount escalates to the next tier (15→30→60→120).
+    /// Resets after `skipResetDelay` of inactivity.
+    private func getSkipAmount(direction: SkipDirection) -> Double {
+        let now = Date()
+
+        switch direction {
+        case .forward:
+            if now.timeIntervalSince(forwardMomentum.lastTime) < Self.skipMomentumWindow {
+                forwardMomentum.count += 1
+                if forwardMomentum.count >= Self.skipMomentumTaps,
+                   forwardMomentum.tierIndex < Self.skipTiers.count - 1 {
+                    forwardMomentum.tierIndex += 1
+                    forwardMomentum.count = 0
+                }
+            } else {
+                forwardMomentum.count = 1
+                forwardMomentum.tierIndex = Self.forwardBaseTierIndex
+            }
+            forwardMomentum.lastTime = now
+            skipAmountForward = Self.skipTiers[forwardMomentum.tierIndex]
+
+        case .backward:
+            if now.timeIntervalSince(backwardMomentum.lastTime) < Self.skipMomentumWindow {
+                backwardMomentum.count += 1
+                if backwardMomentum.count >= Self.skipMomentumTaps,
+                   backwardMomentum.tierIndex < Self.skipTiers.count - 1 {
+                    backwardMomentum.tierIndex += 1
+                    backwardMomentum.count = 0
+                }
+            } else {
+                backwardMomentum.count = 1
+                backwardMomentum.tierIndex = 0
+            }
+            backwardMomentum.lastTime = now
+            skipAmountBackward = Self.skipTiers[backwardMomentum.tierIndex]
+        }
+
+        // Schedule reset after inactivity
+        skipResetTask?.cancel()
+        skipResetTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.skipResetDelay))
+            guard !Task.isCancelled else { return }
+            await MainActor.run { [weak self] in
+                self?.resetMomentum()
+            }
+        }
+
+        return direction == .forward ? skipAmountForward : skipAmountBackward
+    }
+
+    private func resetMomentum() {
+        forwardMomentum = SkipDirectionState(tierIndex: Self.forwardBaseTierIndex)
+        backwardMomentum = SkipDirectionState(tierIndex: 0)
+        skipAmountForward = Self.skipTiers[Self.forwardBaseTierIndex]
+        skipAmountBackward = Self.skipTiers[0]
+        skipResetTask?.cancel()
+        skipResetTask = nil
+    }
+
     // MARK: - Private: Part Navigation Helpers
 
     private func nextAudioFile(after file: AudioFile) -> AudioFile? {
@@ -677,6 +782,30 @@ final class AudioPlayerManager {
         let prevIndex = index - 1
         guard prevIndex >= 0 else { return nil }
         return audioFiles[prevIndex]
+    }
+
+    // MARK: - SF Symbol Helpers
+
+    /// SF Symbol name for the current backward skip amount.
+    var skipBackwardSymbol: String {
+        Self.skipSymbolName(base: "gobackward", amount: skipAmountBackward)
+    }
+
+    /// SF Symbol name for the current forward skip amount.
+    var skipForwardSymbol: String {
+        Self.skipSymbolName(base: "goforward", amount: skipAmountForward)
+    }
+
+    /// Maps a skip amount to an SF Symbol name.
+    /// SF Symbols supports 5, 10, 15, 30, 45, 60, 75, 90 variants.
+    /// Falls back to the plain symbol (no number) for unsupported amounts.
+    private static func skipSymbolName(base: String, amount: Double) -> String {
+        let intAmount = Int(amount)
+        let supported = [5, 10, 15, 30, 45, 60, 75, 90]
+        if supported.contains(intAmount) {
+            return "\(base).\(intAmount)"
+        }
+        return base
     }
 
     // MARK: - Private: Formatting

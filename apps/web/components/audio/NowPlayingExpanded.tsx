@@ -51,6 +51,8 @@ export function NowPlayingExpanded() {
     seek,
     skipBackward,
     skipForward,
+    skipAmountForward,
+    skipAmountBackward,
     setPlaybackRate,
     collapse,
     stop,
@@ -204,9 +206,14 @@ export function NowPlayingExpanded() {
                 variant="ghost"
                 onClick={() => skipBackward()}
                 className="h-11 w-11"
-                aria-label="Skip back 15 seconds"
+                aria-label={`Skip back ${skipAmountBackward} seconds`}
               >
-                <RotateCcw className="h-5 w-5" />
+                <span className="relative inline-flex items-center justify-center">
+                  <RotateCcw className="h-5 w-5" />
+                  <span className="absolute text-[9px] font-bold leading-none">
+                    {skipAmountBackward}
+                  </span>
+                </span>
               </Button>
 
               <Button
@@ -231,9 +238,14 @@ export function NowPlayingExpanded() {
                 variant="ghost"
                 onClick={() => skipForward()}
                 className="h-11 w-11"
-                aria-label="Skip forward 15 seconds"
+                aria-label={`Skip forward ${skipAmountForward} seconds`}
               >
-                <RotateCw className="h-5 w-5" />
+                <span className="relative inline-flex items-center justify-center">
+                  <RotateCw className="h-5 w-5" />
+                  <span className="absolute text-[9px] font-bold leading-none">
+                    {skipAmountForward}
+                  </span>
+                </span>
               </Button>
             </div>
 

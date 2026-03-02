@@ -58,7 +58,8 @@ struct MiniPlayerView: View {
                             Haptics.light()
                             audioPlayer.skipBackward()
                         } label: {
-                            Image(systemName: "gobackward.15")
+                            Image(systemName: audioPlayer.skipBackwardSymbol)
+                                .contentTransition(.symbolEffect(.replace))
                                 .font(.system(size: 22))
                                 .foregroundStyle(.primary)
                                 .frame(width: 36, height: 36)
@@ -80,7 +81,8 @@ struct MiniPlayerView: View {
                             Haptics.light()
                             audioPlayer.skipForward()
                         } label: {
-                            Image(systemName: "goforward.30")
+                            Image(systemName: audioPlayer.skipForwardSymbol)
+                                .contentTransition(.symbolEffect(.replace))
                                 .font(.system(size: 22))
                                 .foregroundStyle(.primary)
                                 .frame(width: 36, height: 36)

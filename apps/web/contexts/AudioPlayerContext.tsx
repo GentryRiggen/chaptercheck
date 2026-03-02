@@ -22,9 +22,21 @@ const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 
 const PLAYBACK_RATE_KEY = "chaptercheck-playback-rate";
 const PROGRESS_FALLBACK_KEY = "chaptercheck-progress-fallback";
-const DEFAULT_SKIP_SECONDS = 15;
 const SAVE_INTERVAL_MS = 10_000;
 const MIN_POSITION_CHANGE = 1; // seconds
+
+// Skip momentum: rapid consecutive taps escalate the skip amount
+const SKIP_TIERS = [15, 30, 60, 120]; // seconds
+const FORWARD_BASE_TIER = 1; // forward starts at 30s to match iOS convention
+const SKIP_MOMENTUM_TAPS = 4; // consecutive rapid taps before escalating
+const SKIP_MOMENTUM_WINDOW = 800; // ms — max gap between taps to count as rapid
+const SKIP_RESET_DELAY = 1500; // ms — UI resets after inactivity
+
+interface SkipDirectionState {
+  count: number;
+  lastTime: number;
+  tierIndex: number;
+}
 
 export function AudioPlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -37,6 +49,18 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const [playbackRate, setPlaybackRateState] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(0);
+
+  // Skip momentum state
+  const [skipAmountForward, setSkipAmountForward] = useState(SKIP_TIERS[FORWARD_BASE_TIER]);
+  const [skipAmountBackward, setSkipAmountBackward] = useState(SKIP_TIERS[0]);
+  const skipMomentumRef = useRef<{
+    forward: SkipDirectionState;
+    backward: SkipDirectionState;
+  }>({
+    forward: { count: 0, lastTime: 0, tierIndex: FORWARD_BASE_TIER },
+    backward: { count: 0, lastTime: 0, tierIndex: 0 },
+  });
+  const skipResetTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const generateStreamUrl = useAction(api.audioFiles.actions.generateStreamUrl);
   const saveProgressMutation = useMutation(api.listeningProgress.mutations.saveProgress);
@@ -88,6 +112,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       localStorage.removeItem(PROGRESS_FALLBACK_KEY);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Clean up skip momentum reset timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(skipResetTimerRef.current);
   }, []);
 
   // Save progress to server (throttled — skips if position hasn't changed enough)
@@ -213,6 +242,71 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
   }, [playbackRate]);
 
+  // Compute momentum-adjusted skip amount for a direction
+  const getSkipAmount = useCallback((direction: "forward" | "backward"): number => {
+    const now = Date.now();
+    const state = skipMomentumRef.current[direction];
+
+    if (now - state.lastTime < SKIP_MOMENTUM_WINDOW) {
+      state.count++;
+      if (state.count >= SKIP_MOMENTUM_TAPS && state.tierIndex < SKIP_TIERS.length - 1) {
+        state.tierIndex++;
+        state.count = 0;
+      }
+    } else {
+      state.count = 1;
+      state.tierIndex = direction === "forward" ? FORWARD_BASE_TIER : 0;
+    }
+    state.lastTime = now;
+
+    const amount = SKIP_TIERS[state.tierIndex];
+    if (direction === "forward") setSkipAmountForward(amount);
+    else setSkipAmountBackward(amount);
+
+    // Reset UI after inactivity
+    clearTimeout(skipResetTimerRef.current);
+    skipResetTimerRef.current = setTimeout(() => {
+      skipMomentumRef.current.forward = { count: 0, lastTime: 0, tierIndex: FORWARD_BASE_TIER };
+      skipMomentumRef.current.backward = { count: 0, lastTime: 0, tierIndex: 0 };
+      setSkipAmountForward(SKIP_TIERS[FORWARD_BASE_TIER]);
+      setSkipAmountBackward(SKIP_TIERS[0]);
+    }, SKIP_RESET_DELAY);
+
+    return amount;
+  }, []);
+
+  const resetMomentum = useCallback(() => {
+    skipMomentumRef.current.forward = { count: 0, lastTime: 0, tierIndex: FORWARD_BASE_TIER };
+    skipMomentumRef.current.backward = { count: 0, lastTime: 0, tierIndex: 0 };
+    setSkipAmountForward(SKIP_TIERS[FORWARD_BASE_TIER]);
+    setSkipAmountBackward(SKIP_TIERS[0]);
+    clearTimeout(skipResetTimerRef.current);
+  }, []);
+
+  const skipForward = useCallback(
+    (seconds?: number) => {
+      if (audioRef.current) {
+        const amount = seconds ?? getSkipAmount("forward");
+        const newTime = Math.min(audioRef.current.currentTime + amount, duration);
+        audioRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+      }
+    },
+    [duration, getSkipAmount]
+  );
+
+  const skipBackward = useCallback(
+    (seconds?: number) => {
+      if (audioRef.current) {
+        const amount = seconds ?? getSkipAmount("backward");
+        const newTime = Math.max(audioRef.current.currentTime - amount, 0);
+        audioRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+      }
+    },
+    [getSkipAmount]
+  );
+
   const play = useCallback(
     async (track: TrackInfo, options?: PlayOptions) => {
       // If same track, just resume
@@ -225,6 +319,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       saveProgress();
 
       // Load new track
+      resetMomentum();
       setIsLoading(true);
       setCurrentTrack(track);
       setCurrentTime(options?.initialPosition ?? 0);
@@ -251,7 +346,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setIsLoading(false);
       }
     },
-    [currentTrack?.audioFileId, generateStreamUrl, saveProgress]
+    [currentTrack?.audioFileId, generateStreamUrl, resetMomentum, saveProgress]
   );
 
   const pause = useCallback(() => {
@@ -274,25 +369,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
   }, []);
 
-  const skipForward = useCallback(
-    (seconds = DEFAULT_SKIP_SECONDS) => {
-      if (audioRef.current) {
-        const newTime = Math.min(audioRef.current.currentTime + seconds, duration);
-        audioRef.current.currentTime = newTime;
-        setCurrentTime(newTime);
-      }
-    },
-    [duration]
-  );
-
-  const skipBackward = useCallback((seconds = DEFAULT_SKIP_SECONDS) => {
-    if (audioRef.current) {
-      const newTime = Math.max(audioRef.current.currentTime - seconds, 0);
-      audioRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
-  }, []);
-
   const setPlaybackRate = useCallback(
     (rate: number) => {
       setPlaybackRateState(rate);
@@ -312,6 +388,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const stop = useCallback(() => {
     // Save before clearing state
     saveProgress();
+    resetMomentum();
 
     if (audioRef.current) {
       audioRef.current.pause();
@@ -323,7 +400,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     setCurrentTime(0);
     setDuration(0);
     setIsExpanded(false);
-  }, [saveProgress]);
+  }, [resetMomentum, saveProgress]);
 
   const value = useMemo(
     (): AudioPlayerContextValue => ({
@@ -335,6 +412,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       playbackRate,
       isExpanded,
       lastSavedAt,
+      skipAmountForward,
+      skipAmountBackward,
       play,
       pause,
       togglePlayPause,
@@ -355,6 +434,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       playbackRate,
       isExpanded,
       lastSavedAt,
+      skipAmountForward,
+      skipAmountBackward,
       play,
       pause,
       togglePlayPause,

@@ -13,6 +13,8 @@ export function NowPlayingBar() {
     isLoading,
     currentTime,
     duration,
+    skipAmountForward,
+    skipAmountBackward,
     togglePlayPause,
     skipBackward,
     skipForward,
@@ -61,9 +63,14 @@ export function NowPlayingBar() {
             variant="ghost"
             onClick={() => skipBackward()}
             className="hidden h-8 w-8 sm:flex"
-            aria-label="Skip back 15 seconds"
+            aria-label={`Skip back ${skipAmountBackward} seconds`}
           >
-            <RotateCcw className="h-4 w-4" />
+            <span className="relative inline-flex items-center justify-center">
+              <RotateCcw className="h-4 w-4" />
+              <span className="absolute text-[7px] font-bold leading-none">
+                {skipAmountBackward}
+              </span>
+            </span>
           </Button>
 
           <Button
@@ -88,9 +95,14 @@ export function NowPlayingBar() {
             variant="ghost"
             onClick={() => skipForward()}
             className="hidden h-8 w-8 sm:flex"
-            aria-label="Skip forward 15 seconds"
+            aria-label={`Skip forward ${skipAmountForward} seconds`}
           >
-            <RotateCw className="h-4 w-4" />
+            <span className="relative inline-flex items-center justify-center">
+              <RotateCw className="h-4 w-4" />
+              <span className="absolute text-[7px] font-bold leading-none">
+                {skipAmountForward}
+              </span>
+            </span>
           </Button>
 
           <Button
