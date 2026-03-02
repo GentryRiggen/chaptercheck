@@ -77,6 +77,21 @@ struct HeroListeningCard: View {
         }
         .buttonStyle(.plain)
         .disabled(isResuming)
+        .contextMenu {
+            NavigationLink(value: AppDestination.book(id: item.bookId)) {
+                Label("Go to Book", systemImage: "book")
+            }
+            if let author = item.book.authors.first {
+                NavigationLink(value: AppDestination.author(id: author._id)) {
+                    Label("Go to Author", systemImage: "person")
+                }
+            }
+            if let series = item.book.series {
+                NavigationLink(value: AppDestination.series(id: series._id)) {
+                    Label("Go to Series", systemImage: "books.vertical")
+                }
+            }
+        }
         .onDisappear { resumeCancellables.removeAll() }
     }
 

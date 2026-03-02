@@ -11,6 +11,7 @@ import SwiftUI
 struct NowPlayingView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.navigateToDestination) private var navigateToDestination
 
     @State private var isPartSelectorPresented = false
 
@@ -22,12 +23,15 @@ struct NowPlayingView: View {
             Spacer()
                 .frame(minHeight: 4, maxHeight: 12)
 
-            // Cover artwork
-            coverImage
-                .padding(.horizontal, 32)
+            // Cover artwork + navigation links
+            VStack(spacing: 12) {
+                coverImage
+                navigationLinks
+            }
+            .padding(.horizontal, 32)
 
             Spacer()
-                .frame(minHeight: 20, maxHeight: 32)
+                .frame(minHeight: 16, maxHeight: 24)
 
             // Track info + Seek bar (tightly grouped)
             VStack(spacing: 16) {
@@ -93,12 +97,9 @@ struct NowPlayingView: View {
     // MARK: - Cover
 
     private var coverImage: some View {
-        BookCoverView(
-            r2Key: audioPlayer.currentBook?.coverImageR2Key,
-            size: 240
-        )
-        .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
-        .frame(maxWidth: .infinity)
+        BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, size: 200)
+            .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
+            .frame(maxWidth: .infinity)
     }
 
     // MARK: - Track Info
@@ -111,10 +112,12 @@ struct NowPlayingView: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
 
-            Text(authorName)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+            if let authorName = audioPlayer.currentBook?.authors.first?.name {
+                Text(authorName)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
 
             if let displayName = audioPlayer.currentAudioFile?.displayName,
                audioPlayer.audioFiles.count > 1 {
@@ -206,9 +209,45 @@ struct NowPlayingView: View {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Navigation Links
 
-    private var authorName: String {
-        audioPlayer.currentBook?.authors.first?.name ?? "Unknown Author"
+    private var navigationLinks: some View {
+        VStack(spacing: 8) {
+            if let book = audioPlayer.currentBook {
+                Button {
+                    navigateToDestination(.book(id: book._id))
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "book")
+                        Text("Book Details")
+                            .font(.subheadline)
+                    }
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.fill.quaternary)
+                    .clipShape(Capsule())
+                }
+
+                ForEach(book.authors, id: \._id) { author in
+                    Button {
+                        navigateToDestination(.author(id: author._id))
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person")
+                            Text(author.name)
+                                .font(.subheadline)
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.fill.quaternary)
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+        }
     }
+
 }

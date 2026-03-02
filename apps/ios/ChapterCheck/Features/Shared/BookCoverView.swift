@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Async image view that loads book/author cover images from presigned R2 URLs.
 ///
-/// Handles three states:
+/// Renders as a square with center-cropped fill so rectangular images
+/// show their center portion. Handles three states:
 /// 1. No `r2Key` provided -- shows a static placeholder.
 /// 2. Loading -- shows a shimmer placeholder.
 /// 3. Loaded or failed -- shows the image or falls back to placeholder.
@@ -24,7 +25,7 @@ struct BookCoverView: View {
                     case .success(let image):
                         image
                             .resizable()
-                            .aspectRatio(contentMode: .fill)
+                            .scaledToFill()
                     case .failure:
                         placeholderView
                     case .empty:
@@ -39,7 +40,7 @@ struct BookCoverView: View {
                 placeholderView
             }
         }
-        .frame(width: size, height: size * 1.5)
+        .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .task(id: r2Key) {
             await loadImageUrl()
@@ -59,7 +60,7 @@ struct BookCoverView: View {
     }
 
     private var shimmerPlaceholder: some View {
-        SkeletonView(shape: .rectangle, width: size, height: size * 1.5)
+        SkeletonView(shape: .rectangle, width: size, height: size)
     }
 
     // MARK: - Loading

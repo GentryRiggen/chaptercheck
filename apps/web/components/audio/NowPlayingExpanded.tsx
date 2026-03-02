@@ -1,6 +1,9 @@
 "use client";
 
-import { ChevronDown, Pause, Play, RotateCcw, RotateCw, Square } from "lucide-react";
+import { api } from "@chaptercheck/convex-backend/_generated/api";
+import { useQuery } from "convex/react";
+import { Book, ChevronDown, Pause, Play, RotateCcw, RotateCw, Square, User } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { PlaybackSpeedControl } from "@/components/audio/PlaybackSpeedControl";
@@ -49,6 +52,11 @@ export function NowPlayingExpanded() {
     collapse,
     stop,
   } = useAudioPlayerContext();
+
+  const book = useQuery(
+    api.books.queries.getBook,
+    currentTrack ? { bookId: currentTrack.bookId } : "skip"
+  );
 
   if (!currentTrack) return null;
 
@@ -134,7 +142,29 @@ export function NowPlayingExpanded() {
             {/* Track info */}
             <div className="w-full text-center">
               <h2 className="truncate text-lg font-bold">{currentTrack.displayName}</h2>
-              <p className="truncate text-sm text-muted-foreground">{currentTrack.bookTitle}</p>
+              <Link
+                href={`/books/${currentTrack.bookId}`}
+                onClick={collapse}
+                className="truncate text-sm text-muted-foreground transition-colors hover:text-primary"
+              >
+                {currentTrack.bookTitle}
+              </Link>
+              {book?.authors?.length ? (
+                <p className="truncate text-xs text-muted-foreground/70">
+                  {book.authors.map((a, i) => (
+                    <span key={String(a._id)}>
+                      {i > 0 && ", "}
+                      <Link
+                        href={`/authors/${a._id}`}
+                        onClick={collapse}
+                        className="transition-colors hover:text-primary"
+                      >
+                        {a.name}
+                      </Link>
+                    </span>
+                  ))}
+                </p>
+              ) : null}
               {contextString && (
                 <p className="truncate text-xs text-muted-foreground/70">{contextString}</p>
               )}
@@ -200,6 +230,30 @@ export function NowPlayingExpanded() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Speed</span>
               <PlaybackSpeedControl value={playbackRate} onChange={setPlaybackRate} size="sm" />
+            </div>
+
+            {/* Navigation links */}
+            <div className="flex flex-col items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-full" asChild>
+                <Link href={`/books/${currentTrack.bookId}`} onClick={collapse}>
+                  <Book className="h-3.5 w-3.5" />
+                  Book Details
+                </Link>
+              </Button>
+              {book?.authors?.map((a) => (
+                <Button
+                  key={String(a._id)}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 rounded-full"
+                  asChild
+                >
+                  <Link href={`/authors/${a._id}`} onClick={collapse}>
+                    <User className="h-3.5 w-3.5" />
+                    {a.name}
+                  </Link>
+                </Button>
+              ))}
             </div>
           </div>
         </div>

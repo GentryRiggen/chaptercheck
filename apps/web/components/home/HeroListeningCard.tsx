@@ -92,14 +92,24 @@ export function HeroListeningCard({ item }: HeroListeningCardProps) {
           </Link>
           {item.book.authors.length > 0 && (
             <p className="mb-1 text-sm text-muted-foreground">
-              {item.book.authors.map((a) => a.name).join(", ")}
+              {item.book.authors.map((a, i) => (
+                <span key={String(a._id)}>
+                  {i > 0 && ", "}
+                  <Link href={`/authors/${a._id}`} className="transition-colors hover:text-primary">
+                    {a.name}
+                  </Link>
+                </span>
+              ))}
             </p>
           )}
           {item.book.series && (
-            <p className="mb-3 text-xs italic text-primary/70">
+            <Link
+              href={`/series/${item.book.series._id}`}
+              className="mb-3 inline-block text-xs italic text-primary/70 transition-colors hover:text-primary"
+            >
               {item.book.series.name}
               {item.book.seriesOrder !== undefined && ` #${item.book.seriesOrder}`}
-            </p>
+            </Link>
           )}
 
           {/* Part info */}

@@ -21,10 +21,34 @@ private struct ShowNowPlayingKey: EnvironmentKey {
     static let defaultValue = ShowNowPlayingAction()
 }
 
+// MARK: - Navigate to Destination Environment Key
+
+/// Dismisses the Now Playing sheet and navigates to a destination in the current tab's NavigationStack.
+struct NavigateToDestinationAction {
+    private let action: (AppDestination) -> Void
+
+    init(_ action: @escaping (AppDestination) -> Void = { _ in }) {
+        self.action = action
+    }
+
+    func callAsFunction(_ destination: AppDestination) {
+        action(destination)
+    }
+}
+
+private struct NavigateToDestinationKey: EnvironmentKey {
+    static let defaultValue = NavigateToDestinationAction()
+}
+
 extension EnvironmentValues {
     var showNowPlaying: ShowNowPlayingAction {
         get { self[ShowNowPlayingKey.self] }
         set { self[ShowNowPlayingKey.self] = newValue }
+    }
+
+    var navigateToDestination: NavigateToDestinationAction {
+        get { self[NavigateToDestinationKey.self] }
+        set { self[NavigateToDestinationKey.self] = newValue }
     }
 }
 
@@ -38,6 +62,12 @@ struct MainTabView: View {
     @State private var audioPlayer = AudioPlayerManager()
     @State private var downloadManager = DownloadManager()
     @State private var isNowPlayingPresented = false
+    @State private var pendingNavigation: (destination: AppDestination, tab: Tab)?
+
+    @State private var homePath = NavigationPath()
+    @State private var libraryPath = NavigationPath()
+    @State private var authorsPath = NavigationPath()
+    @State private var settingsPath = NavigationPath()
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -62,20 +92,43 @@ struct MainTabView: View {
         .environment(audioPlayer)
         .environment(downloadManager)
         .environment(\.showNowPlaying, ShowNowPlayingAction { isNowPlayingPresented = true })
+        .environment(\.navigateToDestination, navigateAction)
         .task {
             await downloadManager.initialize()
             audioPlayer.downloadManager = downloadManager
         }
-        .sheet(isPresented: $isNowPlayingPresented) {
+        .sheet(isPresented: $isNowPlayingPresented, onDismiss: {
+            if let pending = pendingNavigation {
+                pendingNavigation = nil
+                path(for: pending.tab).wrappedValue.append(pending.destination)
+            }
+        }) {
             NowPlayingView()
                 .environment(audioPlayer)
+                .environment(\.navigateToDestination, navigateAction)
+        }
+    }
+
+    private var navigateAction: NavigateToDestinationAction {
+        NavigateToDestinationAction { destination in
+            pendingNavigation = (destination, selectedTab)
+            isNowPlayingPresented = false
+        }
+    }
+
+    private func path(for tab: Tab) -> Binding<NavigationPath> {
+        switch tab {
+        case .home: return $homePath
+        case .library: return $libraryPath
+        case .authors: return $authorsPath
+        case .settings: return $settingsPath
         }
     }
 
     // MARK: - Tabs
 
     private var homeTab: some View {
-        NavigationStack {
+        NavigationStack(path: $homePath) {
             HomeView()
                 .navigationDestination(for: AppDestination.self) { destination in
                     destinationView(for: destination)
@@ -88,7 +141,7 @@ struct MainTabView: View {
     }
 
     private var libraryTab: some View {
-        NavigationStack {
+        NavigationStack(path: $libraryPath) {
             LibraryView()
                 .navigationDestination(for: AppDestination.self) { destination in
                     destinationView(for: destination)
@@ -101,7 +154,7 @@ struct MainTabView: View {
     }
 
     private var authorsTab: some View {
-        NavigationStack {
+        NavigationStack(path: $authorsPath) {
             AuthorsView()
                 .navigationDestination(for: AppDestination.self) { destination in
                     destinationView(for: destination)
@@ -114,7 +167,7 @@ struct MainTabView: View {
     }
 
     private var settingsTab: some View {
-        NavigationStack {
+        NavigationStack(path: $settingsPath) {
             SettingsView()
                 .navigationDestination(for: AppDestination.self) { destination in
                     destinationView(for: destination)
