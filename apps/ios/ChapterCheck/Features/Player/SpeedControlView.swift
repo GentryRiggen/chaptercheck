@@ -2,19 +2,19 @@ import SwiftUI
 
 /// Playback speed control with minus/plus buttons and current rate display.
 ///
-/// Range: 0.25x – 3.00x in 0.25 increments.
+/// Range: 0.5x – 3.0x in 0.1 increments.
 struct SpeedControlView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
 
-    private static let minRate = 0.25
+    private static let minRate = 0.5
     private static let maxRate = 3.0
-    private static let step = 0.25
+    private static let step = 0.1
 
     var body: some View {
         HStack(spacing: 12) {
             Button {
                 Haptics.selection()
-                let newRate = max(Self.minRate, audioPlayer.playbackRate - Self.step)
+                let newRate = max(Self.minRate, (audioPlayer.playbackRate - Self.step).rounded(toPlaces: 1))
                 audioPlayer.setRate(newRate)
             } label: {
                 Image(systemName: "minus")
@@ -37,7 +37,7 @@ struct SpeedControlView: View {
 
             Button {
                 Haptics.selection()
-                let newRate = min(Self.maxRate, audioPlayer.playbackRate + Self.step)
+                let newRate = min(Self.maxRate, (audioPlayer.playbackRate + Self.step).rounded(toPlaces: 1))
                 audioPlayer.setRate(newRate)
             } label: {
                 Image(systemName: "plus")
@@ -58,7 +58,13 @@ struct SpeedControlView: View {
         if rate == floor(rate) {
             return "\(Int(rate))x"
         }
-        let formatted = String(format: "%g", rate)
-        return "\(formatted)x"
+        return String(format: "%.1fx", rate)
+    }
+}
+
+private extension Double {
+    func rounded(toPlaces places: Int) -> Double {
+        let multiplier = pow(10.0, Double(places))
+        return (self * multiplier).rounded() / multiplier
     }
 }
