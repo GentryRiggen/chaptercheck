@@ -17,9 +17,9 @@ struct ListeningCard: View {
         Button {
             resumePlayback()
         } label: {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 ZStack {
-                    BookCoverView(r2Key: item.book.coverImageR2Key, size: 100)
+                    BookCoverView(r2Key: item.book.coverImageR2Key, size: 90)
 
                     Circle()
                         .fill(.black.opacity(0.4))
@@ -43,7 +43,7 @@ struct ListeningCard: View {
                     .frame(height: 32, alignment: .top)
 
             }
-            .frame(width: 160)
+            .frame(width: 140)
         }
         .buttonStyle(.plain)
         .disabled(isResuming)

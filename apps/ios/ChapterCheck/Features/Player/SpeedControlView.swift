@@ -21,8 +21,7 @@ struct SpeedControlView: View {
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
                     .frame(width: 44, height: 44)
-                    .background(.fill.quaternary)
-                    .clipShape(Circle())
+                    .background(.ultraThinMaterial, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Decrease speed")
@@ -44,8 +43,7 @@ struct SpeedControlView: View {
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
                     .frame(width: 44, height: 44)
-                    .background(.fill.quaternary)
-                    .clipShape(Circle())
+                    .background(.ultraThinMaterial, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Increase speed")

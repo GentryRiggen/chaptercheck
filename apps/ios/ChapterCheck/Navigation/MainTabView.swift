@@ -82,7 +82,6 @@ struct MainTabView: View {
             if audioPlayer.hasContent {
                 VStack(spacing: 0) {
                     MiniPlayerView(isNowPlayingPresented: $isNowPlayingPresented)
-                        .padding(.horizontal, 8)
                         .padding(.bottom, 2)
                 }
                 // Position above the tab bar (approximately 49pt)

@@ -16,32 +16,27 @@ struct NowPlayingView: View {
             // Top: dismiss + title/author
             topSection
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
+                .padding(.top, 28)
 
             Spacer()
-                .frame(minHeight: 4, maxHeight: 16)
 
-            // Cover artwork
-            BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, size: 260)
+            // Cover artwork — fills available space
+            BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, size: 320)
                 .shadow(color: .black.opacity(0.25), radius: 20, y: 10)
 
             Spacer()
 
-            // Seek bar
-            SeekBarView()
-                .padding(.horizontal, 24)
+            // Controls group with even spacing
+            VStack(spacing: 28) {
+                SeekBarView()
+                    .padding(.horizontal, 24)
 
-            Spacer()
+                transportControls
 
-            // Transport controls
-            transportControls
-
-            Spacer()
-
-            // Bottom toolbar: parts + speed
-            bottomToolbar
-                .padding(.horizontal, 24)
-                .padding(.bottom, 8)
+                bottomToolbar
+                    .padding(.horizontal, 24)
+            }
+            .padding(.bottom, 12)
         }
         .background(.background)
         .sheet(isPresented: $isPartSelectorPresented) {
@@ -55,17 +50,6 @@ struct NowPlayingView: View {
 
     private var topSection: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Dismiss button
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.down")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 44, height: 44)
-                    .modifier(GlassCircleModifier())
-            }
-
             // Title + author + part — tappable menu for navigation
             VStack(alignment: .leading, spacing: 2) {
                 if let book = audioPlayer.currentBook {
@@ -135,9 +119,10 @@ struct NowPlayingView: View {
                 audioPlayer.skipBackward()
             } label: {
                 Image(systemName: "gobackward.15")
-                    .font(.system(size: 26))
+                    .font(.system(size: 20))
                     .foregroundStyle(.primary)
-                    .frame(width: 56, height: 56)
+                    .frame(width: 44, height: 44)
+                    .modifier(GlassCircleModifier())
             }
 
             Button {
@@ -146,8 +131,17 @@ struct NowPlayingView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(Color.accentColor)
+                        .fill(Color.accentColor.opacity(0.3))
                         .frame(width: 72, height: 72)
+                        .overlay(
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                        )
+                        .overlay(
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.25))
+                        )
+                        .clipShape(Circle())
 
                     if audioPlayer.isLoading {
                         ProgressView()
@@ -166,9 +160,10 @@ struct NowPlayingView: View {
                 audioPlayer.skipForward()
             } label: {
                 Image(systemName: "goforward.30")
-                    .font(.system(size: 26))
+                    .font(.system(size: 20))
                     .foregroundStyle(.primary)
-                    .frame(width: 56, height: 56)
+                    .frame(width: 44, height: 44)
+                    .modifier(GlassCircleModifier())
             }
         }
     }
@@ -180,11 +175,22 @@ struct NowPlayingView: View {
             // Speed control — centered
             SpeedControlView()
 
-            // Parts button — trailing
-            if audioPlayer.audioFiles.count > 1 {
-                HStack {
-                    Spacer()
+            HStack {
+                // Dismiss button — leading
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .modifier(GlassCircleModifier())
+                }
 
+                Spacer()
+
+                // Parts button — trailing
+                if audioPlayer.audioFiles.count > 1 {
                     Button {
                         isPartSelectorPresented = true
                     } label: {
