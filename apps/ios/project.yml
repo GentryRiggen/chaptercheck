@@ -15,7 +15,7 @@ settings:
 packages:
   ConvexMobile:
     url: https://github.com/get-convex/convex-swift
-    from: 0.7.0
+    exactVersion: 0.7.0
   Clerk:
     url: https://github.com/clerk/clerk-ios
     from: 1.0.0
