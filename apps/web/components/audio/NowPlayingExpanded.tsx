@@ -4,7 +4,7 @@ import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { useQuery } from "convex/react";
 import { Book, ChevronDown, Pause, Play, RotateCcw, RotateCw, Square, User } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PlaybackSpeedControl } from "@/components/audio/PlaybackSpeedControl";
 import { BookCover } from "@/components/books/BookCover";
@@ -35,6 +35,8 @@ function formatTime(seconds: number): string {
 
 export function NowPlayingExpanded() {
   const [stopDialogOpen, setStopDialogOpen] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const {
     currentTrack,
@@ -44,6 +46,7 @@ export function NowPlayingExpanded() {
     duration,
     playbackRate,
     isExpanded,
+    lastSavedAt,
     togglePlayPause,
     seek,
     skipBackward,
@@ -52,6 +55,14 @@ export function NowPlayingExpanded() {
     collapse,
     stop,
   } = useAudioPlayerContext();
+
+  useEffect(() => {
+    if (lastSavedAt === 0) return;
+    setShowSaved(true);
+    clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => setShowSaved(false), 2000);
+    return () => clearTimeout(savedTimerRef.current);
+  }, [lastSavedAt]);
 
   const book = useQuery(
     api.books.queries.getBook,
@@ -262,7 +273,16 @@ export function NowPlayingExpanded() {
         <SheetDescription className="sr-only">
           Audio player controls for {currentTrack.displayName}
         </SheetDescription>
-        <div className="h-[env(safe-area-inset-bottom)]" />
+        <div className="relative h-[env(safe-area-inset-bottom)] min-h-6">
+          <span
+            className={cn(
+              "absolute inset-0 flex items-center justify-center text-xs text-muted-foreground transition-opacity duration-300",
+              showSaved ? "opacity-100" : "opacity-0"
+            )}
+          >
+            ✓ Saved
+          </span>
+        </div>
       </SheetContent>
     </Sheet>
   );

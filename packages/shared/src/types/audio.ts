@@ -31,6 +31,9 @@ export interface AudioPlayerContextValue {
   // Expanded state
   isExpanded: boolean;
 
+  // Save status
+  lastSavedAt: number;
+
   // Controls
   play: (track: TrackInfo, options?: PlayOptions) => Promise<void>;
   pause: () => void;

@@ -36,6 +36,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRateState] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(0);
 
   const generateStreamUrl = useAction(api.audioFiles.actions.generateStreamUrl);
   const saveProgressMutation = useMutation(api.listeningProgress.mutations.saveProgress);
@@ -99,6 +100,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (Math.abs(position - lastSavedPositionRef.current) < MIN_POSITION_CHANGE) return;
 
     lastSavedPositionRef.current = position;
+    setLastSavedAt(Date.now());
     saveProgressMutation({
       bookId: track.bookId,
       audioFileId: track.audioFileId,
@@ -332,6 +334,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       duration,
       playbackRate,
       isExpanded,
+      lastSavedAt,
       play,
       pause,
       togglePlayPause,
@@ -351,6 +354,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       duration,
       playbackRate,
       isExpanded,
+      lastSavedAt,
       play,
       pause,
       togglePlayPause,

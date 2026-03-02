@@ -10,6 +10,7 @@ struct NowPlayingView: View {
     @Environment(\.navigateToDestination) private var navigateToDestination
 
     @State private var isPartSelectorPresented = false
+    @State private var showSavedIndicator = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,7 +39,32 @@ struct NowPlayingView: View {
             }
             .padding(.bottom, 12)
         }
+        .overlay(alignment: .bottom) {
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark")
+                Text("Saved")
+            }
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(.ultraThinMaterial, in: Capsule())
+            .opacity(showSavedIndicator ? 1 : 0)
+            .animation(.easeInOut(duration: 0.3), value: showSavedIndicator)
+            .accessibilityLabel("Progress saved")
+            .accessibilityHidden(!showSavedIndicator)
+            .padding(.bottom, -6)
+        }
         .background(.background)
+        .onChange(of: audioPlayer.lastSavedAt) {
+            showSavedIndicator = true
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                await MainActor.run {
+                    showSavedIndicator = false
+                }
+            }
+        }
         .sheet(isPresented: $isPartSelectorPresented) {
             PartSelectorView()
                 .environment(audioPlayer)
@@ -104,6 +130,7 @@ struct NowPlayingView: View {
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
+
             }
 
             Spacer()
@@ -121,7 +148,8 @@ struct NowPlayingView: View {
                 Image(systemName: "gobackward.15")
                     .font(.system(size: 20))
                     .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
+                    .offset(y: -2)
+                    .frame(width: 48, height: 48)
                     .modifier(GlassCircleModifier())
             }
 
@@ -162,7 +190,8 @@ struct NowPlayingView: View {
                 Image(systemName: "goforward.30")
                     .font(.system(size: 20))
                     .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
+                    .offset(y: -2)
+                    .frame(width: 48, height: 48)
                     .modifier(GlassCircleModifier())
             }
         }
@@ -182,7 +211,7 @@ struct NowPlayingView: View {
                 } label: {
                     Image(systemName: "chevron.down")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .frame(width: 44, height: 44)
                         .modifier(GlassCircleModifier())
                 }

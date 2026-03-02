@@ -53,6 +53,9 @@ final class AudioPlayerManager {
     /// A user-facing error message, or `nil` if no error has occurred.
     private(set) var error: String?
 
+    /// Timestamp of the most recent progress save, used to drive UI indicators.
+    private(set) var lastSavedAt: Date?
+
     // MARK: - Computed Properties
 
     /// Playback progress as a fraction (0.0 to 1.0).
@@ -513,6 +516,7 @@ final class AudioPlayerManager {
         let rate = playbackRate
 
         lastSavedPosition = position
+        lastSavedAt = Date()
 
         Task { @MainActor [weak self] in
             guard let self else { return }
