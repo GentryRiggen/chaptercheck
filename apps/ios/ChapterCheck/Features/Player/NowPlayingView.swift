@@ -209,6 +209,7 @@ struct NowPlayingView: View {
 
 private struct GlassCircleModifier: ViewModifier {
     func body(content: Content) -> some View {
+        #if compiler(>=6.1)
         if #available(iOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .circle)
@@ -216,11 +217,16 @@ private struct GlassCircleModifier: ViewModifier {
             content
                 .background(.ultraThinMaterial, in: Circle())
         }
+        #else
+        content
+            .background(.ultraThinMaterial, in: Circle())
+        #endif
     }
 }
 
 private struct GlassCapsuleModifier: ViewModifier {
     func body(content: Content) -> some View {
+        #if compiler(>=6.1)
         if #available(iOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .capsule)
@@ -228,5 +234,9 @@ private struct GlassCapsuleModifier: ViewModifier {
             content
                 .background(.ultraThinMaterial, in: Capsule())
         }
+        #else
+        content
+            .background(.ultraThinMaterial, in: Capsule())
+        #endif
     }
 }
