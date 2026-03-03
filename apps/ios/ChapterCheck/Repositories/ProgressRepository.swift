@@ -50,12 +50,15 @@ final class ProgressRepository {
     ///   - audioFileId: The `_id` of the currently playing audio file.
     ///   - positionSeconds: Current playback position in seconds.
     ///   - playbackRate: Current playback speed (e.g., 1.0, 1.5, 2.0).
+    ///   - audioDuration: The player-reported duration of the audio file, used to
+    ///     backfill the stored duration when it was 0 at upload time.
     /// - Throws: `ClientError` if the audio file does not belong to the specified book.
     func saveProgress(
         bookId: String,
         audioFileId: String,
         positionSeconds: Double,
-        playbackRate: Double
+        playbackRate: Double,
+        audioDuration: Double? = nil
     ) async throws {
         try await convex.mutation(
             "listeningProgress/mutations:saveProgress",
@@ -64,6 +67,7 @@ final class ProgressRepository {
                 "audioFileId": audioFileId,
                 "positionSeconds": positionSeconds,
                 "playbackRate": playbackRate,
+                "audioDuration": audioDuration,
             ]
         )
     }

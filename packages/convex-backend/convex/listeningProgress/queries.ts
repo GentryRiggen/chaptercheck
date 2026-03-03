@@ -66,14 +66,18 @@ export const getRecentlyListening = query({
           .withIndex("by_book", (q) => q.eq("bookId", book._id))
           .collect();
 
-        // Use audio file duration for per-part progress, falling back to
-        // book duration for single-part books where file duration may be 0.
+        // Use audio file duration for per-part progress. When the file
+        // duration is 0 (metadata not extracted), fall back to book duration,
+        // then to the sum of all part durations.
+        const totalPartsDuration = allParts.reduce((sum, p) => sum + p.duration, 0);
         const effectiveDuration =
           audioFile.duration > 0
             ? audioFile.duration
-            : allParts.length === 1 && book.duration
-              ? book.duration
-              : 0;
+            : allParts.length === 1 && (book.duration ?? 0) > 0
+              ? book.duration!
+              : totalPartsDuration > 0
+                ? totalPartsDuration
+                : 0;
         const progressFraction =
           effectiveDuration > 0 ? progress.positionSeconds / effectiveDuration : 0;
 

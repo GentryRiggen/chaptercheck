@@ -13,6 +13,7 @@ export const saveProgress = mutation({
     audioFileId: v.id("audioFiles"),
     positionSeconds: v.number(),
     playbackRate: v.number(),
+    audioDuration: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
@@ -22,6 +23,12 @@ export const saveProgress = mutation({
     const audioFile = await ctx.db.get(args.audioFileId);
     if (!audioFile || audioFile.bookId !== args.bookId) {
       throw new Error("Audio file does not belong to the specified book");
+    }
+
+    // Backfill audio file duration when the stored value is 0 but the
+    // player reports a real duration (metadata wasn't available at upload).
+    if (audioFile.duration === 0 && args.audioDuration && args.audioDuration > 0) {
+      await ctx.db.patch(audioFile._id, { duration: args.audioDuration });
     }
 
     const existing = await ctx.db

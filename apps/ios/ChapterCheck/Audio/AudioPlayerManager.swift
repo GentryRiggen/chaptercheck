@@ -586,6 +586,7 @@ final class AudioPlayerManager {
         let audioFileId = audioFile._id
         let position = currentPosition
         let rate = playbackRate
+        let fileDuration = duration
 
         lastSavedPosition = position
         lastSavedAt = Date()
@@ -597,7 +598,8 @@ final class AudioPlayerManager {
                     bookId: bookId,
                     audioFileId: audioFileId,
                     positionSeconds: position,
-                    playbackRate: rate
+                    playbackRate: rate,
+                    audioDuration: fileDuration
                 )
             } catch {
                 self.logger.error("Failed to save progress: \(error.localizedDescription)")

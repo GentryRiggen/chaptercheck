@@ -135,6 +135,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       audioFileId: track.audioFileId,
       positionSeconds: position,
       playbackRate: playbackRateRef.current,
+      audioDuration: audio.duration > 0 ? audio.duration : undefined,
     }).catch(() => {
       // Silently fail — will retry on next interval
     });
