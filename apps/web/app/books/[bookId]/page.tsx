@@ -160,10 +160,6 @@ export default function BookDetailPage() {
   const AudioSection = (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Audio</h2>
-      <PremiumGate lockedMessage="Upgrade to Premium to upload audio files">
-        <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
-      </PremiumGate>
-
       {audioFiles === undefined || !bookInfo ? (
         <Card>
           <CardHeader className="py-3">
@@ -181,6 +177,10 @@ export default function BookDetailPage() {
           savedProgress={savedProgressForList}
         />
       ) : null}
+
+      <PremiumGate lockedMessage="Upgrade to Premium to upload audio files">
+        <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
+      </PremiumGate>
     </div>
   );
 
