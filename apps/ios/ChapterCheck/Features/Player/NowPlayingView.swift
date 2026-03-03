@@ -11,6 +11,7 @@ struct NowPlayingView: View {
 
     @State private var isPartSelectorPresented = false
     @State private var isNavigationDialogPresented = false
+    @State private var isAudioSettingsPresented = false
     @State private var showSavedIndicator = false
     @State private var isPlayingAnimated = false
 
@@ -87,6 +88,10 @@ struct NowPlayingView: View {
             PartSelectorView()
                 .environment(audioPlayer)
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $isAudioSettingsPresented) {
+            AudioSettingsSheet()
+                .environment(audioPlayer)
         }
     }
 
@@ -228,43 +233,56 @@ struct NowPlayingView: View {
     // MARK: - Bottom Toolbar
 
     private var bottomToolbar: some View {
-        ZStack {
-            // Speed control — centered
-            SpeedControlView()
+        HStack {
+            // Dismiss button — leading
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .contentShape(Circle())
 
-            HStack {
-                // Dismiss button — leading
+            Spacer()
+
+            // Parts button — center-ish
+            if audioPlayer.audioFiles.count > 1 {
                 Button {
-                    dismiss()
+                    isPartSelectorPresented = true
                 } label: {
-                    Image(systemName: "chevron.down")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44)
+                    HStack(spacing: 4) {
+                        Image(systemName: "list.bullet")
+                        Text("Parts")
+                            .font(.subheadline)
+                    }
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
-                .contentShape(Circle())
-
-                Spacer()
-
-                // Parts button — trailing
-                if audioPlayer.audioFiles.count > 1 {
-                    Button {
-                        isPartSelectorPresented = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "list.bullet")
-                            Text("Parts")
-                                .font(.subheadline)
-                        }
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                    }
-                    .buttonStyle(.plain)
-                    .contentShape(Capsule())
-                }
+                .contentShape(Capsule())
             }
+
+            Spacer()
+
+            // Audio settings — trailing
+            Button {
+                Haptics.light()
+                isAudioSettingsPresented = true
+            } label: {
+                Image(systemName: "waveform")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(audioPlayer.isVoiceBoostEnabled ? Color.accentColor : .secondary)
+                    .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .contentShape(Circle())
+            .accessibilityLabel("Audio settings")
         }
     }
 

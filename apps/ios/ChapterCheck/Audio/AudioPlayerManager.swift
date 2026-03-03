@@ -47,6 +47,9 @@ final class AudioPlayerManager {
     /// Current playback rate (e.g., 1.0, 1.25, 1.5, 2.0).
     private(set) var playbackRate: Double = 1.0
 
+    /// Whether voice boost audio processing is enabled.
+    private(set) var isVoiceBoostEnabled: Bool = UserDefaults.standard.bool(forKey: "voiceBoostEnabled")
+
     /// Whether the player is loading/buffering a new track.
     private(set) var isLoading = false
 
@@ -189,6 +192,29 @@ final class AudioPlayerManager {
     }
 
     // MARK: - Public API
+
+    /// Toggle voice boost audio processing on or off.
+    ///
+    /// Persists the preference to UserDefaults and immediately applies or removes
+    /// the audio processing tap on the current player item.
+    func setVoiceBoost(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: "voiceBoostEnabled")
+        isVoiceBoostEnabled = enabled
+
+        guard let playerItem = player?.currentItem else { return }
+
+        if enabled {
+            if let audioMix = VoiceBoostProcessor.createAudioMix(for: playerItem) {
+                playerItem.audioMix = audioMix
+            } else {
+                logger.error("Failed to create voice boost audio mix")
+                isVoiceBoostEnabled = false
+                UserDefaults.standard.set(false, forKey: "voiceBoostEnabled")
+            }
+        } else {
+            playerItem.audioMix = nil
+        }
+    }
 
     /// Start playback of a specific audio file within a book.
     ///
@@ -385,6 +411,11 @@ final class AudioPlayerManager {
             teardownPlayer()
 
             let playerItem = AVPlayerItem(url: url)
+
+            if isVoiceBoostEnabled {
+                playerItem.audioMix = VoiceBoostProcessor.createAudioMix(for: playerItem)
+            }
+
             let avPlayer = AVPlayer(playerItem: playerItem)
             avPlayer.automaticallyWaitsToMinimizeStalling = true
 
