@@ -11,4 +11,7 @@ enum AppDestination: Hashable {
     case series(id: String)
     case shelf(id: String)
     case profile(userId: String)
+    case search
+    case browseLibrary
+    case browseAuthors
 }

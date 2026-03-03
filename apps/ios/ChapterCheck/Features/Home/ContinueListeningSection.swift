@@ -7,6 +7,9 @@ import SwiftUI
 struct ContinueListeningSection: View {
     let items: [RecentListeningProgress]
 
+    private var heroItem: RecentListeningProgress? { items.first }
+    private var remainingItems: [RecentListeningProgress] { Array(items.dropFirst()) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Continue Listening")
@@ -14,13 +17,20 @@ struct ContinueListeningSection: View {
                 .fontWeight(.semibold)
                 .padding(.horizontal)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
-                    ForEach(items) { item in
-                        ListeningCard(item: item)
+            if let heroItem {
+                HeroListeningCard(item: heroItem)
+                    .padding(.horizontal)
+            }
+
+            if !remainingItems.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 12) {
+                        ForEach(remainingItems) { item in
+                            ListeningCard(item: item)
+                        }
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
             }
         }
     }

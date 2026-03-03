@@ -42,11 +42,6 @@ final class BookRepository {
         )
     }
 
-    /// Subscribe to aggregate library statistics for the home page.
-    func subscribeToHomeStats() -> AnyPublisher<HomeStats, ClientError>? {
-        convex.subscribe(to: "books/queries:getHomeStats")
-    }
-
     /// Subscribe to a paginated book list.
     ///
     /// Convex pagination requires `paginationOpts` as a nested dictionary with

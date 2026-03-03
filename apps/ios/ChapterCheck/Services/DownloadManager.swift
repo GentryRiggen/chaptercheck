@@ -43,7 +43,7 @@ final class DownloadManager {
 
     // MARK: - Initialization
 
-    /// Load the manifest and hydrate observable state. Call once from `MainTabView.task`.
+    /// Load the manifest and hydrate observable state. Call once from `MainView.task`.
     func initialize() async {
         let manifest = await downloadService.loadManifest()
         hydrateState(from: manifest)

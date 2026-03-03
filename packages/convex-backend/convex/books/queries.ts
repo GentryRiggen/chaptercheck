@@ -5,12 +5,12 @@ import { type Doc } from "../_generated/dataModel";
 import { query, type QueryCtx } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
 
-type EnrichedBook = Doc<"books"> & {
+export type EnrichedBook = Doc<"books"> & {
   authors: Array<Doc<"authors"> & { role?: string }>;
   series: { _id: Doc<"series">["_id"]; name: string } | null;
 };
 
-function createBookEnricher(ctx: QueryCtx): (book: Doc<"books">) => Promise<EnrichedBook> {
+export function createBookEnricher(ctx: QueryCtx): (book: Doc<"books">) => Promise<EnrichedBook> {
   const authorCache = new Map<string, Doc<"authors"> | null>();
   const seriesCache = new Map<string, Doc<"series"> | null>();
 

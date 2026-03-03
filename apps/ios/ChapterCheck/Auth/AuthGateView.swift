@@ -9,7 +9,7 @@ import os
 /// client to authenticate (either restoring from cache or performing a fresh
 /// login).
 ///
-/// Once authenticated, `MainTabView` stays mounted through transient `.loading`
+/// Once authenticated, `MainView` stays mounted through transient `.loading`
 /// states (e.g. token refresh) to preserve navigation, playback, and downloads.
 struct AuthGateView: View {
     @ObservedObject private var convexService = ConvexService.shared
@@ -19,7 +19,7 @@ struct AuthGateView: View {
     private var showMainTab: Bool {
         guard Clerk.shared.isLoaded, Clerk.shared.session != nil else { return false }
         if case .authenticated = convexService.authState { return true }
-        // Keep MainTabView mounted through transient loading/unauthenticated
+        // Keep MainView mounted through transient loading/unauthenticated
         // states once we've been authenticated at least once this session.
         return hasAuthenticated
     }
@@ -38,7 +38,7 @@ struct AuthGateView: View {
                         logger.info("Clerk loaded but no session, showing SignInView")
                     }
             } else if showMainTab {
-                MainTabView()
+                MainView()
                     .onAppear {
                         hasAuthenticated = true
                     }

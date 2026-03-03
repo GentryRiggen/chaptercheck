@@ -93,8 +93,10 @@ struct MiniPlayerView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
             }
-            .background(Color(UIColor.systemBackground).opacity(0.625))
+            .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
         }
         .buttonStyle(.plain)
     }

@@ -5,8 +5,8 @@ import os
 
 /// View model for the home screen.
 ///
-/// Manages four concurrent Convex subscriptions for real-time updates:
-/// continue listening, recently added books, top rated books, and library stats.
+/// Manages three concurrent Convex subscriptions for real-time updates:
+/// continue listening, recently added books, and top rated books.
 @Observable
 @MainActor
 final class HomeViewModel {
@@ -16,7 +16,6 @@ final class HomeViewModel {
     var recentlyListening: [RecentListeningProgress] = []
     var recentBooks: [BookWithDetails] = []
     var topRatedBooks: [BookWithDetails] = []
-    var stats: HomeStats?
 
     var isLoading = true
     var error: String?
@@ -40,7 +39,6 @@ final class HomeViewModel {
         subscribeToRecentlyListening()
         subscribeToRecentBooks()
         subscribeToTopRatedBooks()
-        subscribeToStats()
     }
 
     func unsubscribe() {
@@ -106,28 +104,9 @@ final class HomeViewModel {
             .store(in: &cancellables)
     }
 
-    private func subscribeToStats() {
-        bookRepository.subscribeToHomeStats()?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { [weak self] completion in
-                    if case .failure(let error) = completion {
-                        self?.logger.error("homeStats FAILED: \(error)")
-                        self?.error = error.localizedDescription
-                    }
-                },
-                receiveValue: { [weak self] stats in
-                    self?.logger.info("homeStats: received stats")
-                    self?.stats = stats
-                    self?.markLoaded("stats")
-                }
-            )
-            .store(in: &cancellables)
-    }
-
     private func markLoaded(_ section: String) {
         loadedSections.insert(section)
-        if loadedSections.count >= 2 {
+        if loadedSections.count >= 1 {
             isLoading = false
         }
     }

@@ -126,7 +126,7 @@ final class AudioPlayerManager {
     private let logger = Logger(subsystem: "com.chaptercheck", category: "AudioPlayer")
 
     /// Optional download manager for offline playback. Set after initialization
-    /// from `MainTabView` once the download manager is available.
+    /// from `MainView` once the download manager is available.
     var downloadManager: DownloadManager?
 
     // MARK: - Private State

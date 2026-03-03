@@ -19,18 +19,18 @@ struct HeroListeningCard: View {
         } label: {
             HStack(spacing: 16) {
                 ZStack {
-                    BookCoverView(r2Key: item.book.coverImageR2Key, size: 100)
+                    BookCoverView(r2Key: item.book.coverImageR2Key, size: 140)
 
                     Circle()
                         .fill(.black.opacity(0.4))
-                        .frame(width: 40, height: 40)
+                        .frame(width: 44, height: 44)
 
                     if isResuming {
                         ProgressView()
                             .tint(.white)
                     } else {
                         Image(systemName: "play.fill")
-                            .font(.system(size: 16))
+                            .font(.system(size: 18))
                             .foregroundStyle(.white)
                     }
                 }
@@ -49,6 +49,15 @@ struct HeroListeningCard: View {
                     }
 
                     Spacer()
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        ProgressView(value: item.progressFraction)
+                            .tint(.accentColor)
+
+                        Text(item.formattedProgress)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
