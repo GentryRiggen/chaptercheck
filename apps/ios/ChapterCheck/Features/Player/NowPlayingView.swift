@@ -2,48 +2,52 @@ import SwiftUI
 
 /// Full-screen now playing sheet with large artwork and transport controls.
 ///
-/// iOS 26-style layout: left-aligned metadata at top, centered hero artwork
-/// filling available space, and controls anchored at the bottom.
+/// Podcast-app-style layout: category label + title at top, large centered artwork,
+/// seek bar → transport → toolbar anchored at bottom.
 struct NowPlayingView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(\.dismiss) private var dismiss
     @Environment(\.navigateToDestination) private var navigateToDestination
 
     @State private var isPartSelectorPresented = false
+    @State private var isNavigationDialogPresented = false
     @State private var showSavedIndicator = false
+    @State private var isPlayingAnimated = false
+
+    /// Artwork fills width minus 48pt padding, capped at 400 for iPad.
+    private var artworkSize: CGFloat {
+        min(UIScreen.main.bounds.width - 48, 400)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Drag indicator
-            Capsule()
-                .fill(.tertiary)
-                .frame(width: 36, height: 5)
-                .padding(.top, 10)
-
-            // Top: dismiss + title/author
+            // Top: category label + title + part info
             topSection
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
 
             Spacer()
 
-            // Cover artwork — fills available space
-            BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, size: 320)
-                .shadow(color: .black.opacity(0.25), radius: 20, y: 10)
+            // Cover artwork — scales up when playing, down when paused (iOS Music app effect)
+            BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, size: artworkSize)
+                .scaleEffect(isPlayingAnimated ? 1.0 : 0.85)
+                .shadow(color: .black.opacity(0.25), radius: isPlayingAnimated ? 20 : 10, y: isPlayingAnimated ? 10 : 5)
 
             Spacer()
 
-            // Controls group with even spacing
-            VStack(spacing: 28) {
-                SeekBarView()
-                    .padding(.horizontal, 24)
+            // Seek bar
+            SeekBarView()
+                .padding(.horizontal, 24)
 
-                transportControls
+            // Transport controls — vertically centered between seek bar and bottom toolbar
+            Spacer()
+            transportControls
+            Spacer()
 
-                bottomToolbar
-                    .padding(.horizontal, 24)
-            }
-            .padding(.bottom, 12)
+            // Bottom toolbar
+            bottomToolbar
+                .padding(.horizontal, 24)
+                .padding(.bottom, 12)
         }
         .overlay(alignment: .bottom) {
             HStack(spacing: 4) {
@@ -62,6 +66,14 @@ struct NowPlayingView: View {
             .padding(.bottom, -6)
         }
         .background(.background)
+        .onAppear {
+            isPlayingAnimated = audioPlayer.isPlaying
+        }
+        .onChange(of: audioPlayer.isPlaying) {
+            withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
+                isPlayingAnimated = audioPlayer.isPlaying
+            }
+        }
         .onChange(of: audioPlayer.lastSavedAt) {
             showSavedIndicator = true
             Task {
@@ -80,30 +92,44 @@ struct NowPlayingView: View {
 
     // MARK: - Top Section
 
+    /// Returns a category label like "THE STORMLIGHT ARCHIVE #2", or the author name as fallback.
+    /// Returns nil when neither series nor authors are available.
+    private func categoryLabel(for book: BookWithDetails) -> String? {
+        if let series = book.series {
+            if let order = book.seriesOrder {
+                let formatted = order.rounded() == order
+                    ? String(format: "%.0f", order)
+                    : String(format: "%g", order)
+                return "\(series.name) #\(formatted)".uppercased()
+            }
+            return series.name.uppercased()
+        }
+        guard let name = book.authors.first?.name else { return nil }
+        return name.uppercased()
+    }
+
     private var topSection: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Title + author + part — tappable menu for navigation
             VStack(alignment: .leading, spacing: 2) {
                 if let book = audioPlayer.currentBook {
-                    Menu {
-                        Button {
-                            navigateToDestination(.book(id: book._id))
-                        } label: {
-                            Label("Book Details", systemImage: "book")
-                        }
+                    // Category line: series or author
+                    if let category = categoryLabel(for: book) {
+                        Text(category)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
 
-                        ForEach(book.authors, id: \._id) { author in
-                            Button {
-                                navigateToDestination(.author(id: author._id))
-                            } label: {
-                                Label(author.name, systemImage: "person")
-                            }
-                        }
+                    // Title with navigation dialog
+                    Button {
+                        isNavigationDialogPresented = true
                     } label: {
                         HStack(alignment: .firstTextBaseline, spacing: 5) {
                             Text(book.title)
                                 .font(.title2)
                                 .fontWeight(.bold)
+                                .foregroundStyle(.primary)
                                 .lineLimit(2)
                                 .multilineTextAlignment(.leading)
 
@@ -111,14 +137,18 @@ struct NowPlayingView: View {
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(.tertiary)
                         }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-
-                    if let authorName = book.authors.first?.name {
-                        Text(authorName)
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                    .confirmationDialog("Navigate to", isPresented: $isNavigationDialogPresented) {
+                        Button("Book Details") {
+                            navigateToDestination(.book(id: book._id))
+                        }
+                        ForEach(book.authors, id: \._id) { author in
+                            Button(author.name) {
+                                navigateToDestination(.author(id: author._id))
+                            }
+                        }
                     }
                 } else {
                     Text("Unknown")
@@ -146,49 +176,38 @@ struct NowPlayingView: View {
     // MARK: - Transport Controls
 
     private var transportControls: some View {
-        HStack(spacing: 40) {
+        HStack(spacing: 36) {
             Button {
                 Haptics.light()
                 audioPlayer.skipBackward()
             } label: {
                 Image(systemName: audioPlayer.skipBackwardSymbol)
                     .contentTransition(.symbolEffect(.replace))
-                    .font(.system(size: 20))
-                    .foregroundStyle(.primary)
-                    .offset(y: -2)
-                    .frame(width: 48, height: 48)
-                    .modifier(GlassCircleModifier())
+                    .font(.system(size: 42))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 72, height: 72)
             }
+            .buttonStyle(.plain)
+            .contentShape(Circle())
 
             Button {
                 Haptics.medium()
                 audioPlayer.togglePlayPause()
             } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.accentColor.opacity(0.3))
-                        .frame(width: 72, height: 72)
-                        .overlay(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                        )
-                        .overlay(
-                            Circle()
-                                .fill(Color.accentColor.opacity(0.25))
-                        )
-                        .clipShape(Circle())
-
-                    if audioPlayer.isLoading {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 26))
-                            .foregroundStyle(.white)
-                            .offset(x: audioPlayer.isPlaying ? 0 : 2)
-                    }
+                if audioPlayer.isLoading {
+                    ProgressView()
+                        .tint(.accentColor)
+                        .frame(width: 80, height: 80)
+                } else {
+                    Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(Color.accentColor)
+                        .offset(x: audioPlayer.isPlaying ? 0 : 3)
+                        .frame(width: 80, height: 80)
                 }
             }
+            .buttonStyle(.plain)
+            .contentShape(Circle())
 
             Button {
                 Haptics.light()
@@ -196,13 +215,14 @@ struct NowPlayingView: View {
             } label: {
                 Image(systemName: audioPlayer.skipForwardSymbol)
                     .contentTransition(.symbolEffect(.replace))
-                    .font(.system(size: 20))
-                    .foregroundStyle(.primary)
-                    .offset(y: -2)
-                    .frame(width: 48, height: 48)
-                    .modifier(GlassCircleModifier())
+                    .font(.system(size: 42))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 72, height: 72)
             }
+            .buttonStyle(.plain)
+            .contentShape(Circle())
         }
+        .scaleEffect(isPlayingAnimated ? 1.0 : 0.85)
     }
 
     // MARK: - Bottom Toolbar
@@ -219,10 +239,11 @@ struct NowPlayingView: View {
                 } label: {
                     Image(systemName: "chevron.down")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(.secondary)
                         .frame(width: 44, height: 44)
-                        .modifier(GlassCircleModifier())
                 }
+                .buttonStyle(.plain)
+                .contentShape(Circle())
 
                 Spacer()
 
@@ -239,27 +260,12 @@ struct NowPlayingView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
-                        .modifier(GlassCapsuleModifier())
                     }
+                    .buttonStyle(.plain)
+                    .contentShape(Capsule())
                 }
             }
         }
     }
 
-}
-
-// MARK: - Glass Modifiers
-
-private struct GlassCircleModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .background(.ultraThinMaterial, in: Circle())
-    }
-}
-
-private struct GlassCapsuleModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .background(.ultraThinMaterial, in: Capsule())
-    }
 }
