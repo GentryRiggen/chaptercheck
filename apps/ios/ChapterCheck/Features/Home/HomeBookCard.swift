@@ -15,7 +15,6 @@ struct HomeBookCard: View {
                 .fontWeight(.medium)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
-                .frame(height: 32, alignment: .top)
 
             if let authorName = book.authors.first?.name {
                 Text(authorName)

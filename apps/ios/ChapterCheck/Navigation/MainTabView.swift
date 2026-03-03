@@ -293,6 +293,7 @@ private struct SettingsView: View {
                 }
             }
         }
+        .contentMargins(.bottom, 80)
         .navigationTitle("Settings")
         .onAppear { subscribeToUser() }
         .onDisappear { cancellables.removeAll() }
