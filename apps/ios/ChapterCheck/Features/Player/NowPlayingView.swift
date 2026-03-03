@@ -10,7 +10,6 @@ struct NowPlayingView: View {
     @Environment(\.navigateToDestination) private var navigateToDestination
 
     @State private var isPartSelectorPresented = false
-    @State private var isNavigationDialogPresented = false
     @State private var isAudioSettingsPresented = false
     @State private var showSavedIndicator = false
     @State private var isPlayingAnimated = false
@@ -126,35 +125,12 @@ struct NowPlayingView: View {
                             .lineLimit(1)
                     }
 
-                    // Title with navigation dialog
-                    Button {
-                        isNavigationDialogPresented = true
-                    } label: {
-                        HStack(alignment: .firstTextBaseline, spacing: 5) {
-                            Text(book.title)
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.primary)
-                                .lineLimit(2)
-                                .multilineTextAlignment(.leading)
-
-                            Image(systemName: "chevron.down")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(.tertiary)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .confirmationDialog("Navigate to", isPresented: $isNavigationDialogPresented) {
-                        Button("Book Details") {
-                            navigateToDestination(.book(id: book._id))
-                        }
-                        ForEach(book.authors, id: \._id) { author in
-                            Button(author.name) {
-                                navigateToDestination(.author(id: author._id))
-                            }
-                        }
-                    }
+                    Text(book.title)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                 } else {
                     Text("Unknown")
                         .font(.headline)
@@ -171,7 +147,6 @@ struct NowPlayingView: View {
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
-
             }
 
             Spacer()
@@ -227,7 +202,6 @@ struct NowPlayingView: View {
             .buttonStyle(.plain)
             .contentShape(Circle())
         }
-        .scaleEffect(isPlayingAnimated ? 1.0 : 0.85)
     }
 
     // MARK: - Bottom Toolbar
@@ -240,12 +214,37 @@ struct NowPlayingView: View {
             } label: {
                 Image(systemName: "chevron.down")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.accentColor)
                     .frame(width: 44, height: 44)
                     .background(.ultraThinMaterial, in: Circle())
             }
             .buttonStyle(.plain)
             .contentShape(Circle())
+
+            // Info button — navigate to book or author
+            if let book = audioPlayer.currentBook {
+                Menu {
+                    Button {
+                        navigateToDestination(.book(id: book._id))
+                    } label: {
+                        Label("Book Details", systemImage: "book")
+                    }
+                    ForEach(book.authors, id: \._id) { author in
+                        Button {
+                            navigateToDestination(.author(id: author._id))
+                        } label: {
+                            Label(author.name, systemImage: "person")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+                .accessibilityLabel("Book info")
+            }
 
             Spacer()
 
