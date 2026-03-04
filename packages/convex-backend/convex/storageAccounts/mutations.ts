@@ -106,6 +106,50 @@ export async function updateStorageStatsOnInsert(
   });
 }
 
+// Recalculate storage stats by summing audioFiles per account.
+// Run via: npx convex run storageAccounts/mutations:recalculateStorageStats
+export const recalculateStorageStats = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const accounts = await ctx.db.query("storageAccounts").collect();
+    const results: Array<{
+      accountId: string;
+      name?: string;
+      oldBytes: number;
+      newBytes: number;
+      oldFileCount: number;
+      newFileCount: number;
+    }> = [];
+
+    for (const account of accounts) {
+      const audioFiles = await ctx.db
+        .query("audioFiles")
+        .withIndex("by_storageAccount", (q) => q.eq("storageAccountId", account._id))
+        .collect();
+
+      const totalBytes = audioFiles.reduce((sum, file) => sum + file.fileSize, 0);
+      const fileCount = audioFiles.length;
+
+      results.push({
+        accountId: account._id,
+        name: account.name,
+        oldBytes: account.totalBytesUsed,
+        newBytes: totalBytes,
+        oldFileCount: account.fileCount,
+        newFileCount: fileCount,
+      });
+
+      await ctx.db.patch(account._id, {
+        totalBytesUsed: totalBytes,
+        fileCount: fileCount,
+        updatedAt: Date.now(),
+      });
+    }
+
+    return results;
+  },
+});
+
 export async function updateStorageStatsOnDelete(
   ctx: MutationCtx,
   storageAccountId: Id<"storageAccounts">,
