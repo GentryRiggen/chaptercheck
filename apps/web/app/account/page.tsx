@@ -13,7 +13,7 @@ import { ArrowLeft, Eye, EyeOff, HardDrive, Loader2, Monitor, Moon, Sun } from "
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -132,6 +132,14 @@ function AccentColorPicker() {
 }
 
 export default function AccountPage() {
+  return (
+    <Suspense>
+      <AccountPageContent />
+    </Suspense>
+  );
+}
+
+function AccountPageContent() {
   usePageTitle("Settings");
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
