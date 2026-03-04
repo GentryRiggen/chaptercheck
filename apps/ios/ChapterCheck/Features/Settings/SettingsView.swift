@@ -84,6 +84,7 @@ struct SettingsView: View {
                 Section {
                     Button("Sign Out", role: .destructive) {
                         downloadManager.deleteAllDownloads()
+                        UserDefaults.standard.removeObject(forKey: "hasAuthenticatedBefore")
                         Task {
                             await convexService.logout()
                         }
@@ -121,7 +122,7 @@ struct SettingsView: View {
             ShelfDetailView(shelfId: id)
         case .profile(let userId):
             ProfileView(userId: userId)
-        case .search, .browseLibrary, .browseAuthors:
+        case .search, .browseLibrary, .browseAuthors, .offlineBook:
             EmptyView()
         }
     }

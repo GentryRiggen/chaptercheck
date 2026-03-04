@@ -44,16 +44,39 @@ struct BookMetadataEntry: Codable, Sendable {
     let coverImageR2Key: String?
 }
 
+// MARK: - Audio File Metadata Entry
+
+/// Audio file metadata stored in the manifest for offline playback.
+struct AudioFileMetadataEntry: Codable, Sendable {
+    let audioFileId: String
+    let bookId: String
+    let fileName: String
+    let fileSize: Double
+    let duration: Double
+    let format: String
+    let partNumber: Double?
+    let displayName: String?
+}
+
 // MARK: - Download Manifest
 
 /// JSON-serialized manifest tracking all downloaded files.
 struct DownloadManifest: Codable, Sendable {
     var files: [String: DownloadedFile]
     var bookMetadata: [String: BookMetadataEntry]
+    var audioFileMetadata: [String: AudioFileMetadataEntry]
 
     init() {
         self.files = [:]
         self.bookMetadata = [:]
+        self.audioFileMetadata = [:]
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        files = try container.decode([String: DownloadedFile].self, forKey: .files)
+        bookMetadata = try container.decode([String: BookMetadataEntry].self, forKey: .bookMetadata)
+        audioFileMetadata = try container.decodeIfPresent([String: AudioFileMetadataEntry].self, forKey: .audioFileMetadata) ?? [:]
     }
 }
 
@@ -76,6 +99,7 @@ struct BookDownloadInfo: Identifiable {
     let authorNames: [String]
     let coverImageR2Key: String?
     let files: [DownloadedFile]
+    let audioFileMetadata: [AudioFileMetadataEntry]
 
     var id: String { bookId }
 

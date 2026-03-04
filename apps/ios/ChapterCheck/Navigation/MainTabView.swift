@@ -90,14 +90,22 @@ struct MainView: View {
     @State private var pendingNavigation: AppDestination?
     @State private var preferencesCancellable: AnyCancellable?
     @Environment(ThemeManager.self) private var themeManager
+    private let networkMonitor = NetworkMonitor.shared
 
     var body: some View {
         ZStack(alignment: .bottom) {
             NavigationStack(path: $navigationPath) {
-                HomeView()
-                    .navigationDestination(for: AppDestination.self) { destination in
-                        destinationView(for: destination)
-                    }
+                if networkMonitor.isConnected {
+                    HomeView()
+                        .navigationDestination(for: AppDestination.self) { destination in
+                            destinationView(for: destination)
+                        }
+                } else {
+                    OfflineHomeView()
+                        .navigationDestination(for: AppDestination.self) { destination in
+                            destinationView(for: destination)
+                        }
+                }
             }
 
             // Mini player overlay at the bottom
@@ -114,7 +122,11 @@ struct MainView: View {
         .task {
             await downloadManager.initialize()
             audioPlayer.downloadManager = downloadManager
-            subscribeToPreferences()
+
+            if networkMonitor.isConnected {
+                subscribeToPreferences()
+                await OfflineProgressQueue.shared.flush()
+            }
         }
         .sheet(isPresented: $isNowPlayingPresented, onDismiss: {
             if let pending = pendingNavigation {
@@ -181,6 +193,8 @@ struct MainView: View {
             LibraryView()
         case .browseAuthors:
             AuthorsView()
+        case .offlineBook(let bookId):
+            OfflineBookDetailView(bookId: bookId)
         }
     }
 }

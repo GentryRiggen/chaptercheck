@@ -82,8 +82,25 @@ final class DownloadManager {
             coverImageR2Key: book.coverImageR2Key
         )
 
+        // Store audio file metadata for offline playback reconstruction
+        let audioMetas = audioFiles.map { file in
+            AudioFileMetadataEntry(
+                audioFileId: file._id,
+                bookId: bookId,
+                fileName: file.fileName,
+                fileSize: file.fileSize,
+                duration: file.duration,
+                format: file.format,
+                partNumber: file.partNumber,
+                displayName: file.displayName
+            )
+        }
+
         let task = Task { [weak self] in
             guard let self else { return }
+
+            // Persist audio file metadata for offline playback
+            await self.downloadService.storeAudioFileMetadata(audioMetas)
 
             for audioFile in audioFiles {
                 guard !Task.isCancelled else { break }
@@ -204,15 +221,70 @@ final class DownloadManager {
         await downloadService.localFileURL(for: audioFileId)
     }
 
+    // MARK: - Offline Playback
+
+    /// Construct playback data from the download manifest for offline use.
+    ///
+    /// Returns a `BookWithDetails` and sorted `[AudioFile]` built from stored
+    /// manifest metadata, or `nil` if the book isn't fully downloaded.
+    func offlinePlaybackData(for bookId: String) -> (BookWithDetails, [AudioFile])? {
+        guard let info = downloadedBooks.first(where: { $0.bookId == bookId && $0.isComplete }) else {
+            return nil
+        }
+
+        let now = Date().timeIntervalSince1970 * 1000
+
+        let authors = info.authorNames.enumerated().map { index, name in
+            BookAuthor(
+                _id: "offline-author-\(index)",
+                name: name
+            )
+        }
+
+        let book = BookWithDetails(
+            _id: info.bookId,
+            _creationTime: now,
+            title: info.bookTitle,
+            coverImageR2Key: info.coverImageR2Key,
+            createdAt: now,
+            updatedAt: now,
+            authors: authors
+        )
+
+        let audioFiles: [AudioFile] = info.audioFileMetadata
+            .sorted { ($0.partNumber ?? 0) < ($1.partNumber ?? 0) }
+            .map { meta in
+                AudioFile(
+                    _id: meta.audioFileId,
+                    _creationTime: now,
+                    bookId: meta.bookId,
+                    fileName: meta.fileName,
+                    fileSize: meta.fileSize,
+                    duration: meta.duration,
+                    format: meta.format,
+                    r2Key: "",
+                    r2Bucket: "",
+                    uploadedBy: "",
+                    uploadedAt: now,
+                    partNumber: meta.partNumber,
+                    displayName: meta.displayName
+                )
+            }
+
+        guard !audioFiles.isEmpty else { return nil }
+        return (book, audioFiles)
+    }
+
     // MARK: - Private
 
     private func refreshState() async {
         let files = await downloadService.allDownloadedFiles()
         let metadata = await downloadService.allBookMetadata()
+        let audioMeta = await downloadService.allAudioFileMetadata()
         let storage = await downloadService.totalStorageUsed()
 
         await MainActor.run {
-            hydrateStateFromData(files: files, metadata: metadata, storage: storage)
+            hydrateStateFromData(files: files, metadata: metadata, audioFileMetadata: audioMeta, storage: storage)
         }
     }
 
@@ -220,6 +292,7 @@ final class DownloadManager {
         hydrateStateFromData(
             files: manifest.files,
             metadata: manifest.bookMetadata,
+            audioFileMetadata: manifest.audioFileMetadata,
             storage: manifest.files.values
                 .filter { $0.status == .completed }
                 .reduce(0) { $0 + $1.fileSize }
@@ -229,6 +302,7 @@ final class DownloadManager {
     private func hydrateStateFromData(
         files: [String: DownloadedFile],
         metadata: [String: BookMetadataEntry],
+        audioFileMetadata: [String: AudioFileMetadataEntry] = [:],
         storage: Int64
     ) {
         // Update per-file state
@@ -248,12 +322,14 @@ final class DownloadManager {
 
         for (bookId, bookFileList) in bookFiles {
             let meta = metadata[bookId]
+            let bookAudioMeta = bookFileList.compactMap { audioFileMetadata[$0.audioFileId] }
             let info = BookDownloadInfo(
                 bookId: bookId,
                 bookTitle: meta?.title ?? "Unknown Book",
                 authorNames: meta?.authorNames ?? [],
                 coverImageR2Key: meta?.coverImageR2Key,
-                files: bookFileList
+                files: bookFileList,
+                audioFileMetadata: bookAudioMeta
             )
             books.append(info)
 

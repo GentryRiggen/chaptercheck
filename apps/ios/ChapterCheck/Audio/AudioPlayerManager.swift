@@ -459,6 +459,10 @@ final class AudioPlayerManager {
             if let localURL = await downloadManager?.localFileURL(for: audioFile._id) {
                 url = localURL
                 logger.info("Playing from local file: \(audioFile._id)")
+            } else if !NetworkMonitor.shared.isConnected {
+                self.error = "This book isn't downloaded for offline listening."
+                isLoading = false
+                return
             } else {
                 url = try await streamURLCache.getUrl(audioFileId: audioFile._id)
             }
@@ -655,7 +659,7 @@ final class AudioPlayerManager {
         saveProgressNow()
     }
 
-    /// Immediately save the current progress to the backend.
+    /// Immediately save the current progress to the backend, or queue for later if offline.
     private func saveProgressNow() {
         guard
             let book = currentBook,
@@ -677,6 +681,22 @@ final class AudioPlayerManager {
         lastSavedPosition = position
         lastSavedAt = Date()
 
+        // When offline, queue progress for later sync
+        if !NetworkMonitor.shared.isConnected {
+            let entry = QueuedProgress(
+                bookId: bookId,
+                audioFileId: audioFileId,
+                positionSeconds: position,
+                playbackRate: rate,
+                audioDuration: fileDuration,
+                timestamp: Date().timeIntervalSince1970 * 1000
+            )
+            Task {
+                await OfflineProgressQueue.shared.enqueue(entry)
+            }
+            return
+        }
+
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
@@ -689,6 +709,18 @@ final class AudioPlayerManager {
                 )
             } catch {
                 self.logger.error("Failed to save progress: \(error.localizedDescription)")
+                // Fallback: queue for later sync if online save fails
+                let entry = QueuedProgress(
+                    bookId: bookId,
+                    audioFileId: audioFileId,
+                    positionSeconds: position,
+                    playbackRate: rate,
+                    audioDuration: fileDuration,
+                    timestamp: Date().timeIntervalSince1970 * 1000
+                )
+                Task {
+                    await OfflineProgressQueue.shared.enqueue(entry)
+                }
             }
         }
     }

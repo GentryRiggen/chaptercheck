@@ -24,6 +24,47 @@ struct AudioFile: Decodable, Identifiable, Hashable, Sendable {
     let displayName: String?
 
     var id: String { _id }
+
+    init(
+        _id: String,
+        _creationTime: Double,
+        bookId: String,
+        fileName: String,
+        fileSize: Double,
+        duration: Double,
+        format: String,
+        bitrate: String? = nil,
+        r2Key: String,
+        r2Bucket: String,
+        storageAccountId: String? = nil,
+        uploadedBy: String,
+        uploadedAt: Double,
+        partNumber: Double? = nil,
+        chapterNumber: Double? = nil,
+        chapterTitle: String? = nil,
+        friendlyName: String? = nil,
+        displayName: String? = nil
+    ) {
+        self._id = _id
+        self._creationTime = _creationTime
+        self.bookId = bookId
+        self.fileName = fileName
+        self.fileSize = fileSize
+        self.duration = duration
+        self.format = format
+        self.bitrate = bitrate
+        self.r2Key = r2Key
+        self.r2Bucket = r2Bucket
+        self.storageAccountId = storageAccountId
+        self.uploadedBy = uploadedBy
+        self.uploadedAt = uploadedAt
+        self.partNumber = partNumber
+        self.chapterNumber = chapterNumber
+        self.chapterTitle = chapterTitle
+        self.friendlyName = friendlyName
+        self.displayName = displayName
+    }
+
     var partNumberInt: Int { Int(partNumber ?? 1) }
     var fileSizeBytes: Int { Int(fileSize) }
     var durationSeconds: Int { Int(duration) }

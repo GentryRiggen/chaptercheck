@@ -91,6 +91,19 @@ actor DownloadService {
         manifest.bookMetadata
     }
 
+    /// Get audio file metadata from the manifest.
+    func allAudioFileMetadata() -> [String: AudioFileMetadataEntry] {
+        manifest.audioFileMetadata
+    }
+
+    /// Store audio file metadata entries in the manifest for offline playback.
+    func storeAudioFileMetadata(_ entries: [AudioFileMetadataEntry]) {
+        for entry in entries {
+            manifest.audioFileMetadata[entry.audioFileId] = entry
+        }
+        saveManifestToDisk()
+    }
+
     /// Total storage used by all downloaded files.
     func totalStorageUsed() -> Int64 {
         manifest.files.values
@@ -191,6 +204,7 @@ actor DownloadService {
             activeTasks[id]?.cancel()
             activeTasks.removeValue(forKey: id)
             manifest.files.removeValue(forKey: id)
+            manifest.audioFileMetadata.removeValue(forKey: id)
         }
 
         // Remove book metadata

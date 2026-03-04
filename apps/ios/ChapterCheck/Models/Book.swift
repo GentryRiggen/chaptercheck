@@ -25,6 +25,46 @@ struct BookWithDetails: Decodable, Identifiable, Hashable, Sendable {
 
     var id: String { _id }
 
+    init(
+        _id: String,
+        _creationTime: Double,
+        title: String,
+        subtitle: String? = nil,
+        description: String? = nil,
+        isbn: String? = nil,
+        publishedYear: Double? = nil,
+        coverImageR2Key: String? = nil,
+        language: String? = nil,
+        duration: Double? = nil,
+        seriesId: String? = nil,
+        seriesOrder: Double? = nil,
+        averageRating: Double? = nil,
+        ratingCount: Double? = nil,
+        createdAt: Double,
+        updatedAt: Double,
+        authors: [BookAuthor],
+        series: SeriesSummary? = nil
+    ) {
+        self._id = _id
+        self._creationTime = _creationTime
+        self.title = title
+        self.subtitle = subtitle
+        self.description = description
+        self.isbn = isbn
+        self.publishedYear = publishedYear
+        self.coverImageR2Key = coverImageR2Key
+        self.language = language
+        self.duration = duration
+        self.seriesId = seriesId
+        self.seriesOrder = seriesOrder
+        self.averageRating = averageRating
+        self.ratingCount = ratingCount
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.authors = authors
+        self.series = series
+    }
+
     var ratingCountInt: Int { Int(ratingCount ?? 0) }
 
     /// Duration formatted as "Xh Ym"
@@ -63,6 +103,26 @@ struct BookAuthor: Decodable, Identifiable, Hashable, Sendable {
     let updatedAt: Double?
 
     var id: String { _id }
+
+    init(
+        _id: String,
+        _creationTime: Double? = nil,
+        name: String,
+        bio: String? = nil,
+        imageR2Key: String? = nil,
+        role: String? = nil,
+        createdAt: Double? = nil,
+        updatedAt: Double? = nil
+    ) {
+        self._id = _id
+        self._creationTime = _creationTime
+        self.name = name
+        self.bio = bio
+        self.imageR2Key = imageR2Key
+        self.role = role
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
 }
 
 /// Lightweight series reference returned inline with book queries.

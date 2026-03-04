@@ -14,4 +14,5 @@ enum AppDestination: Hashable {
     case search
     case browseLibrary
     case browseAuthors
+    case offlineBook(bookId: String)
 }
