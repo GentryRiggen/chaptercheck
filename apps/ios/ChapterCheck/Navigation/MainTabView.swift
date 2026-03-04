@@ -88,6 +88,7 @@ struct MainView: View {
     @State private var isNowPlayingPresented = false
     @State private var isSettingsPresented = false
     @State private var pendingNavigation: AppDestination?
+    @State private var preferencesCancellable: AnyCancellable?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -112,6 +113,7 @@ struct MainView: View {
         .task {
             await downloadManager.initialize()
             audioPlayer.downloadManager = downloadManager
+            subscribeToPreferences()
         }
         .sheet(isPresented: $isNowPlayingPresented, onDismiss: {
             if let pending = pendingNavigation {
@@ -134,6 +136,24 @@ struct MainView: View {
             pendingNavigation = destination
             isNowPlayingPresented = false
         }
+    }
+
+    private func subscribeToPreferences() {
+        guard preferencesCancellable == nil,
+              let publisher = PreferencesRepository().subscribeToPreferences() else { return }
+
+        preferencesCancellable = publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure = completion {
+                        // Subscription ended — player continues with cached/default preferences
+                    }
+                },
+                receiveValue: { [audioPlayer] prefs in
+                    audioPlayer.applyPreferences(prefs)
+                }
+            )
     }
 
     // MARK: - Navigation Destination

@@ -48,8 +48,14 @@ struct SettingsView: View {
                     }
                 }
 
-                // Downloads section
+                // Settings section
                 Section {
+                    NavigationLink {
+                        PlaybackSettingsView()
+                    } label: {
+                        Label("Playback", systemImage: "play.circle")
+                    }
+
                     NavigationLink {
                         DownloadsView()
                     } label: {
@@ -65,24 +71,8 @@ struct SettingsView: View {
                             }
                         }
                     }
-                }
-
-                // Account details section
-                Section {
-                    if let user = Clerk.shared.user {
-                        LabeledContent(
-                            "Email",
-                            value: user.emailAddresses.first?.emailAddress ?? "Unknown"
-                        )
-                        let fullName = [user.firstName, user.lastName]
-                            .compactMap { $0 }
-                            .joined(separator: " ")
-                        if !fullName.isEmpty {
-                            LabeledContent("Name", value: fullName)
-                        }
-                    }
                 } header: {
-                    Text("Account")
+                    Text("Settings")
                 }
 
                 // Sign out

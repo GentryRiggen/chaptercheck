@@ -175,7 +175,7 @@ struct BookDetailView: View {
                 book: book,
                 audioFile: audioFile,
                 allFiles: viewModel.audioFiles,
-                startPosition: viewModel.resumePosition,
+                startPosition: viewModel.resumePosition(smartRewindEnabled: audioPlayer.isSmartRewindEnabled),
                 rate: viewModel.resumeRate
             )
         } label: {
@@ -192,7 +192,7 @@ struct BookDetailView: View {
     }
 
     private var hasExistingProgress: Bool {
-        viewModel.progress != nil && viewModel.resumePosition > 0
+        viewModel.progress != nil && viewModel.resumePosition(smartRewindEnabled: audioPlayer.isSmartRewindEnabled) > 0
     }
 
     // MARK: - Description

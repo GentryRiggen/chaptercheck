@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Sheet for audio playback settings: speed control and voice boost toggle.
+/// Sheet for audio playback settings: speed control, voice boost, skip durations,
+/// momentum skipping, and smart rewind.
 ///
 /// Overcast-inspired layout with grouped sections on a material background.
 struct AudioSettingsSheet: View {
@@ -10,97 +11,199 @@ struct AudioSettingsSheet: View {
     private static let maxRate = 3.0
     private static let step = 0.1
 
+    private static let forwardOptions: [Double] = [10, 15, 30, 45, 60]
+    private static let backwardOptions: [Double] = [5, 10, 15, 30]
+
+    private let preferencesRepository = PreferencesRepository()
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Header
-            Text("Audio")
-                .font(.title2)
-                .fontWeight(.bold)
-                .padding(.horizontal, 36)
-                .padding(.top, 16)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Header
+                Text("Audio")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 36)
+                    .padding(.top, 16)
 
-            // Speed control row
-            HStack {
-                Text("Playback Speed")
-                    .font(.body)
+                // Speed control row
+                speedControl
 
-                Spacer()
+                // Voice boost toggle
+                settingToggle(
+                    title: "Voice Boost",
+                    subtitle: "Clear, consistent volume",
+                    isOn: audioPlayer.isVoiceBoostEnabled,
+                    hint: "Enhances voice clarity and evens out volume"
+                ) { audioPlayer.setVoiceBoost($0) }
 
-                Text(formatRate(audioPlayer.playbackRate))
-                    .font(.body)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 44)
-
-                HStack(spacing: 0) {
-                    Button {
-                        Haptics.selection()
-                        let newRate = max(Self.minRate, (audioPlayer.playbackRate - Self.step).rounded(toPlaces: 1))
-                        audioPlayer.setRate(newRate)
-                    } label: {
-                        Image(systemName: "minus")
-                            .font(.body.weight(.semibold))
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .disabled(audioPlayer.playbackRate <= Self.minRate)
-                    .opacity(audioPlayer.playbackRate <= Self.minRate ? 0.35 : 1)
-
-                    Divider()
-                        .frame(height: 20)
-
-                    Button {
-                        Haptics.selection()
-                        let newRate = min(Self.maxRate, (audioPlayer.playbackRate + Self.step).rounded(toPlaces: 1))
-                        audioPlayer.setRate(newRate)
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.body.weight(.semibold))
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .disabled(audioPlayer.playbackRate >= Self.maxRate)
-                    .opacity(audioPlayer.playbackRate >= Self.maxRate ? 0.35 : 1)
-                }
-                .buttonStyle(.plain)
-                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 10))
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal, 16)
-
-            // Voice boost toggle
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Voice Boost")
-                        .font(.body)
-                    Text("Clear, consistent volume")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                // Skip forward picker
+                skipPicker(
+                    title: "Skip Forward",
+                    options: Self.forwardOptions,
+                    selected: audioPlayer.baseSkipForward
+                ) { value in
+                    preferencesRepository.updatePreferences(skipForwardSeconds: value)
                 }
 
-                Spacer()
+                // Skip backward picker
+                skipPicker(
+                    title: "Skip Backward",
+                    options: Self.backwardOptions,
+                    selected: audioPlayer.baseSkipBackward
+                ) { value in
+                    preferencesRepository.updatePreferences(skipBackwardSeconds: value)
+                }
 
-                Toggle("Voice Boost", isOn: Binding(
-                    get: { audioPlayer.isVoiceBoostEnabled },
-                    set: { audioPlayer.setVoiceBoost($0) }
-                ))
-                .labelsHidden()
-                .tint(.accentColor)
-                .accessibilityHint("Enhances voice clarity and evens out volume")
+                // Momentum skipping toggle
+                settingToggle(
+                    title: "Momentum Skipping",
+                    subtitle: "Skip farther with rapid taps",
+                    isOn: audioPlayer.isMomentumSkipEnabled
+                ) { preferencesRepository.updatePreferences(momentumSkipEnabled: $0) }
+
+                // Smart rewind toggle
+                settingToggle(
+                    title: "Smart Rewind",
+                    subtitle: "Rewind slightly when resuming after a break",
+                    isOn: audioPlayer.isSmartRewindEnabled
+                ) { preferencesRepository.updatePreferences(smartRewindEnabled: $0) }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal, 16)
-
-            Spacer()
+            .padding(.bottom, 16)
         }
-        .presentationDetents([.height(260)])
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
+
+    // MARK: - Speed Control
+
+    private var speedControl: some View {
+        HStack {
+            Text("Playback Speed")
+                .font(.body)
+
+            Spacer()
+
+            Text(formatRate(audioPlayer.playbackRate))
+                .font(.body)
+                .fontWeight(.semibold)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 44)
+
+            HStack(spacing: 0) {
+                Button {
+                    Haptics.selection()
+                    let newRate = max(Self.minRate, (audioPlayer.playbackRate - Self.step).rounded(toPlaces: 1))
+                    audioPlayer.setRate(newRate)
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .disabled(audioPlayer.playbackRate <= Self.minRate)
+                .opacity(audioPlayer.playbackRate <= Self.minRate ? 0.35 : 1)
+
+                Divider()
+                    .frame(height: 20)
+
+                Button {
+                    Haptics.selection()
+                    let newRate = min(Self.maxRate, (audioPlayer.playbackRate + Self.step).rounded(toPlaces: 1))
+                    audioPlayer.setRate(newRate)
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .disabled(audioPlayer.playbackRate >= Self.maxRate)
+                .opacity(audioPlayer.playbackRate >= Self.maxRate ? 0.35 : 1)
+            }
+            .buttonStyle(.plain)
+            .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 10))
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - Skip Picker
+
+    private func skipPicker(
+        title: String,
+        options: [Double],
+        selected: Double,
+        onChange: @escaping (Double) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.body)
+
+            HStack(spacing: 8) {
+                ForEach(options, id: \.self) { value in
+                    Button {
+                        Haptics.selection()
+                        onChange(value)
+                    } label: {
+                        Text("\(Int(value))s")
+                            .font(.subheadline)
+                            .fontWeight(selected == value ? .semibold : .regular)
+                            .foregroundStyle(selected == value ? .white : .primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                selected == value ? AnyShapeStyle(.tint) : AnyShapeStyle(.fill.tertiary),
+                                in: RoundedRectangle(cornerRadius: 8)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - Toggle Row
+
+    private func settingToggle(
+        title: String,
+        subtitle: String,
+        isOn: Bool,
+        hint: String? = nil,
+        onChange: @escaping (Bool) -> Void
+    ) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Toggle(title, isOn: Binding(
+                get: { isOn },
+                set: { onChange($0) }
+            ))
+            .labelsHidden()
+            .tint(.accentColor)
+            .accessibilityHint(hint ?? "")
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - Helpers
 
     private func formatRate(_ rate: Double) -> String {
         if rate == floor(rate) {

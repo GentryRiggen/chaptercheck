@@ -26,11 +26,11 @@ final class NowPlayingManager {
 
     private let logger = Logger(subsystem: "com.chaptercheck", category: "NowPlaying")
 
-    /// Skip interval in seconds for the forward command (30s, matching the app UI).
-    private let skipForwardInterval: TimeInterval = 30
+    /// Skip interval in seconds for the forward command.
+    private var skipForwardInterval: TimeInterval = 30
 
-    /// Skip interval in seconds for the backward command (15s, matching the app UI).
-    private let skipBackwardInterval: TimeInterval = 15
+    /// Skip interval in seconds for the backward command.
+    private var skipBackwardInterval: TimeInterval = 15
 
     /// Cached artwork image to avoid regenerating it on every info update.
     private var cachedArtwork: MPMediaItemArtwork?
@@ -202,5 +202,15 @@ final class NowPlayingManager {
         let center = MPRemoteCommandCenter.shared()
         center.nextTrackCommand.isEnabled = hasNext
         center.previousTrackCommand.isEnabled = hasPrevious
+    }
+
+    /// Update the skip intervals shown on the lock screen / Control Center.
+    func updateSkipIntervals(forward: TimeInterval, backward: TimeInterval) {
+        skipForwardInterval = forward
+        skipBackwardInterval = backward
+
+        let center = MPRemoteCommandCenter.shared()
+        center.skipForwardCommand.preferredIntervals = [NSNumber(value: forward)]
+        center.skipBackwardCommand.preferredIntervals = [NSNumber(value: backward)]
     }
 }

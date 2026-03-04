@@ -37,7 +37,7 @@ struct NowPlayingView: View {
             // Top: category label + title + part info
             topSection
                 .padding(.horizontal, 24)
-                .padding(.top, 8)
+                .padding(.top, 20)
 
             Spacer()
 

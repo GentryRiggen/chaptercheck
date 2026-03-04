@@ -80,11 +80,12 @@ final class BookDetailViewModel {
     }
 
     /// Position in seconds to resume from, with smart rewind applied.
-    var resumePosition: Double {
+    func resumePosition(smartRewindEnabled: Bool) -> Double {
         guard let progress, progress.lastListenedAt > 0 else { return 0 }
         return AudioPlayerManager.smartRewindPosition(
             from: progress.positionSeconds,
-            lastListenedAt: progress.lastListenedAt
+            lastListenedAt: progress.lastListenedAt,
+            enabled: smartRewindEnabled
         )
     }
 

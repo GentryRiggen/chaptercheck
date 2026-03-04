@@ -48,7 +48,19 @@ final class AudioPlayerManager {
     private(set) var playbackRate: Double = 1.0
 
     /// Whether voice boost audio processing is enabled.
-    private(set) var isVoiceBoostEnabled: Bool = UserDefaults.standard.bool(forKey: "voiceBoostEnabled")
+    private(set) var isVoiceBoostEnabled: Bool = false
+
+    /// Base skip-forward duration in seconds (configurable via preferences).
+    private(set) var baseSkipForward: Double = PlaybackDefaults.skipForwardSeconds
+
+    /// Base skip-backward duration in seconds (configurable via preferences).
+    private(set) var baseSkipBackward: Double = PlaybackDefaults.skipBackwardSeconds
+
+    /// Whether momentum skipping (escalating amounts on rapid taps) is enabled.
+    private(set) var isMomentumSkipEnabled: Bool = PlaybackDefaults.momentumSkipEnabled
+
+    /// Whether smart rewind (slight rewind after long pauses) is enabled.
+    private(set) var isSmartRewindEnabled: Bool = PlaybackDefaults.smartRewindEnabled
 
     /// Whether the player is loading/buffering a new track.
     private(set) var isLoading = false
@@ -123,6 +135,7 @@ final class AudioPlayerManager {
     private let nowPlayingManager: NowPlayingManager
     private let sessionManager: AudioSessionManager
     private let progressRepository: ProgressRepository
+    private let preferencesRepository: PreferencesRepository
     private let logger = Logger(subsystem: "com.chaptercheck", category: "AudioPlayer")
 
     /// Optional download manager for offline playback. Set after initialization
@@ -185,7 +198,9 @@ final class AudioPlayerManager {
         self.nowPlayingManager = NowPlayingManager()
         self.sessionManager = AudioSessionManager()
         self.progressRepository = ProgressRepository()
+        self.preferencesRepository = PreferencesRepository()
 
+        loadCachedPreferences()
         configureAudioSession()
         configureRemoteCommands()
         observeAppLifecycle()
@@ -198,8 +213,9 @@ final class AudioPlayerManager {
     /// Persists the preference to UserDefaults and immediately applies or removes
     /// the audio processing tap on the current player item.
     func setVoiceBoost(_ enabled: Bool) {
-        UserDefaults.standard.set(enabled, forKey: "voiceBoostEnabled")
         isVoiceBoostEnabled = enabled
+        cachePreferencesLocally()
+        preferencesRepository.updatePreferences(voiceBoostEnabled: enabled)
 
         guard let playerItem = player?.currentItem else { return }
 
@@ -209,7 +225,8 @@ final class AudioPlayerManager {
             } else {
                 logger.error("Failed to create voice boost audio mix")
                 isVoiceBoostEnabled = false
-                UserDefaults.standard.set(false, forKey: "voiceBoostEnabled")
+                cachePreferencesLocally()
+                preferencesRepository.updatePreferences(voiceBoostEnabled: false)
             }
         } else {
             playerItem.audioMix = nil
@@ -745,10 +762,16 @@ final class AudioPlayerManager {
     /// `skipMomentumWindow`, the amount escalates to the next tier (15→30→60→120).
     /// Resets after `skipResetDelay` of inactivity.
     private func getSkipAmount(direction: SkipDirection) -> Double {
+        // When momentum is disabled, always return the fixed base amount
+        guard isMomentumSkipEnabled else {
+            return direction == .forward ? baseSkipForward : baseSkipBackward
+        }
+
         let now = Date()
 
         switch direction {
         case .forward:
+            let baseTierIndex = Self.baseTierIndex(for: baseSkipForward)
             if now.timeIntervalSince(forwardMomentum.lastTime) < Self.skipMomentumWindow {
                 forwardMomentum.count += 1
                 if forwardMomentum.count >= Self.skipMomentumTaps,
@@ -758,12 +781,14 @@ final class AudioPlayerManager {
                 }
             } else {
                 forwardMomentum.count = 1
-                forwardMomentum.tierIndex = Self.forwardBaseTierIndex
+                forwardMomentum.tierIndex = baseTierIndex
             }
             forwardMomentum.lastTime = now
-            skipAmountForward = Self.skipTiers[forwardMomentum.tierIndex]
+            let tierIndex = min(forwardMomentum.tierIndex, Self.skipTiers.count - 1)
+            skipAmountForward = Self.skipTiers[tierIndex]
 
         case .backward:
+            let baseTierIndex = Self.baseTierIndex(for: baseSkipBackward)
             if now.timeIntervalSince(backwardMomentum.lastTime) < Self.skipMomentumWindow {
                 backwardMomentum.count += 1
                 if backwardMomentum.count >= Self.skipMomentumTaps,
@@ -773,10 +798,11 @@ final class AudioPlayerManager {
                 }
             } else {
                 backwardMomentum.count = 1
-                backwardMomentum.tierIndex = 0
+                backwardMomentum.tierIndex = baseTierIndex
             }
             backwardMomentum.lastTime = now
-            skipAmountBackward = Self.skipTiers[backwardMomentum.tierIndex]
+            let tierIndex = min(backwardMomentum.tierIndex, Self.skipTiers.count - 1)
+            skipAmountBackward = Self.skipTiers[tierIndex]
         }
 
         // Schedule reset after inactivity
@@ -793,12 +819,19 @@ final class AudioPlayerManager {
     }
 
     private func resetMomentum() {
-        forwardMomentum = SkipDirectionState(tierIndex: Self.forwardBaseTierIndex)
-        backwardMomentum = SkipDirectionState(tierIndex: 0)
-        skipAmountForward = Self.skipTiers[Self.forwardBaseTierIndex]
-        skipAmountBackward = Self.skipTiers[0]
+        forwardMomentum = SkipDirectionState(tierIndex: Self.baseTierIndex(for: baseSkipForward))
+        backwardMomentum = SkipDirectionState(tierIndex: Self.baseTierIndex(for: baseSkipBackward))
+        skipAmountForward = baseSkipForward
+        skipAmountBackward = baseSkipBackward
         skipResetTask?.cancel()
         skipResetTask = nil
+    }
+
+    /// Find the lowest tier index whose value is >= the base amount.
+    /// If no tier is large enough, returns the last tier index so momentum
+    /// starts at the highest available tier rather than crashing.
+    private static func baseTierIndex(for baseAmount: Double) -> Int {
+        skipTiers.firstIndex(where: { $0 >= baseAmount }) ?? (skipTiers.count - 1)
     }
 
     // MARK: - Private: Part Navigation Helpers
@@ -855,7 +888,9 @@ final class AudioPlayerManager {
     ///   - position: The saved position in seconds.
     ///   - lastListenedAt: Epoch timestamp in milliseconds of the last listen.
     /// - Returns: Adjusted position in seconds, clamped to ≥ 0.
-    static func smartRewindPosition(from position: Double, lastListenedAt: Double) -> Double {
+    static func smartRewindPosition(from position: Double, lastListenedAt: Double, enabled: Bool = true) -> Double {
+        guard enabled else { return position }
+
         let elapsedMs = max(0, Date().timeIntervalSince1970 * 1000 - lastListenedAt)
 
         let rewind: Double
@@ -883,5 +918,84 @@ final class AudioPlayerManager {
             return "\(hours):\(String(format: "%02d", minutes)):\(String(format: "%02d", seconds))"
         }
         return "\(minutes):\(String(format: "%02d", seconds))"
+    }
+
+    // MARK: - Preferences
+
+    /// Apply preferences from Convex, falling back to defaults for nil fields.
+    func applyPreferences(_ prefs: UserPreferences?) {
+        let rawForward = prefs?.skipForwardSeconds ?? PlaybackDefaults.skipForwardSeconds
+        let rawBackward = prefs?.skipBackwardSeconds ?? PlaybackDefaults.skipBackwardSeconds
+        let newForward = rawForward > 0 ? rawForward : PlaybackDefaults.skipForwardSeconds
+        let newBackward = rawBackward > 0 ? rawBackward : PlaybackDefaults.skipBackwardSeconds
+        let newMomentum = prefs?.momentumSkipEnabled ?? PlaybackDefaults.momentumSkipEnabled
+        let newSmartRewind = prefs?.smartRewindEnabled ?? PlaybackDefaults.smartRewindEnabled
+        let newVoiceBoost = prefs?.voiceBoostEnabled ?? PlaybackDefaults.voiceBoostEnabled
+
+        let skipChanged = newForward != baseSkipForward || newBackward != baseSkipBackward
+
+        baseSkipForward = newForward
+        baseSkipBackward = newBackward
+        isMomentumSkipEnabled = newMomentum
+        isSmartRewindEnabled = newSmartRewind
+
+        if skipChanged {
+            nowPlayingManager.updateSkipIntervals(forward: newForward, backward: newBackward)
+            resetMomentum()
+        }
+
+        // Sync voice boost if changed (without re-persisting to Convex)
+        if newVoiceBoost != isVoiceBoostEnabled {
+            isVoiceBoostEnabled = newVoiceBoost
+            if let playerItem = player?.currentItem {
+                if newVoiceBoost {
+                    playerItem.audioMix = VoiceBoostProcessor.createAudioMix(for: playerItem)
+                } else {
+                    playerItem.audioMix = nil
+                }
+            }
+        }
+
+        cachePreferencesLocally()
+    }
+
+    // MARK: - UserDefaults Caching
+
+    private static let cacheKeyPrefix = "pref_"
+
+    private func cachePreferencesLocally() {
+        let defaults = UserDefaults.standard
+        defaults.set(baseSkipForward, forKey: "\(Self.cacheKeyPrefix)skipForward")
+        defaults.set(baseSkipBackward, forKey: "\(Self.cacheKeyPrefix)skipBackward")
+        defaults.set(isMomentumSkipEnabled, forKey: "\(Self.cacheKeyPrefix)momentum")
+        defaults.set(isSmartRewindEnabled, forKey: "\(Self.cacheKeyPrefix)smartRewind")
+        defaults.set(isVoiceBoostEnabled, forKey: "\(Self.cacheKeyPrefix)voiceBoost")
+    }
+
+    private func loadCachedPreferences() {
+        let defaults = UserDefaults.standard
+
+        // Only load if we have cached values (check for the skip forward key)
+        guard defaults.object(forKey: "\(Self.cacheKeyPrefix)skipForward") != nil else {
+            // Migrate legacy voiceBoostEnabled key if present
+            if defaults.object(forKey: "voiceBoostEnabled") != nil {
+                isVoiceBoostEnabled = defaults.bool(forKey: "voiceBoostEnabled")
+                defaults.removeObject(forKey: "voiceBoostEnabled")
+            }
+            return
+        }
+
+        baseSkipForward = defaults.double(forKey: "\(Self.cacheKeyPrefix)skipForward")
+        baseSkipBackward = defaults.double(forKey: "\(Self.cacheKeyPrefix)skipBackward")
+        isMomentumSkipEnabled = defaults.bool(forKey: "\(Self.cacheKeyPrefix)momentum")
+        isSmartRewindEnabled = defaults.bool(forKey: "\(Self.cacheKeyPrefix)smartRewind")
+        isVoiceBoostEnabled = defaults.bool(forKey: "\(Self.cacheKeyPrefix)voiceBoost")
+
+        // Validate loaded values
+        if baseSkipForward <= 0 { baseSkipForward = PlaybackDefaults.skipForwardSeconds }
+        if baseSkipBackward <= 0 { baseSkipBackward = PlaybackDefaults.skipBackwardSeconds }
+
+        skipAmountForward = baseSkipForward
+        skipAmountBackward = baseSkipBackward
     }
 }

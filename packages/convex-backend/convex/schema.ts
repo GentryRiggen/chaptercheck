@@ -41,6 +41,18 @@ export default defineSchema({
       filterFields: ["email"],
     }),
 
+  // User Preferences (playback settings, synced across devices)
+  userPreferences: defineTable({
+    userId: v.id("users"),
+    skipForwardSeconds: v.optional(v.number()), // default: 30
+    skipBackwardSeconds: v.optional(v.number()), // default: 15
+    momentumSkipEnabled: v.optional(v.boolean()), // default: true
+    smartRewindEnabled: v.optional(v.boolean()), // default: true
+    voiceBoostEnabled: v.optional(v.boolean()), // default: false
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
   // Authors
   authors: defineTable({
     name: v.string(),

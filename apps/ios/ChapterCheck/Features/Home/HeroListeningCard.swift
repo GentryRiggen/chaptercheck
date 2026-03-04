@@ -105,7 +105,8 @@ struct HeroListeningCard: View {
         let targetFileId = item.audioFile._id
         let position = AudioPlayerManager.smartRewindPosition(
             from: item.positionSeconds,
-            lastListenedAt: item.lastListenedAt
+            lastListenedAt: item.lastListenedAt,
+            enabled: audioPlayer.isSmartRewindEnabled
         )
         let rate = item.playbackRate
 
