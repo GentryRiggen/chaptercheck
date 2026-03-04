@@ -224,104 +224,89 @@ struct NowPlayingView: View {
     // MARK: - Bottom Toolbar
 
     private var bottomToolbar: some View {
-        HStack {
-            // Dismiss button — leading
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.down")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .contentShape(Circle())
-
-            // Info button — navigate to book or author
-            if let book = audioPlayer.currentBook {
-                Menu {
-                    Button {
-                        navigateToDestination(.book(id: book._id))
-                    } label: {
-                        Label("Book Details", systemImage: "book")
-                    }
-                    ForEach(book.authors, id: \._id) { author in
-                        Button {
-                            navigateToDestination(.author(id: author._id))
-                        } label: {
-                            Label(author.name, systemImage: "person")
-                        }
-                    }
+        ZStack {
+            // Center group: audio settings, info, sleep timer — screen-centered
+            HStack(spacing: 12) {
+                // Audio settings — left of center
+                Button {
+                    Haptics.light()
+                    isAudioSettingsPresented = true
                 } label: {
-                    Image(systemName: "info.circle")
+                    Image(systemName: "waveform")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .frame(width: 44, height: 44)
                         .background(.ultraThinMaterial, in: Circle())
                 }
-                .accessibilityLabel("Book info")
-            }
-
-            Spacer()
-
-            // Parts button — center-ish
-            if audioPlayer.audioFiles.count > 1 {
-                Button {
-                    isPartSelectorPresented = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "list.bullet")
-                        Text("Parts")
-                            .font(.subheadline)
-                    }
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                }
                 .buttonStyle(.plain)
-                .contentShape(Capsule())
-            }
+                .contentShape(Circle())
+                .accessibilityLabel("Audio settings")
 
-            Spacer()
-
-            // Sleep timer — trailing
-            Button {
-                Haptics.light()
-                isSleepTimerPresented = true
-            } label: {
-                VStack(spacing: 2) {
-                    Image(systemName: audioPlayer.isSleepTimerActive ? "moon.zzz.fill" : "moon.zzz")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(audioPlayer.isSleepTimerActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                    if audioPlayer.isSleepTimerActive {
-                        Text(audioPlayer.formattedSleepTimer)
-                            .font(.system(size: 9, weight: .medium))
-                            .monospacedDigit()
-                            .foregroundStyle(.tint)
+                // Info button — center
+                if let book = audioPlayer.currentBook {
+                    Menu {
+                        Button {
+                            navigateToDestination(.book(id: book._id))
+                        } label: {
+                            Label("Book Details", systemImage: "book")
+                        }
+                        ForEach(book.authors, id: \._id) { author in
+                            Button {
+                                navigateToDestination(.author(id: author._id))
+                            } label: {
+                                Label(author.name, systemImage: "person")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                            .background(.ultraThinMaterial, in: Circle())
                     }
+                    .accessibilityLabel("Book info")
                 }
-                .frame(width: 44, height: 44)
-                .background(.ultraThinMaterial, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .contentShape(Circle())
-            .accessibilityLabel(audioPlayer.isSleepTimerActive ? "Sleep timer \(audioPlayer.formattedSleepTimer) remaining" : "Sleep timer")
 
-            // Audio settings — trailing
-            Button {
-                Haptics.light()
-                isAudioSettingsPresented = true
-            } label: {
-                Image(systemName: "waveform")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                // Sleep timer — right of center
+                Button {
+                    Haptics.light()
+                    isSleepTimerPresented = true
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: audioPlayer.isSleepTimerActive ? "moon.zzz.fill" : "moon.zzz")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(audioPlayer.isSleepTimerActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                        if audioPlayer.isSleepTimerActive {
+                            Text(audioPlayer.formattedSleepTimer)
+                                .font(.system(size: 9, weight: .medium))
+                                .monospacedDigit()
+                                .foregroundStyle(.tint)
+                        }
+                    }
                     .frame(width: 44, height: 44)
                     .background(.ultraThinMaterial, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .contentShape(Circle())
+                .accessibilityLabel(audioPlayer.isSleepTimerActive ? "Sleep timer \(audioPlayer.formattedSleepTimer) remaining" : "Sleep timer")
             }
-            .buttonStyle(.plain)
-            .contentShape(Circle())
-            .accessibilityLabel("Audio settings")
+
+            // Dismiss button — pinned leading
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .contentShape(Circle())
+
+                Spacer()
+            }
         }
     }
 
