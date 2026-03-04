@@ -228,22 +228,4 @@ struct ThemeSettingsView: View {
         .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 12))
     }
 
-    // MARK: - Subscription
-
-    private func subscribeToPreferences() {
-        guard cancellables.isEmpty,
-              let publisher = preferencesRepository.subscribeToPreferences() else { return }
-
-        publisher
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in },
-                receiveValue: { prefs in
-                    selectedAccent = prefs?.accentColor ?? PlaybackDefaults.accentColor
-                    selectedScheme = prefs?.colorSchemeMode ?? PlaybackDefaults.colorSchemeMode
-                    hasInitialized = true
-                }
-            )
-            .store(in: &cancellables)
-    }
 }
