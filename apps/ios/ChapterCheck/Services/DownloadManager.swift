@@ -251,25 +251,53 @@ final class DownloadManager {
             authors: authors
         )
 
-        let audioFiles: [AudioFile] = info.audioFileMetadata
-            .sorted { ($0.partNumber ?? 0) < ($1.partNumber ?? 0) }
-            .map { meta in
-                AudioFile(
-                    _id: meta.audioFileId,
-                    _creationTime: now,
-                    bookId: meta.bookId,
-                    fileName: meta.fileName,
-                    fileSize: meta.fileSize,
-                    duration: meta.duration,
-                    format: meta.format,
-                    r2Key: "",
-                    r2Bucket: "",
-                    uploadedBy: "",
-                    uploadedAt: now,
-                    partNumber: meta.partNumber,
-                    displayName: meta.displayName
-                )
-            }
+        let audioFiles: [AudioFile]
+        if !info.audioFileMetadata.isEmpty {
+            audioFiles = info.audioFileMetadata
+                .sorted { ($0.partNumber ?? 0) < ($1.partNumber ?? 0) }
+                .map { meta in
+                    AudioFile(
+                        _id: meta.audioFileId,
+                        _creationTime: now,
+                        bookId: meta.bookId,
+                        fileName: meta.fileName,
+                        fileSize: meta.fileSize,
+                        duration: meta.duration,
+                        format: meta.format,
+                        r2Key: "",
+                        r2Bucket: "",
+                        uploadedBy: "",
+                        uploadedAt: now,
+                        partNumber: meta.partNumber,
+                        displayName: meta.displayName
+                    )
+                }
+        } else {
+            // Fallback: reconstruct minimal AudioFile objects from DownloadedFile
+            // records when audioFileMetadata is missing (e.g., legacy downloads).
+            audioFiles = info.files
+                .filter(\.isComplete)
+                .sorted { ($0.downloadedAt ?? .distantPast) < ($1.downloadedAt ?? .distantPast) }
+                .enumerated()
+                .map { index, file in
+                    let ext = (file.fileName as NSString).pathExtension
+                    return AudioFile(
+                        _id: file.audioFileId,
+                        _creationTime: now,
+                        bookId: file.bookId,
+                        fileName: file.fileName,
+                        fileSize: Double(file.fileSize),
+                        duration: 0,
+                        format: ext.isEmpty ? "m4a" : ext,
+                        r2Key: "",
+                        r2Bucket: "",
+                        uploadedBy: "",
+                        uploadedAt: now,
+                        partNumber: Double(index + 1),
+                        displayName: nil
+                    )
+                }
+        }
 
         guard !audioFiles.isEmpty else { return nil }
         return (book, audioFiles)

@@ -18,6 +18,7 @@ final class HomeViewModel {
     var topRatedBooks: [BookWithDetails] = []
 
     var isLoading = true
+    var showRetry = false
     var error: String?
 
     // MARK: - Dependencies
@@ -30,6 +31,7 @@ final class HomeViewModel {
     /// Tracks which subscriptions have emitted at least once,
     /// so we can dismiss the loading state after initial data arrives.
     private var loadedSections: Set<String> = []
+    private var retryTimer: Task<Void, Never>?
 
     // MARK: - Subscriptions
 
@@ -39,10 +41,23 @@ final class HomeViewModel {
         subscribeToRecentlyListening()
         subscribeToRecentBooks()
         subscribeToTopRatedBooks()
+        startRetryTimer()
     }
 
     func unsubscribe() {
         cancellables.removeAll()
+        retryTimer?.cancel()
+        retryTimer = nil
+    }
+
+    func retry() {
+        logger.info("Manual retry triggered")
+        isLoading = true
+        showRetry = false
+        error = nil
+        loadedSections.removeAll()
+        cancellables.removeAll()
+        subscribe()
     }
 
     // MARK: - Private Subscription Setup
@@ -54,7 +69,7 @@ final class HomeViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("recentlyListening FAILED: \(error)")
-                        self?.error = error.localizedDescription
+                        self?.handleError(error.localizedDescription)
                     }
                 },
                 receiveValue: { [weak self] items in
@@ -73,7 +88,7 @@ final class HomeViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("recentBooks FAILED: \(error)")
-                        self?.error = error.localizedDescription
+                        self?.handleError(error.localizedDescription)
                     }
                 },
                 receiveValue: { [weak self] books in
@@ -92,7 +107,7 @@ final class HomeViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("topRatedBooks FAILED: \(error)")
-                        self?.error = error.localizedDescription
+                        self?.handleError(error.localizedDescription)
                     }
                 },
                 receiveValue: { [weak self] books in
@@ -108,6 +123,22 @@ final class HomeViewModel {
         loadedSections.insert(section)
         if loadedSections.count >= 1 {
             isLoading = false
+            retryTimer?.cancel()
+            retryTimer = nil
+        }
+    }
+
+    private func handleError(_ message: String) {
+        error = message
+        isLoading = false
+    }
+
+    private func startRetryTimer() {
+        retryTimer?.cancel()
+        retryTimer = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            self?.showRetry = true
         }
     }
 }

@@ -15,10 +15,25 @@ struct HomeView: View {
         Group {
             if viewModel.isLoading {
                 LoadingView(message: "Loading your library...")
+                    .overlay(alignment: .bottom) {
+                        if viewModel.showRetry {
+                            Button {
+                                viewModel.retry()
+                            } label: {
+                                Label("Retry", systemImage: "arrow.clockwise")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+                            .buttonStyle(.bordered)
+                            .padding(.bottom, 120)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            .accessibilityLabel("Retry loading library")
+                        }
+                    }
+                    .animation(.easeInOut, value: viewModel.showRetry)
             } else if let error = viewModel.error {
                 ErrorView(message: error) {
-                    viewModel.unsubscribe()
-                    viewModel.subscribe()
+                    viewModel.retry()
                 }
             } else {
                 scrollContent
