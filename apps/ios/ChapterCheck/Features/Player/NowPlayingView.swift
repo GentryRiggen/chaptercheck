@@ -182,7 +182,7 @@ struct NowPlayingView: View {
                 Image(systemName: audioPlayer.skipBackwardSymbol)
                     .contentTransition(.symbolEffect(.replace))
                     .font(.system(size: 42))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.tint)
                     .frame(width: 72, height: 72)
             }
             .buttonStyle(.plain)
@@ -194,12 +194,11 @@ struct NowPlayingView: View {
             } label: {
                 if audioPlayer.isLoading {
                     ProgressView()
-                        .tint(.accentColor)
                         .frame(width: 80, height: 80)
                 } else {
                     Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 56))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(.tint)
                         .offset(x: audioPlayer.isPlaying ? 0 : 3)
                         .frame(width: 80, height: 80)
                 }
@@ -214,7 +213,7 @@ struct NowPlayingView: View {
                 Image(systemName: audioPlayer.skipForwardSymbol)
                     .contentTransition(.symbolEffect(.replace))
                     .font(.system(size: 42))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.tint)
                     .frame(width: 72, height: 72)
             }
             .buttonStyle(.plain)
@@ -294,12 +293,12 @@ struct NowPlayingView: View {
                 VStack(spacing: 2) {
                     Image(systemName: audioPlayer.isSleepTimerActive ? "moon.zzz.fill" : "moon.zzz")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(audioPlayer.isSleepTimerActive ? Color.accentColor : .secondary)
+                        .foregroundStyle(audioPlayer.isSleepTimerActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                     if audioPlayer.isSleepTimerActive {
                         Text(audioPlayer.formattedSleepTimer)
                             .font(.system(size: 9, weight: .medium))
                             .monospacedDigit()
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(.tint)
                     }
                 }
                 .frame(width: 44, height: 44)

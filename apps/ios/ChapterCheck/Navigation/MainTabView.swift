@@ -89,6 +89,7 @@ struct MainView: View {
     @State private var isSettingsPresented = false
     @State private var pendingNavigation: AppDestination?
     @State private var preferencesCancellable: AnyCancellable?
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -124,10 +125,12 @@ struct MainView: View {
             NowPlayingView()
                 .environment(audioPlayer)
                 .environment(\.navigateToDestination, navigateAction)
+                .preferredColorScheme(themeManager.preferredColorScheme)
         }
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView()
                 .environment(downloadManager)
+                .preferredColorScheme(themeManager.preferredColorScheme)
         }
     }
 
@@ -150,8 +153,9 @@ struct MainView: View {
                         // Subscription ended — player continues with cached/default preferences
                     }
                 },
-                receiveValue: { [audioPlayer] prefs in
+                receiveValue: { [audioPlayer, themeManager] prefs in
                     audioPlayer.applyPreferences(prefs)
+                    themeManager.applyPreferences(prefs)
                 }
             )
     }

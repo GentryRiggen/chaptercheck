@@ -26,7 +26,7 @@ struct AudioFileRow: View {
                 // Part number badge
                 ZStack {
                     Circle()
-                        .fill(isNowPlaying ? Color.accentColor : Color(.systemFill))
+                        .fill(isNowPlaying ? AnyShapeStyle(.tint) : AnyShapeStyle(Color(.systemFill)))
                         .frame(width: 36, height: 36)
 
                     if isNowPlaying && audioPlayer.isPlaying {
@@ -71,7 +71,7 @@ struct AudioFileRow: View {
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
-            .background(isNowPlaying ? Color.accentColor.opacity(0.08) : .clear)
+            .background(isNowPlaying ? AnyShapeStyle(.tint.opacity(0.08)) : AnyShapeStyle(.clear))
         }
         .buttonStyle(.plain)
     }

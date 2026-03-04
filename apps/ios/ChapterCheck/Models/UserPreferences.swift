@@ -11,6 +11,8 @@ struct UserPreferences: Decodable, Sendable {
     let momentumSkipEnabled: Bool?
     let smartRewindEnabled: Bool?
     let voiceBoostEnabled: Bool?
+    let accentColor: String?
+    let colorSchemeMode: String?
     let createdAt: Double
     let updatedAt: Double
 }
@@ -22,4 +24,6 @@ enum PlaybackDefaults {
     static let momentumSkipEnabled = true
     static let smartRewindEnabled = true
     static let voiceBoostEnabled = false
+    static let accentColor = "blue"
+    static let colorSchemeMode = "system"
 }

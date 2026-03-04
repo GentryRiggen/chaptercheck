@@ -9,6 +9,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject private var convexService = ConvexService.shared
     @Environment(DownloadManager.self) private var downloadManager
+    @Environment(ThemeManager.self) private var themeManager
     @Environment(\.dismiss) private var dismiss
     @State private var convexUser: UserWithPermissions?
     @State private var isProfilePrivate = false
@@ -52,6 +53,12 @@ struct SettingsView: View {
                         PlaybackSettingsView()
                     } label: {
                         Label("Playback", systemImage: "play.circle")
+                    }
+
+                    NavigationLink {
+                        ThemeSettingsView()
+                    } label: {
+                        Label("Theme", systemImage: "paintbrush")
                     }
 
                     NavigationLink {
@@ -124,22 +131,14 @@ struct SettingsView: View {
     @ViewBuilder
     private func userHeader(_ user: User) -> some View {
         VStack(spacing: 8) {
-            if let url = URL(string: user.imageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    default:
-                        avatarPlaceholder
-                    }
-                }
+            Circle()
+                .fill(themeManager.accentGradient)
                 .frame(width: 60, height: 60)
-                .clipShape(Circle())
-            } else {
-                avatarPlaceholder
-            }
+                .overlay {
+                    Image(systemName: "person.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                }
 
             let fullName = [user.firstName, user.lastName]
                 .compactMap { $0 }
@@ -157,17 +156,6 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-    }
-
-    private var avatarPlaceholder: some View {
-        Circle()
-            .fill(.secondary.opacity(0.2))
-            .overlay {
-                Image(systemName: "person.fill")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(width: 60, height: 60)
     }
 
     // MARK: - Subscriptions

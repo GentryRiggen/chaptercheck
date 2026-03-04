@@ -52,7 +52,6 @@ struct HeroListeningCard: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         ProgressView(value: item.progressFraction)
-                            .tint(.accentColor)
 
                         Text(item.formattedProgress)
                             .font(.caption2)

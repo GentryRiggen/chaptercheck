@@ -41,7 +41,7 @@ struct PartSelectorView: View {
                 // Part number
                 ZStack {
                     Circle()
-                        .fill(isCurrentPart ? Color.accentColor : Color(.systemFill))
+                        .fill(isCurrentPart ? AnyShapeStyle(.tint) : AnyShapeStyle(Color(.systemFill)))
                         .frame(width: 32, height: 32)
 
                     if isCurrentPart && audioPlayer.isPlaying {
@@ -79,6 +79,12 @@ struct PartSelectorView: View {
                 }
             }
         }
-        .listRowBackground(isCurrentPart ? Color.accentColor.opacity(0.08) : nil)
+        .listRowBackground(
+            Group {
+                if isCurrentPart {
+                    Rectangle().fill(.tint.opacity(0.08))
+                }
+            }
+        )
     }
 }

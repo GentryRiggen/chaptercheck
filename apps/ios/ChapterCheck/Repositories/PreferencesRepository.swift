@@ -31,7 +31,9 @@ final class PreferencesRepository {
         skipBackwardSeconds: Double? = nil,
         momentumSkipEnabled: Bool? = nil,
         smartRewindEnabled: Bool? = nil,
-        voiceBoostEnabled: Bool? = nil
+        voiceBoostEnabled: Bool? = nil,
+        accentColor: String? = nil,
+        colorSchemeMode: String? = nil
     ) {
         var args: [String: ConvexEncodable?] = [:]
         if let skipForwardSeconds { args["skipForwardSeconds"] = skipForwardSeconds }
@@ -39,6 +41,8 @@ final class PreferencesRepository {
         if let momentumSkipEnabled { args["momentumSkipEnabled"] = momentumSkipEnabled }
         if let smartRewindEnabled { args["smartRewindEnabled"] = smartRewindEnabled }
         if let voiceBoostEnabled { args["voiceBoostEnabled"] = voiceBoostEnabled }
+        if let accentColor { args["accentColor"] = accentColor }
+        if let colorSchemeMode { args["colorSchemeMode"] = colorSchemeMode }
 
         guard !args.isEmpty else { return }
 

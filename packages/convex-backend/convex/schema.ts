@@ -49,6 +49,8 @@ export default defineSchema({
     momentumSkipEnabled: v.optional(v.boolean()), // default: true
     smartRewindEnabled: v.optional(v.boolean()), // default: true
     voiceBoostEnabled: v.optional(v.boolean()), // default: false
+    accentColor: v.optional(v.string()), // default: "blue"
+    colorSchemeMode: v.optional(v.string()), // "system" | "light" | "dark"
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),

@@ -112,6 +112,9 @@
 		FCDC1439BB77F015DC1FA925 /* ListeningCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2374A2C380BE1BB06CE53A4 /* ListeningCard.swift */; };
 		FEB27D6B7647D5BAFAC0ACFF /* BookDownloadButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F55248B02AB02F2DC38EFA39 /* BookDownloadButton.swift */; };
 		FF212EBC80A3EBD8B3F96833 /* Download.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9EE730AE1B9B739DE817794 /* Download.swift */; };
+		DD4E5F6A7B8C9D0E1F2A3B4C /* AccentColorToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F6A7B8C9D0E1F /* AccentColorToken.swift */; };
+		EE5F6A7B8C9D0E1F2A3B4C5D /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2C3D4E5F6A7B8C9D0E1F2A /* ThemeManager.swift */; };
+		FF6A7B8C9D0E1F2A3B4C5D6E /* ThemeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC3D4E5F6A7B8C9D0E1F2A3B /* ThemeSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -220,6 +223,9 @@
 		FADF5FD0EE950D199DCCC689 /* AuthorsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorsView.swift; sourceTree = "<group>"; };
 		FAF0C9F0F9DBC035715F7BAB /* MiniPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerView.swift; sourceTree = "<group>"; };
 		FFD1A315901E9A4580F341EC /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		AA1B2C3D4E5F6A7B8C9D0E1F /* AccentColorToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorToken.swift; sourceTree = "<group>"; };
+		BB2C3D4E5F6A7B8C9D0E1F2A /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		CC3D4E5F6A7B8C9D0E1F2A3B /* ThemeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -411,6 +417,7 @@
 			children = (
 				1B87ACED80DD28E594782A65 /* PlaybackSettingsView.swift */,
 				B78DCEC5BDD9170FACA3835D /* SettingsView.swift */,
+				CC3D4E5F6A7B8C9D0E1F2A3B /* ThemeSettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -488,6 +495,7 @@
 				6993C8A82F27AA1B8F79DA4E /* Navigation */,
 				5CD144C5DA2411144CFF695C /* Repositories */,
 				23D7A4B8E6531D83E1C87CF7 /* Services */,
+				AA7B8C9D0E1F2A3B4C5D6E7F /* Theme */,
 				EFB758EBD7CB004DEFF0CAEF /* Utilities */,
 			);
 			path = ChapterCheck;
@@ -514,6 +522,15 @@
 				61916CE867290E161C23F4EA /* UserReview.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		AA7B8C9D0E1F2A3B4C5D6E7F /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				AA1B2C3D4E5F6A7B8C9D0E1F /* AccentColorToken.swift */,
+				BB2C3D4E5F6A7B8C9D0E1F2A /* ThemeManager.swift */,
+			);
+			path = Theme;
 			sourceTree = "<group>";
 		};
 		EFB758EBD7CB004DEFF0CAEF /* Utilities */ = {
@@ -703,6 +720,9 @@
 				7979FF730E90284C5A1F2E27 /* SeriesDetailViewModel.swift in Sources */,
 				A50D25449BF328A1F81202CB /* SeriesRepository.swift in Sources */,
 				CB06A06F653E338C7B18765A /* SettingsView.swift in Sources */,
+				DD4E5F6A7B8C9D0E1F2A3B4C /* AccentColorToken.swift in Sources */,
+				EE5F6A7B8C9D0E1F2A3B4C5D /* ThemeManager.swift in Sources */,
+				FF6A7B8C9D0E1F2A3B4C5D6E /* ThemeSettingsView.swift in Sources */,
 				C63F88E3285C32FC4C0431F0 /* Shelf.swift in Sources */,
 				B89A67ECD0FE8AC80AB8395D /* ShelfCard.swift in Sources */,
 				E2BAF8941EDD40223B924458 /* ShelfDetailView.swift in Sources */,

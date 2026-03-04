@@ -10,6 +10,7 @@ struct ProfileView: View {
     let userId: String
 
     @State private var viewModel = ProfileViewModel()
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         Group {
@@ -238,13 +239,13 @@ struct ProfileView: View {
 
     private var avatarPlaceholder: some View {
         Circle()
-            .fill(.secondary.opacity(0.2))
+            .fill(themeManager.accentGradient)
+            .frame(width: 70, height: 70)
             .overlay {
                 Image(systemName: "person.fill")
                     .font(.title2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white)
             }
-            .frame(width: 70, height: 70)
     }
 
     // MARK: - Loading / Error States

@@ -14,6 +14,8 @@ export const updatePreferences = mutation({
     momentumSkipEnabled: v.optional(v.boolean()),
     smartRewindEnabled: v.optional(v.boolean()),
     voiceBoostEnabled: v.optional(v.boolean()),
+    accentColor: v.optional(v.string()),
+    colorSchemeMode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
@@ -33,6 +35,70 @@ export const updatePreferences = mutation({
       throw new Error("skipBackwardSeconds must be between 5 and 120");
     }
 
+    // Validate accent color
+    const validAccentColors = [
+      // Blues
+      "sky",
+      "blue",
+      "navy",
+      // Indigos
+      "periwinkle",
+      "indigo",
+      "midnight",
+      // Purples
+      "lavender",
+      "purple",
+      "plum",
+      // Pinks
+      "rose",
+      "pink",
+      "magenta",
+      // Reds
+      "coral",
+      "red",
+      "crimson",
+      // Oranges
+      "peach",
+      "orange",
+      "tangerine",
+      // Yellows
+      "lemon",
+      "amber",
+      "yellow",
+      "gold",
+      // Greens
+      "chartreuse",
+      "lime",
+      "green",
+      "emerald",
+      "forest",
+      // Teals & Cyans
+      "aqua",
+      "teal",
+      "ocean",
+      "cyan",
+      "electric",
+      // Mints
+      "seafoam",
+      "mint",
+      "jade",
+      // Neutrals
+      "brown",
+      "graphite",
+    ];
+    if (args.accentColor !== undefined && !validAccentColors.includes(args.accentColor)) {
+      throw new Error(`accentColor must be one of: ${validAccentColors.join(", ")}`);
+    }
+
+    // Validate color scheme mode
+    const validColorSchemeModes = ["system", "light", "dark"];
+    if (
+      args.colorSchemeMode !== undefined &&
+      !validColorSchemeModes.includes(args.colorSchemeMode)
+    ) {
+      throw new Error(`colorSchemeMode must be one of: ${validColorSchemeModes.join(", ")}`);
+    }
+
     // Build patch from only the fields that were provided
     const patch: Record<string, unknown> = { updatedAt: now };
     if (args.skipForwardSeconds !== undefined) patch.skipForwardSeconds = args.skipForwardSeconds;
@@ -42,6 +108,8 @@ export const updatePreferences = mutation({
       patch.momentumSkipEnabled = args.momentumSkipEnabled;
     if (args.smartRewindEnabled !== undefined) patch.smartRewindEnabled = args.smartRewindEnabled;
     if (args.voiceBoostEnabled !== undefined) patch.voiceBoostEnabled = args.voiceBoostEnabled;
+    if (args.accentColor !== undefined) patch.accentColor = args.accentColor;
+    if (args.colorSchemeMode !== undefined) patch.colorSchemeMode = args.colorSchemeMode;
 
     const existing = await ctx.db
       .query("userPreferences")
@@ -60,6 +128,8 @@ export const updatePreferences = mutation({
       momentumSkipEnabled: args.momentumSkipEnabled,
       smartRewindEnabled: args.smartRewindEnabled,
       voiceBoostEnabled: args.voiceBoostEnabled,
+      accentColor: args.accentColor,
+      colorSchemeMode: args.colorSchemeMode,
       createdAt: now,
       updatedAt: now,
     });

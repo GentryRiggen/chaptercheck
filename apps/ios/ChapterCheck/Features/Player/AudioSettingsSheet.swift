@@ -194,7 +194,6 @@ struct AudioSettingsSheet: View {
                 set: { onChange($0) }
             ))
             .labelsHidden()
-            .tint(.accentColor)
             .accessibilityHint(hint ?? "")
         }
         .padding(.horizontal, 20)

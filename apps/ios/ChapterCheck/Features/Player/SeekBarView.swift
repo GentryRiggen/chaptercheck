@@ -48,12 +48,12 @@ struct SeekBarView: View {
 
                     // Filled track
                     Capsule()
-                        .fill(Color.accentColor)
+                        .fill(.tint)
                         .frame(width: trackWidth * displayProgress, height: isDragging ? 8 : 4)
 
                     // Thumb
                     Circle()
-                        .fill(Color.accentColor)
+                        .fill(.tint)
                         .frame(width: isDragging ? 20 : 12, height: isDragging ? 20 : 12)
                         .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
                         .offset(x: (trackWidth * displayProgress) - (isDragging ? 10 : 6))

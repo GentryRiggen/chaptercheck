@@ -9,6 +9,7 @@ import SwiftUI
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @Environment(\.showSettings) private var showSettings
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         Group {
@@ -48,30 +49,15 @@ struct HomeView: View {
 
     // MARK: - Avatar
 
-    @ViewBuilder
     private var avatarImage: some View {
-        if let user = Clerk.shared.user,
-           let url = URL(string: user.imageUrl) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 28, height: 28)
-                        .clipShape(Circle())
-                default:
-                    avatarPlaceholder
-                }
+        Circle()
+            .fill(themeManager.accentGradient)
+            .frame(width: 28, height: 28)
+            .overlay {
+                Image(systemName: "person.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white)
             }
-        } else {
-            avatarPlaceholder
-        }
-    }
-
-    private var avatarPlaceholder: some View {
-        Image(systemName: "person.crop.circle")
-            .font(.title3)
     }
 
     // MARK: - Content

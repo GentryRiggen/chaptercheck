@@ -46,7 +46,7 @@ struct MiniPlayerView: View {
                         Image(systemName: audioPlayer.skipBackwardSymbol)
                             .contentTransition(.symbolEffect(.replace))
                             .font(.system(size: 20))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.tint)
                             .frame(width: 34, height: 34)
                     }
                     .buttonStyle(.plain)
@@ -57,7 +57,7 @@ struct MiniPlayerView: View {
                     } label: {
                         Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.tint)
                             .frame(width: 34, height: 34)
                     }
                     .buttonStyle(.plain)
@@ -69,7 +69,7 @@ struct MiniPlayerView: View {
                         Image(systemName: audioPlayer.skipForwardSymbol)
                             .contentTransition(.symbolEffect(.replace))
                             .font(.system(size: 20))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.tint)
                             .frame(width: 34, height: 34)
                     }
                     .buttonStyle(.plain)
