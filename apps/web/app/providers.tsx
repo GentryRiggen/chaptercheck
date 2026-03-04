@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
+import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext";
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -21,12 +22,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
           enableSystem
           disableTransitionOnChange
         >
-          <PermissionsProvider>
-            <AudioPlayerProvider>
-              {children}
-              <Toaster richColors position="bottom-right" />
-            </AudioPlayerProvider>
-          </PermissionsProvider>
+          <UserPreferencesProvider>
+            <PermissionsProvider>
+              <AudioPlayerProvider>
+                {children}
+                <Toaster richColors position="bottom-right" />
+              </AudioPlayerProvider>
+            </PermissionsProvider>
+          </UserPreferencesProvider>
         </ThemeProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>

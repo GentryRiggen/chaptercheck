@@ -42,7 +42,7 @@ export function Navigation() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background/60 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 items-center sm:h-16">
           {/* Mobile Menu Button */}
@@ -72,7 +72,7 @@ export function Navigation() {
                         className={cn(
                           "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                           isActive(link.href)
-                            ? "bg-secondary text-secondary-foreground"
+                            ? "bg-primary/10 text-primary"
                             : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                         )}
                       >
@@ -103,7 +103,7 @@ export function Navigation() {
                   className={cn(
                     "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     isActive(link.href)
-                      ? "bg-secondary text-secondary-foreground"
+                      ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                   )}
                 >
@@ -117,16 +117,18 @@ export function Navigation() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Search, Theme Toggle & User Menu */}
+          {/* Search & User Menu */}
           <div className="flex items-center gap-2">
             {isSignedIn && <GlobalSearch />}
-            <ThemeToggle />
             {isSignedIn ? (
               <UserMenu />
             ) : (
-              <Link href="/sign-in">
-                <Button size="sm">Sign In</Button>
-              </Link>
+              <>
+                <ThemeToggle />
+                <Link href="/sign-in">
+                  <Button size="sm">Sign In</Button>
+                </Link>
+              </>
             )}
           </div>
         </div>

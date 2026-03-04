@@ -26,7 +26,7 @@ export function NowPlayingBar() {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/80 backdrop-blur-xl backdrop-saturate-150">
       {/* Progress bar */}
       <div className="absolute inset-x-0 top-0 h-0.5 bg-muted">
         <div
@@ -58,20 +58,16 @@ export function NowPlayingBar() {
 
         {/* Controls */}
         <div className="flex flex-shrink-0 items-center gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
+          <button
             onClick={() => skipBackward()}
-            className="hidden h-8 w-8 sm:flex"
+            className="relative hidden h-10 w-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary sm:inline-flex"
             aria-label={`Skip back ${skipAmountBackward} seconds`}
           >
-            <span className="relative inline-flex items-center justify-center">
-              <RotateCcw className="h-4 w-4" />
-              <span className="absolute text-[7px] font-bold leading-none">
-                {skipAmountBackward}
-              </span>
+            <RotateCcw className="h-6 w-6" strokeWidth={1.5} />
+            <span className="absolute text-[10px] font-bold leading-none">
+              {skipAmountBackward}
             </span>
-          </Button>
+          </button>
 
           <Button
             size="icon"
@@ -90,20 +86,14 @@ export function NowPlayingBar() {
             )}
           </Button>
 
-          <Button
-            size="icon"
-            variant="ghost"
+          <button
             onClick={() => skipForward()}
-            className="hidden h-8 w-8 sm:flex"
+            className="relative hidden h-10 w-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary sm:inline-flex"
             aria-label={`Skip forward ${skipAmountForward} seconds`}
           >
-            <span className="relative inline-flex items-center justify-center">
-              <RotateCw className="h-4 w-4" />
-              <span className="absolute text-[7px] font-bold leading-none">
-                {skipAmountForward}
-              </span>
-            </span>
-          </Button>
+            <RotateCw className="h-6 w-6" strokeWidth={1.5} />
+            <span className="absolute text-[10px] font-bold leading-none">{skipAmountForward}</span>
+          </button>
 
           <Button
             size="icon"

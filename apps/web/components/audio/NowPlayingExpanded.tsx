@@ -200,53 +200,43 @@ export function NowPlayingExpanded() {
             </div>
 
             {/* Large controls */}
-            <div className="flex items-center gap-4">
-              <Button
-                size="icon"
-                variant="ghost"
+            <div className="flex items-center gap-6">
+              <button
                 onClick={() => skipBackward()}
-                className="h-11 w-11"
+                className="relative inline-flex h-16 w-16 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
                 aria-label={`Skip back ${skipAmountBackward} seconds`}
               >
-                <span className="relative inline-flex items-center justify-center">
-                  <RotateCcw className="h-5 w-5" />
-                  <span className="absolute text-[9px] font-bold leading-none">
-                    {skipAmountBackward}
-                  </span>
+                <RotateCcw className="h-10 w-10" strokeWidth={1.5} />
+                <span className="absolute text-sm font-bold leading-none">
+                  {skipAmountBackward}
                 </span>
-              </Button>
+              </button>
 
               <Button
                 size="icon"
                 variant="default"
                 onClick={togglePlayPause}
                 disabled={isLoading}
-                className={cn("h-14 w-14 rounded-full", isLoading && "animate-pulse")}
+                className={cn("h-16 w-16 rounded-full", isLoading && "animate-pulse")}
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isLoading ? (
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                  <div className="h-7 w-7 animate-spin rounded-full border-2 border-background border-t-transparent" />
                 ) : isPlaying ? (
-                  <Pause className="h-6 w-6" />
+                  <Pause className="h-7 w-7" />
                 ) : (
-                  <Play className="h-6 w-6 translate-x-0.5" />
+                  <Play className="h-7 w-7 translate-x-0.5" />
                 )}
               </Button>
 
-              <Button
-                size="icon"
-                variant="ghost"
+              <button
                 onClick={() => skipForward()}
-                className="h-11 w-11"
+                className="relative inline-flex h-16 w-16 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
                 aria-label={`Skip forward ${skipAmountForward} seconds`}
               >
-                <span className="relative inline-flex items-center justify-center">
-                  <RotateCw className="h-5 w-5" />
-                  <span className="absolute text-[9px] font-bold leading-none">
-                    {skipAmountForward}
-                  </span>
-                </span>
-              </Button>
+                <RotateCw className="h-10 w-10" strokeWidth={1.5} />
+                <span className="absolute text-sm font-bold leading-none">{skipAmountForward}</span>
+              </button>
             </div>
 
             {/* Playback speed */}

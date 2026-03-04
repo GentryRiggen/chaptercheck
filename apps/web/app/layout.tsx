@@ -4,7 +4,8 @@ import type { Metadata } from "next";
 
 import { NowPlayingSpacer } from "@/components/audio/NowPlayingSpacer";
 import { NowPlayingUI } from "@/components/audio/NowPlayingUI";
-import { MeshBackground } from "@/components/layout/MeshBackground";
+import { AccentApplicator } from "@/components/layout/AccentApplicator";
+import { IOSBackground } from "@/components/layout/IOSBackground";
 import { Navigation } from "@/components/layout/Navigation";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 
@@ -25,7 +26,8 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <Providers>
           <ScrollToTop />
-          <MeshBackground />
+          <AccentApplicator />
+          <IOSBackground />
           <Navigation />
           {children}
           <NowPlayingSpacer />

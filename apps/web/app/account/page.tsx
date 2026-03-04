@@ -9,9 +9,10 @@ import {
 import { useClerk, useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Eye, EyeOff, HardDrive, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, HardDrive, Loader2, Monitor, Moon, Sun } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -37,16 +38,106 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUserPreferences } from "@/contexts/UserPreferencesContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { ACCENT_COLOR_ORDER, ACCENT_COLORS, type AccentColorName } from "@/lib/accent-colors";
 
 // 2 TB storage limit (display only)
 const STORAGE_LIMIT_BYTES = 2 * 1024 * 1024 * 1024 * 1024;
 
+const THEME_OPTIONS = [
+  { value: "light" as const, label: "Light", icon: Sun },
+  { value: "dark" as const, label: "Dark", icon: Moon },
+  { value: "system" as const, label: "System", icon: Monitor },
+];
+
+function AccentColorPicker() {
+  const { accentColor, updatePreferences } = useUserPreferences();
+  const { theme, setTheme } = useTheme();
+
+  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme);
+    updatePreferences({ colorSchemeMode: newTheme });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Appearance</CardTitle>
+        <CardDescription>Customize theme and accent color</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Theme</label>
+          <div className="flex gap-2">
+            {THEME_OPTIONS.map((option) => {
+              const Icon = option.icon;
+              const isSelected = theme === option.value;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => handleThemeChange(option.value)}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    isSelected
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:bg-secondary"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Accent Color</label>
+          <div className="grid grid-cols-7 gap-2 sm:grid-cols-8">
+            {ACCENT_COLOR_ORDER.map((name) => {
+              const color = ACCENT_COLORS[name];
+              const isSelected = name === accentColor;
+              return (
+                <button
+                  key={name}
+                  onClick={() => updatePreferences({ accentColor: name as AccentColorName })}
+                  className="group relative flex items-center justify-center"
+                  title={color.displayName}
+                  aria-label={color.displayName}
+                >
+                  <span
+                    className={`block h-8 w-8 rounded-full transition-transform group-hover:scale-110 ${isSelected ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : ""}`}
+                    style={{ backgroundColor: color.swatch }}
+                  />
+                  {isSelected && (
+                    <svg
+                      className="absolute h-4 w-4 text-white drop-shadow-sm"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AccountPage() {
-  usePageTitle("Account");
+  usePageTitle("Settings");
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get("tab") === "appearance" ? "appearance" : "account";
   const storageStats = useQuery(api.storageAccounts.queries.getStorageStats);
   const currentUserData = useQuery(api.users.queries.getCurrentUserWithPermissions);
   const updateProfilePrivacy = useMutation(api.users.mutations.updateProfilePrivacy);
@@ -379,6 +470,9 @@ export default function AccountPage() {
     </Card>
   );
 
+  // Appearance Card Component
+  const AppearanceCard = <AccentColorPicker />;
+
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-4xl p-4 pb-24 sm:p-6 lg:p-8">
@@ -389,14 +483,15 @@ export default function AccountPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold">Account Settings</h1>
+          <h1 className="text-2xl font-bold">Settings</h1>
         </div>
 
         {/* Mobile Layout - Tabbed Interface */}
         <div className="block md:hidden">
-          <Tabs defaultValue="account" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs defaultValue={defaultTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="account">Account</TabsTrigger>
+              <TabsTrigger value="appearance">Appearance</TabsTrigger>
               <TabsTrigger value="storage">Storage</TabsTrigger>
             </TabsList>
             <TabsContent value="account" className="space-y-6">
@@ -404,6 +499,9 @@ export default function AccountPage() {
               {EmailCard}
               {PrivacyCard}
               {SignOutCard}
+            </TabsContent>
+            <TabsContent value="appearance" className="space-y-6">
+              {AppearanceCard}
             </TabsContent>
             <TabsContent value="storage" className="space-y-6">
               {StorageCard}
@@ -421,8 +519,11 @@ export default function AccountPage() {
             {SignOutCard}
           </div>
 
-          {/* Right Column - Storage Card */}
-          <div className="space-y-6">{StorageCard}</div>
+          {/* Right Column */}
+          <div className="space-y-6">
+            {AppearanceCard}
+            {StorageCard}
+          </div>
         </div>
       </div>
 

@@ -92,7 +92,7 @@ export function SignInCard() {
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <div className="mb-2 flex justify-center">
-          <Logo size={48} showBackground />
+          <Logo size={48} />
         </div>
         <CardTitle className="text-2xl">Welcome back</CardTitle>
         <CardDescription>

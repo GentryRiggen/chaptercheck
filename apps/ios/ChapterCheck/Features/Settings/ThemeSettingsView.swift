@@ -1,21 +1,17 @@
-import Combine
 import SwiftUI
 
 /// Theme settings for accent color and color scheme.
 ///
-/// Subscribes to `PreferencesRepository` for cloud sync and writes
-/// changes via `ThemeManager`.
+/// Reads current values from `ThemeManager` (which is already synced
+/// with Convex via MainView's preference subscription) and writes
+/// changes back through it.
 struct ThemeSettingsView: View {
 
     @Environment(ThemeManager.self) private var themeManager
 
     @State private var selectedAccent: String = PlaybackDefaults.accentColor
     @State private var selectedScheme: String = PlaybackDefaults.colorSchemeMode
-    @State private var hasInitialized = false
-    @State private var cancellables = Set<AnyCancellable>()
     @State private var previewToggle = true
-
-    private let preferencesRepository = PreferencesRepository()
 
     private let columns = [GridItem(.adaptive(minimum: 36), spacing: 10)]
 
@@ -29,7 +25,6 @@ struct ThemeSettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .onChange(of: selectedScheme) { _, newValue in
-                    guard hasInitialized else { return }
                     themeManager.setColorSchemeMode(newValue)
                 }
             } header: {
@@ -42,7 +37,6 @@ struct ThemeSettingsView: View {
                         Button {
                             Haptics.selection()
                             selectedAccent = token.id
-                            guard hasInitialized else { return }
                             themeManager.setAccentColor(token.id)
                         } label: {
                             Circle()
@@ -79,8 +73,10 @@ struct ThemeSettingsView: View {
             }
         }
         .navigationTitle("Theme")
-        .onAppear { subscribeToPreferences() }
-        .onDisappear { cancellables.removeAll() }
+        .onAppear {
+            selectedAccent = themeManager.accentColorName
+            selectedScheme = themeManager.colorSchemeModeName
+        }
     }
 
     // MARK: - Preview Components
