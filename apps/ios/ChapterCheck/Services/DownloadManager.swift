@@ -221,6 +221,28 @@ final class DownloadManager {
         await downloadService.localFileURL(for: audioFileId)
     }
 
+    /// Update cached listening progress for a downloaded book.
+    func updateCachedProgress(
+        bookId: String,
+        audioFileId: String,
+        positionSeconds: Double,
+        playbackRate: Double,
+        timestamp: Double
+    ) async {
+        let entry = CachedListeningProgress(
+            audioFileId: audioFileId,
+            positionSeconds: positionSeconds,
+            playbackRate: playbackRate,
+            timestamp: timestamp
+        )
+        await downloadService.updateListeningProgress(bookId: bookId, entry: entry)
+    }
+
+    /// Get cached listening progress for a downloaded book.
+    func cachedProgress(for bookId: String) async -> CachedListeningProgress? {
+        await downloadService.listeningProgress(for: bookId)
+    }
+
     // MARK: - Offline Playback
 
     /// Construct playback data from the download manifest for offline use.

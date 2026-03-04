@@ -55,6 +55,9 @@ final class BookDetailViewModel {
 
     // MARK: - Dependencies
 
+    /// Optional download manager for warming the offline progress cache.
+    var downloadManager: DownloadManager?
+
     private let bookRepository = BookRepository()
     private let audioRepository = AudioRepository()
     private let progressRepository = ProgressRepository()
@@ -246,6 +249,19 @@ final class BookDetailViewModel {
                 receiveValue: { [weak self] progress in
                     self?.progress = progress
                     self?.markLoaded("progress")
+
+                    // Warm the offline progress cache for downloaded books
+                    if let progress, let dm = self?.downloadManager, dm.isBookDownloaded(bookId) {
+                        Task {
+                            await dm.updateCachedProgress(
+                                bookId: bookId,
+                                audioFileId: progress.audioFileId,
+                                positionSeconds: progress.positionSeconds,
+                                playbackRate: progress.playbackRate,
+                                timestamp: progress.lastListenedAt
+                            )
+                        }
+                    }
                 }
             )
             .store(in: &cancellables)

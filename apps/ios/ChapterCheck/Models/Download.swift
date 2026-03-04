@@ -58,6 +58,18 @@ struct AudioFileMetadataEntry: Codable, Sendable {
     let displayName: String?
 }
 
+// MARK: - Cached Listening Progress
+
+/// Listening progress cached in the manifest for offline resume.
+struct CachedListeningProgress: Codable, Sendable {
+    let audioFileId: String
+    let positionSeconds: Double
+    let playbackRate: Double
+    /// Epoch milliseconds (`Date().timeIntervalSince1970 * 1000`).
+    /// Must match the format expected by `AudioPlayerManager.smartRewindPosition()`.
+    let timestamp: Double
+}
+
 // MARK: - Download Manifest
 
 /// JSON-serialized manifest tracking all downloaded files.
@@ -65,11 +77,13 @@ struct DownloadManifest: Codable, Sendable {
     var files: [String: DownloadedFile]
     var bookMetadata: [String: BookMetadataEntry]
     var audioFileMetadata: [String: AudioFileMetadataEntry]
+    var listeningProgress: [String: CachedListeningProgress]
 
     init() {
         self.files = [:]
         self.bookMetadata = [:]
         self.audioFileMetadata = [:]
+        self.listeningProgress = [:]
     }
 
     init(from decoder: Decoder) throws {
@@ -77,6 +91,7 @@ struct DownloadManifest: Codable, Sendable {
         files = try container.decode([String: DownloadedFile].self, forKey: .files)
         bookMetadata = try container.decode([String: BookMetadataEntry].self, forKey: .bookMetadata)
         audioFileMetadata = try container.decodeIfPresent([String: AudioFileMetadataEntry].self, forKey: .audioFileMetadata) ?? [:]
+        listeningProgress = try container.decodeIfPresent([String: CachedListeningProgress].self, forKey: .listeningProgress) ?? [:]
     }
 }
 

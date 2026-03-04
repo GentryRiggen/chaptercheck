@@ -681,6 +681,19 @@ final class AudioPlayerManager {
         lastSavedPosition = position
         lastSavedAt = Date()
 
+        // Update local cache for offline resume of downloaded books
+        if let dm = downloadManager, dm.isBookDownloaded(bookId) {
+            Task {
+                await dm.updateCachedProgress(
+                    bookId: bookId,
+                    audioFileId: audioFileId,
+                    positionSeconds: position,
+                    playbackRate: rate,
+                    timestamp: Date().timeIntervalSince1970 * 1000
+                )
+            }
+        }
+
         // When offline, queue progress for later sync
         if !NetworkMonitor.shared.isConnected {
             let entry = QueuedProgress(
@@ -1008,7 +1021,7 @@ final class AudioPlayerManager {
         return max(0, position - rewind)
     }
 
-    private static func formatTime(_ totalSeconds: Double) -> String {
+    static func formatTime(_ totalSeconds: Double) -> String {
         guard totalSeconds.isFinite && totalSeconds >= 0 else { return "0:00" }
         let total = Int(totalSeconds)
         let hours = total / 3600

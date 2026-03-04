@@ -96,6 +96,17 @@ actor DownloadService {
         manifest.audioFileMetadata
     }
 
+    /// Update cached listening progress for a book.
+    func updateListeningProgress(bookId: String, entry: CachedListeningProgress) {
+        manifest.listeningProgress[bookId] = entry
+        saveManifestToDisk()
+    }
+
+    /// Get cached listening progress for a book.
+    func listeningProgress(for bookId: String) -> CachedListeningProgress? {
+        manifest.listeningProgress[bookId]
+    }
+
     /// Store audio file metadata entries in the manifest for offline playback.
     func storeAudioFileMetadata(_ entries: [AudioFileMetadataEntry]) {
         for entry in entries {
@@ -207,8 +218,9 @@ actor DownloadService {
             manifest.audioFileMetadata.removeValue(forKey: id)
         }
 
-        // Remove book metadata
+        // Remove book metadata and cached progress
         manifest.bookMetadata.removeValue(forKey: bookId)
+        manifest.listeningProgress.removeValue(forKey: bookId)
 
         // Delete the book's download directory
         let bookDir = Self.downloadsDirectory.appendingPathComponent(bookId, isDirectory: true)

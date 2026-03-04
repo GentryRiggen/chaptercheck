@@ -11,6 +11,7 @@ struct BookDetailView: View {
     @State private var isReviewSheetPresented = false
     @State private var isAddToShelfPresented = false
     @Environment(AudioPlayerManager.self) private var audioPlayer
+    @Environment(DownloadManager.self) private var downloadManager
 
     var body: some View {
         Group {
@@ -43,6 +44,7 @@ struct BookDetailView: View {
             }
         }
         .onAppear {
+            viewModel.downloadManager = downloadManager
             viewModel.subscribe(bookId: bookId)
         }
         .onDisappear {
