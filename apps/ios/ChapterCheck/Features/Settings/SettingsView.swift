@@ -30,9 +30,7 @@ struct SettingsView: View {
                 // Profile section — only available once the Convex user is loaded
                 if let convexUser {
                     Section {
-                        NavigationLink {
-                            ProfileView(userId: convexUser._id)
-                        } label: {
+                        NavigationLink(value: AppDestination.profile(userId: convexUser._id)) {
                             Label("View Profile", systemImage: "person.crop.circle")
                         }
 

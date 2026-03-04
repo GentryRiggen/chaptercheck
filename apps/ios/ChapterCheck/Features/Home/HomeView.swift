@@ -167,6 +167,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 12)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -183,6 +184,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 12)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
