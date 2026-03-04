@@ -78,6 +78,7 @@ struct MiniPlayerView: View {
             .padding(.leading, 8)
             .padding(.trailing, 12)
             .padding(.vertical, 6)
+            .contentShape(.capsule)
             .glassEffect(.regular.interactive(), in: .capsule)
             .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
             .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)

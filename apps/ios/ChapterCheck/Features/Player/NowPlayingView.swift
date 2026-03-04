@@ -21,10 +21,23 @@ struct NowPlayingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Drag handle — tapping dismisses the sheet
+            Button {
+                dismiss()
+            } label: {
+                Capsule()
+                    .fill(.tertiary)
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss player")
+
             // Top: category label + title + part info
             topSection
                 .padding(.horizontal, 24)
-                .padding(.top, 20)
+                .padding(.top, 8)
 
             Spacer()
 
@@ -156,7 +169,7 @@ struct NowPlayingView: View {
     // MARK: - Transport Controls
 
     private var transportControls: some View {
-        HStack(spacing: 36) {
+        HStack(spacing: 24) {
             Button {
                 Haptics.light()
                 audioPlayer.skipBackward()
