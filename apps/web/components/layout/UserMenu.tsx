@@ -4,7 +4,7 @@ import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { LogOut, Monitor, Moon, Palette, Settings, Sun, User } from "lucide-react";
+import { LogOut, Monitor, Moon, Palette, Settings, Shield, Sun, User } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 
@@ -95,6 +95,14 @@ export function UserMenu() {
             <Link href={`/users/${convexUser._id}`} className="cursor-pointer">
               <User className="mr-2 h-4 w-4" />
               View Profile
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {convexUser?.permissions?.canManageUsers && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin" className="cursor-pointer">
+              <Shield className="mr-2 h-4 w-4" />
+              Admin
             </Link>
           </DropdownMenuItem>
         )}

@@ -54,6 +54,43 @@ export const updateUserPremium = mutation({
 });
 
 /**
+ * Admin update: set role, premium, and storage account in one call
+ */
+export const adminUpdateUser = mutation({
+  args: {
+    userId: v.id("users"),
+    role: v.union(v.literal("admin"), v.literal("editor"), v.literal("viewer")),
+    hasPremium: v.boolean(),
+    storageAccountId: v.optional(v.id("storageAccounts")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminMutation(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Validate storage account exists if provided
+    if (args.storageAccountId) {
+      const storageAccount = await ctx.db.get(args.storageAccountId);
+      if (!storageAccount) {
+        throw new Error("Storage account not found");
+      }
+    }
+
+    await ctx.db.patch(args.userId, {
+      role: args.role,
+      hasPremium: args.hasPremium,
+      storageAccountId: args.storageAccountId,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
  * Update current user's profile privacy setting
  */
 export const updateProfilePrivacy = mutation({

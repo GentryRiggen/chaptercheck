@@ -93,6 +93,23 @@ export const createUser = internalMutation({
     imageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Check for existing user (idempotent: admin may pre-configure before webhook fires)
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (existing) {
+      // Update profile fields but preserve role/premium/storageAccountId
+      await ctx.db.patch(existing._id, {
+        email: args.email,
+        name: args.name,
+        imageUrl: args.imageUrl,
+        updatedAt: Date.now(),
+      });
+      return;
+    }
+
     const now = Date.now();
 
     await ctx.db.insert("users", {

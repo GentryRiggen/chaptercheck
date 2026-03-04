@@ -6,6 +6,7 @@ import {
   getEffectiveRole,
   hasPremium,
   hasRoleLevel,
+  requireAdmin,
   requireAuth,
 } from "../lib/auth";
 
@@ -79,6 +80,49 @@ export const getCurrentUserWithPermissions = query({
       isProfilePrivate: user.isProfilePrivate ?? false,
       permissions,
     };
+  },
+});
+
+/**
+ * List all users with storage account info (admin-only)
+ */
+export const listAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const users = await ctx.db.query("users").collect();
+
+    const usersWithStorage = await Promise.all(
+      users.map(async (user) => {
+        const storageAccount = user.storageAccountId
+          ? await ctx.db.get(user.storageAccountId)
+          : null;
+
+        return {
+          _id: user._id,
+          clerkId: user.clerkId,
+          email: user.email,
+          name: user.name,
+          imageUrl: user.imageUrl,
+          role: getEffectiveRole(user),
+          hasPremium: hasPremium(user),
+          storageAccountId: user.storageAccountId,
+          storageAccount: storageAccount
+            ? {
+                _id: storageAccount._id,
+                name: storageAccount.name,
+                r2PathPrefix: storageAccount.r2PathPrefix,
+                totalBytesUsed: storageAccount.totalBytesUsed,
+                fileCount: storageAccount.fileCount,
+              }
+            : null,
+          createdAt: user.createdAt,
+        };
+      })
+    );
+
+    return usersWithStorage;
   },
 });
 

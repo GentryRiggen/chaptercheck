@@ -1,5 +1,5 @@
 import { query } from "../_generated/server";
-import { requireAuth } from "../lib/auth";
+import { requireAdmin, requireAuth } from "../lib/auth";
 
 // Get the current user's storage account
 export const getMyStorageAccount = query({
@@ -44,6 +44,36 @@ export const getStorageStats = query({
       fileCount: storageAccount.fileCount,
       hasStorageAccount: true,
     };
+  },
+});
+
+// List all storage accounts with owner info (admin-only)
+export const listAllStorageAccounts = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const accounts = await ctx.db.query("storageAccounts").collect();
+
+    const accountsWithUsers = await Promise.all(
+      accounts.map(async (account) => {
+        const users = await ctx.db
+          .query("users")
+          .withIndex("by_storageAccountId", (q) => q.eq("storageAccountId", account._id))
+          .collect();
+
+        return {
+          _id: account._id,
+          name: account.name,
+          r2PathPrefix: account.r2PathPrefix,
+          totalBytesUsed: account.totalBytesUsed,
+          fileCount: account.fileCount,
+          users: users.map((u) => ({ _id: u._id, name: u.name, email: u.email })),
+        };
+      })
+    );
+
+    return accountsWithUsers;
   },
 });
 
