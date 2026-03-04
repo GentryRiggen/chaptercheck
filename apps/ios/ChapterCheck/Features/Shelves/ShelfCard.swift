@@ -43,7 +43,7 @@ struct ShelfCard: View {
                 emptyPlaceholder
             } else {
                 ForEach(Array(shelf.previewBooks.prefix(3).enumerated().reversed()), id: \.offset) { index, book in
-                    BookCoverView(r2Key: book.coverImageR2Key, size: coverSize)
+                    BookCoverView(r2Key: book.coverImageR2Key, displayMode: .fit(maxWidth: coverSize, maxHeight: coverSize * 1.5))
                         .offset(x: CGFloat(index) * 6, y: CGFloat(index) * -4)
                         .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
                 }

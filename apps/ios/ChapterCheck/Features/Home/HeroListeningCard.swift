@@ -19,7 +19,7 @@ struct HeroListeningCard: View {
         } label: {
             HStack(spacing: 16) {
                 ZStack {
-                    BookCoverView(r2Key: item.book.coverImageR2Key, size: 140)
+                    BookCoverView(r2Key: item.book.coverImageR2Key, displayMode: .fit(maxWidth: 140, maxHeight: 210))
 
                     Circle()
                         .fill(.black.opacity(0.4))

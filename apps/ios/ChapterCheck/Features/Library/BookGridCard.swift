@@ -8,7 +8,7 @@ struct BookGridCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            BookCoverView(r2Key: book.coverImageR2Key, size: cardCoverSize)
+            BookCoverView(r2Key: book.coverImageR2Key, displayMode: .fit(maxWidth: cardCoverSize, maxHeight: cardCoverSize * 1.5))
                 .frame(maxWidth: .infinity)
 
             Text(book.title)

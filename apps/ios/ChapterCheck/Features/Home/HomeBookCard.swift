@@ -8,7 +8,7 @@ struct HomeBookCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            BookCoverView(r2Key: book.coverImageR2Key, size: 90)
+            BookCoverView(r2Key: book.coverImageR2Key, displayMode: .fit(maxWidth: 140, maxHeight: 210))
 
             Text(book.title)
                 .font(.caption)

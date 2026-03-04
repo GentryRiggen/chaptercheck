@@ -43,7 +43,7 @@ struct NowPlayingView: View {
             Spacer()
 
             // Cover artwork — scales up when playing, down when paused (iOS Music app effect)
-            BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, size: artworkSize)
+            BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, displayMode: .fit(maxWidth: artworkSize, maxHeight: artworkSize))
                 .scaleEffect(isPlayingAnimated ? 1.0 : 0.85)
                 .shadow(color: .black.opacity(0.25), radius: isPlayingAnimated ? 20 : 10, y: isPlayingAnimated ? 10 : 5)
 

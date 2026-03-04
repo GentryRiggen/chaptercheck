@@ -75,7 +75,7 @@ struct BookDetailView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Cover Image
-                BookCoverView(r2Key: book.coverImageR2Key, size: 200)
+                BookCoverView(r2Key: book.coverImageR2Key, displayMode: .fit(maxWidth: 200, maxHeight: 300))
                     .frame(maxWidth: .infinity)
 
                 // Title and Subtitle
