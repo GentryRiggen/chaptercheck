@@ -1,8 +1,19 @@
 import Foundation
 
-/// Combined search results for books and authors.
+/// Combined search results for books, authors, and users.
 /// Matches the shape returned by `search/queries:searchAll`.
 struct UnifiedSearchResult: Decodable, Sendable {
     let books: [BookWithDetails]
     let authors: [AuthorWithCounts]
+    let users: [SearchUser]?
+}
+
+/// A user returned from the unified search query.
+struct SearchUser: Decodable, Identifiable, Sendable {
+    let _id: String
+    let name: String?
+    let imageUrl: String?
+
+    var id: String { _id }
+    var displayName: String { name ?? "Anonymous" }
 }

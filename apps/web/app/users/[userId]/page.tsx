@@ -4,12 +4,25 @@ import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { formatRelativeDate } from "@chaptercheck/shared/utils";
 import { useQuery } from "convex/react";
-import { Book, BookOpen, Calendar, Lock, MessageSquare, Plus, Settings } from "lucide-react";
+import {
+  Book,
+  BookOpen,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  EyeOff,
+  Lock,
+  MessageSquare,
+  Plus,
+  Settings,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { BookCover } from "@/components/books/BookCover";
 import { LibraryBookCard } from "@/components/books/LibraryBookCard";
+import { StarRating } from "@/components/books/StarRating";
 import { ShelfCard } from "@/components/shelves/ShelfCard";
 import { ShelfDialog } from "@/components/shelves/ShelfDialog";
 import { Button } from "@/components/ui/button";
@@ -36,7 +49,15 @@ export default function UserProfilePage() {
     shouldSkipShelves ? "skip" : { userId }
   );
 
+  const shouldSkipReviews =
+    !userId || (profile?.isProfilePrivate === true && !profile?.isOwnProfile);
+  const reviews = useQuery(
+    api.bookUserData.queries.getUserPublicReviews,
+    shouldSkipReviews ? "skip" : { userId }
+  );
+
   const [createShelfOpen, setCreateShelfOpen] = useState(false);
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
 
   const booksLoading = readBooks === undefined && !shouldSkipBooks;
   const noBooksRead = readBooks !== undefined && readBooks.length === 0;
@@ -196,6 +217,141 @@ export default function UserProfilePage() {
                 {shelvesData.shelves.map((shelf) => (
                   <ShelfCard key={shelf._id} shelf={shelf} />
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Reviews section - only show if profile is public or own profile */}
+        {(!profile.isProfilePrivate || profile.isOwnProfile) && (
+          <div className="mb-8">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Reviews
+            </h2>
+
+            {reviews === undefined ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
+                ))}
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="rounded-lg border border-border/50 bg-card/50 p-8 text-center">
+                <MessageSquare className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+                <p className="text-muted-foreground">
+                  {profile.isOwnProfile
+                    ? "You haven't reviewed any books yet."
+                    : `${profile.name || "This user"} hasn't written any reviews.`}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reviews.map((review) => {
+                  const isExpanded = expandedReviews.has(review._id);
+                  const hasLongText = (review.reviewText?.length ?? 0) > 200;
+
+                  return (
+                    <div
+                      key={review._id}
+                      className="rounded-lg border border-border/50 bg-card/50 p-4"
+                    >
+                      <div className="flex gap-3">
+                        {/* Book cover */}
+                        {review.book && (
+                          <Link href={`/books/${review.book._id}`} className="shrink-0">
+                            <BookCover
+                              coverImageR2Key={review.book.coverImageR2Key}
+                              title={review.book.title}
+                              size="sm"
+                            />
+                          </Link>
+                        )}
+
+                        {/* Review content */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              {review.book && (
+                                <Link
+                                  href={`/books/${review.book._id}`}
+                                  className="line-clamp-1 font-medium hover:underline"
+                                >
+                                  {review.book.title}
+                                </Link>
+                              )}
+                              {review.book && review.book.authors.length > 0 && (
+                                <p className="line-clamp-1 text-sm text-muted-foreground">
+                                  {review.book.authors.map((a) => a.name).join(", ")}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Private badge for own private reviews */}
+                            {profile.isOwnProfile && review.isReviewPrivate && (
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                                <EyeOff className="h-3 w-3" />
+                                Private
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Rating + date row */}
+                          <div className="mt-1 flex items-center gap-3">
+                            {review.rating !== undefined && (
+                              <StarRating value={review.rating} readonly size="xs" />
+                            )}
+                            {review.reviewedAt && (
+                              <span className="text-xs text-muted-foreground">
+                                {formatRelativeDate(review.reviewedAt)}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Review text */}
+                          {review.reviewText && (
+                            <div className="mt-2">
+                              <p
+                                className={
+                                  isExpanded
+                                    ? "whitespace-pre-wrap text-sm"
+                                    : "line-clamp-3 whitespace-pre-wrap text-sm"
+                                }
+                              >
+                                {review.reviewText}
+                              </p>
+                              {hasLongText && (
+                                <button
+                                  onClick={() => {
+                                    setExpandedReviews((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(review._id)) {
+                                        next.delete(review._id);
+                                      } else {
+                                        next.add(review._id);
+                                      }
+                                      return next;
+                                    });
+                                  }}
+                                  className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      Show less <ChevronUp className="h-3 w-3" />
+                                    </>
+                                  ) : (
+                                    <>
+                                      Show more <ChevronDown className="h-3 w-3" />
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

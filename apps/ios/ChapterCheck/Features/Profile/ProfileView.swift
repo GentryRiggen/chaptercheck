@@ -53,6 +53,21 @@ struct ProfileView: View {
                     statsSection(stats)
                 }
 
+                // Reviews
+                if !viewModel.reviews.isEmpty {
+                    Section {
+                        ForEach(viewModel.reviews) { review in
+                            if let book = review.book {
+                                NavigationLink(value: AppDestination.book(id: book._id)) {
+                                    profileReviewRow(review, book: book)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Reviews")
+                    }
+                }
+
                 // Reading history
                 if !viewModel.readBooks.isEmpty {
                     Section {
@@ -78,7 +93,7 @@ struct ProfileView: View {
                 }
 
                 // Empty state when there's no content
-                if viewModel.readBooks.isEmpty && viewModel.shelves.isEmpty && profile.stats == nil {
+                if viewModel.readBooks.isEmpty && viewModel.shelves.isEmpty && viewModel.reviews.isEmpty && profile.stats == nil {
                     Section {
                         ContentUnavailableView(
                             "No Activity Yet",
@@ -171,6 +186,52 @@ struct ProfileView: View {
             Text("\(shelf.bookCountInt) books")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func profileReviewRow(_ review: UserReview, book: UserReviewBook) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            BookCoverView(r2Key: book.coverImageR2Key, size: 50)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(book.title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+
+                if !book.authors.isEmpty {
+                    Text(book.authors.map(\.name).joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                HStack(spacing: 6) {
+                    if let rating = review.rating {
+                        RatingView(rating: rating, size: 10)
+                    }
+
+                    if review.isReviewPrivate {
+                        Label("Private", systemImage: "eye.slash")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+
+                    if let reviewedAt = review.reviewedAt {
+                        Text(TimeFormatting.formatRelativeDate(reviewedAt))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                if let text = review.reviewText, !text.isEmpty {
+                    Text(text)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                }
+            }
         }
         .padding(.vertical, 2)
     }

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
+import { GlobalSearch } from "./GlobalSearch";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
@@ -116,8 +117,9 @@ export function Navigation() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Theme Toggle & User Menu */}
+          {/* Search, Theme Toggle & User Menu */}
           <div className="flex items-center gap-2">
+            {isSignedIn && <GlobalSearch />}
             <ThemeToggle />
             {isSignedIn ? (
               <UserMenu />

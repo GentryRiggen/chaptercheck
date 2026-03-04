@@ -8,18 +8,21 @@ struct ReviewRow: View {
         VStack(alignment: .leading, spacing: 8) {
             // User info and rating
             HStack(spacing: 8) {
-                // User avatar
-                userAvatar
+                // User avatar + name → tappable link to profile
+                NavigationLink(value: AppDestination.profile(userId: review.userId)) {
+                    userAvatar
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(review.user?.displayName ?? "Anonymous")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(review.user?.displayName ?? "Anonymous")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
 
-                    if let rating = review.rating {
-                        RatingView(rating: rating, size: 12)
+                        if let rating = review.rating {
+                            RatingView(rating: rating, size: 12)
+                        }
                     }
                 }
+                .buttonStyle(.plain)
 
                 Spacer()
 

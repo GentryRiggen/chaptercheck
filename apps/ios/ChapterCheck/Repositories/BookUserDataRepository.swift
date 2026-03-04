@@ -58,6 +58,17 @@ final class BookUserDataRepository {
         )
     }
 
+    /// Subscribe to a user's reviews with embedded book info.
+    ///
+    /// For the caller's own profile: includes private reviews.
+    /// For other users: only public reviews are returned (filtered server-side).
+    func subscribeToUserReviews(userId: String) -> AnyPublisher<[UserReview], ClientError>? {
+        convex.subscribe(
+            to: "bookUserData/queries:getUserPublicReviews",
+            with: ["userId": userId]
+        )
+    }
+
     // MARK: - Mutations
 
     /// Toggle the read status for a book.

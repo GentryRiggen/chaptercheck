@@ -68,6 +68,16 @@ struct SearchView: View {
                         }
                     }
                 }
+
+                if !viewModel.userResults.isEmpty {
+                    Section("People") {
+                        ForEach(viewModel.userResults) { user in
+                            NavigationLink(value: AppDestination.profile(userId: user._id)) {
+                                userRow(user)
+                            }
+                        }
+                    }
+                }
             }
             .listStyle(.plain)
         }
@@ -116,6 +126,46 @@ struct SearchView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    // MARK: - User Row
+
+    private func userRow(_ user: SearchUser) -> some View {
+        HStack(spacing: 12) {
+            if let imageUrl = user.imageUrl, let url = URL(string: imageUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    default:
+                        userAvatarPlaceholder
+                    }
+                }
+                .frame(width: 40, height: 40)
+                .clipShape(Circle())
+            } else {
+                userAvatarPlaceholder
+            }
+
+            Text(user.displayName)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .lineLimit(1)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var userAvatarPlaceholder: some View {
+        Circle()
+            .fill(.fill.tertiary)
+            .frame(width: 40, height: 40)
+            .overlay {
+                Image(systemName: "person.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.secondary)
+            }
     }
 
     // MARK: - Browse Links (empty query state)

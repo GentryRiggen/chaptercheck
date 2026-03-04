@@ -16,10 +16,11 @@ final class SearchViewModel {
     var searchText: String = ""
     var bookResults: [BookWithDetails] = []
     var authorResults: [AuthorWithCounts] = []
+    var userResults: [SearchUser] = []
     var isLoading = false
     var error: String?
 
-    var hasResults: Bool { !bookResults.isEmpty || !authorResults.isEmpty }
+    var hasResults: Bool { !bookResults.isEmpty || !authorResults.isEmpty || !userResults.isEmpty }
     var isSearchActive: Bool { !searchText.trimmingCharacters(in: .whitespaces).isEmpty }
 
     // MARK: - Dependencies
@@ -51,6 +52,7 @@ final class SearchViewModel {
             cancellables.removeAll()
             bookResults = []
             authorResults = []
+            userResults = []
             isLoading = false
             error = nil
             return
@@ -88,9 +90,10 @@ final class SearchViewModel {
                     }
                 },
                 receiveValue: { [weak self] result in
-                    self?.logger.info("search: \(result.books.count) books, \(result.authors.count) authors")
+                    self?.logger.info("search: \(result.books.count) books, \(result.authors.count) authors, \(result.users?.count ?? 0) people")
                     self?.bookResults = result.books
                     self?.authorResults = result.authors
+                    self?.userResults = result.users ?? []
                     self?.isLoading = false
                 }
             )

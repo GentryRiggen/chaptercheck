@@ -4,10 +4,10 @@ import Foundation
 
 /// View model for the user profile screen.
 ///
-/// Subscribes to three parallel data sources: the user's profile, their shelves,
-/// and their reading history. Loading is dismissed once all three have emitted
-/// at least one value. The `markLoaded` pattern prevents the loading state from
-/// flickering as each subscription arrives independently.
+/// Subscribes to four parallel data sources: the user's profile, their shelves,
+/// their reading history, and their reviews. Loading is dismissed once all four
+/// have emitted at least one value. The `markLoaded` pattern prevents the loading
+/// state from flickering as each subscription arrives independently.
 @Observable
 @MainActor
 final class ProfileViewModel {
@@ -18,6 +18,7 @@ final class ProfileViewModel {
     var shelves: [Shelf] = []
     var isShelvesOwner = false
     var readBooks: [UserReadBook] = []
+    var reviews: [UserReview] = []
     var isLoading = true
     var error: String?
 
@@ -38,6 +39,7 @@ final class ProfileViewModel {
         subscribeToProfile(userId: userId)
         subscribeToShelves(userId: userId)
         subscribeToReadBooks(userId: userId)
+        subscribeToReviews(userId: userId)
     }
 
     func unsubscribe() {
@@ -110,13 +112,35 @@ final class ProfileViewModel {
             .store(in: &cancellables)
     }
 
+    private func subscribeToReviews(userId: String) {
+        guard let publisher = bookUserDataRepository.subscribeToUserReviews(userId: userId) else {
+            markLoaded(section: "reviews")
+            return
+        }
+        publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let err) = completion {
+                        self?.error = err.localizedDescription
+                        self?.markLoaded(section: "reviews")
+                    }
+                },
+                receiveValue: { [weak self] reviews in
+                    self?.reviews = reviews
+                    self?.markLoaded(section: "reviews")
+                }
+            )
+            .store(in: &cancellables)
+    }
+
     // MARK: - Loading State
 
     /// Marks a section as having loaded and dismisses the global loading state
-    /// once all three sections have received their first value.
+    /// once all four sections have received their first value.
     private func markLoaded(section: String) {
         loadedSections.insert(section)
-        if loadedSections.count >= 3 {
+        if loadedSections.count >= 4 {
             isLoading = false
         }
     }

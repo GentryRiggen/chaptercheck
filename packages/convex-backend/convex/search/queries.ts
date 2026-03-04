@@ -80,6 +80,21 @@ export const searchAll = query({
       })
     );
 
-    return { books: enrichedBooks, authors: authorsWithCounts };
+    // --- Users ---
+    const usersRaw = await ctx.db
+      .query("users")
+      .withSearchIndex("search_users", (q) => q.search("name", searchTerm))
+      .take(10);
+
+    // Filter out private profiles
+    const users = usersRaw
+      .filter((u) => !u.isProfilePrivate)
+      .map((u) => ({
+        _id: u._id,
+        name: u.name,
+        imageUrl: u.imageUrl,
+      }));
+
+    return { books: enrichedBooks, authors: authorsWithCounts, users };
   },
 });
