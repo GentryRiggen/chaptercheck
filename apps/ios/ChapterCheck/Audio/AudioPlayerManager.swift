@@ -62,6 +62,9 @@ final class AudioPlayerManager {
     /// Whether smart rewind (slight rewind after long pauses) is enabled.
     private(set) var isSmartRewindEnabled: Bool = PlaybackDefaults.smartRewindEnabled
 
+    /// Seconds remaining on the sleep timer, or 0 if inactive.
+    private(set) var sleepTimerRemaining: TimeInterval = 0
+
     /// Whether the player is loading/buffering a new track.
     private(set) var isLoading = false
 
@@ -129,6 +132,14 @@ final class AudioPlayerManager {
         return "-\(Self.formatTime(remaining))"
     }
 
+    /// Whether a sleep timer is currently counting down.
+    var isSleepTimerActive: Bool { sleepTimerRemaining > 0 }
+
+    /// Sleep timer remaining formatted as "M:SS" or "H:MM:SS".
+    var formattedSleepTimer: String {
+        Self.formatTime(sleepTimerRemaining)
+    }
+
     // MARK: - Dependencies
 
     private let streamURLCache: StreamURLCache
@@ -149,6 +160,7 @@ final class AudioPlayerManager {
     private var statusObservation: NSKeyValueObservation?
     private var endObservation: NSObjectProtocol?
     private var progressSaveTask: Task<Void, Never>?
+    private var sleepTimerTask: Task<Void, Never>?
 
     /// Minimum position change (in seconds) before saving progress to the backend.
     /// Prevents unnecessary writes when the user pauses and resumes at the same spot.
@@ -286,6 +298,7 @@ final class AudioPlayerManager {
     func pause() {
         player?.pause()
         isPlaying = false
+        cancelSleepTimer()
         saveProgressNow()
         updateNowPlayingState()
     }
@@ -352,6 +365,30 @@ final class AudioPlayerManager {
         saveProgressNow()
     }
 
+    // MARK: - Sleep Timer
+
+    /// Start a sleep timer that auto-pauses playback after the given minutes.
+    func setSleepTimer(minutes: Double) {
+        guard minutes > 0 else { return }
+        sleepTimerRemaining = minutes * 60
+        startSleepTimerCountdown()
+    }
+
+    /// Add or subtract minutes from the running sleep timer, clamped to ≥ 0.
+    func adjustSleepTimer(byMinutes minutes: Double) {
+        sleepTimerRemaining = max(0, sleepTimerRemaining + minutes * 60)
+        if sleepTimerRemaining == 0 {
+            cancelSleepTimer()
+        }
+    }
+
+    /// Cancel the sleep timer and clear remaining time.
+    func cancelSleepTimer() {
+        sleepTimerRemaining = 0
+        sleepTimerTask?.cancel()
+        sleepTimerTask = nil
+    }
+
     /// Advance to the next audio part.
     func nextPart() {
         guard let currentAudioFile,
@@ -396,6 +433,7 @@ final class AudioPlayerManager {
     func stop() {
         saveProgressNow()
         teardownPlayer()
+        cancelSleepTimer()
         resetMomentum()
 
         currentBook = nil
@@ -577,6 +615,37 @@ final class AudioPlayerManager {
     private func stopProgressSaving() {
         progressSaveTask?.cancel()
         progressSaveTask = nil
+    }
+
+    // MARK: - Private: Sleep Timer
+
+    private func startSleepTimerCountdown() {
+        sleepTimerTask?.cancel()
+        sleepTimerTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { return }
+                let shouldStop = await MainActor.run { [weak self] () -> Bool in
+                    guard let self, self.sleepTimerRemaining > 0 else { return true }
+                    self.sleepTimerRemaining -= 1
+                    if self.sleepTimerRemaining <= 0 {
+                        self.sleepTimerRemaining = 0
+                        self.sleepTimerTask = nil
+                        // Auto-pause with haptic
+                        if self.isPlaying {
+                            Haptics.warning()
+                            self.player?.pause()
+                            self.isPlaying = false
+                            self.saveProgressNow()
+                            self.updateNowPlayingState()
+                        }
+                        return true
+                    }
+                    return false
+                }
+                if shouldStop { return }
+            }
+        }
     }
 
     /// Save progress only if the position has changed meaningfully since the last save.

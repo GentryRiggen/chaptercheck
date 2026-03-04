@@ -11,6 +11,7 @@ struct NowPlayingView: View {
 
     @State private var isPartSelectorPresented = false
     @State private var isAudioSettingsPresented = false
+    @State private var isSleepTimerPresented = false
     @State private var showSavedIndicator = false
     @State private var isPlayingAnimated = false
 
@@ -103,6 +104,10 @@ struct NowPlayingView: View {
         }
         .sheet(isPresented: $isAudioSettingsPresented) {
             AudioSettingsSheet()
+                .environment(audioPlayer)
+        }
+        .sheet(isPresented: $isSleepTimerPresented) {
+            SleepTimerSheet()
                 .environment(audioPlayer)
         }
     }
@@ -227,7 +232,7 @@ struct NowPlayingView: View {
             } label: {
                 Image(systemName: "chevron.down")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.secondary)
                     .frame(width: 44, height: 44)
                     .background(.ultraThinMaterial, in: Circle())
             }
@@ -281,6 +286,29 @@ struct NowPlayingView: View {
 
             Spacer()
 
+            // Sleep timer — trailing
+            Button {
+                Haptics.light()
+                isSleepTimerPresented = true
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: audioPlayer.isSleepTimerActive ? "moon.zzz.fill" : "moon.zzz")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(audioPlayer.isSleepTimerActive ? Color.accentColor : .secondary)
+                    if audioPlayer.isSleepTimerActive {
+                        Text(audioPlayer.formattedSleepTimer)
+                            .font(.system(size: 9, weight: .medium))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .background(.ultraThinMaterial, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .contentShape(Circle())
+            .accessibilityLabel(audioPlayer.isSleepTimerActive ? "Sleep timer \(audioPlayer.formattedSleepTimer) remaining" : "Sleep timer")
+
             // Audio settings — trailing
             Button {
                 Haptics.light()
@@ -288,7 +316,7 @@ struct NowPlayingView: View {
             } label: {
                 Image(systemName: "waveform")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(audioPlayer.isVoiceBoostEnabled ? Color.accentColor : .secondary)
+                    .foregroundStyle(.secondary)
                     .frame(width: 44, height: 44)
                     .background(.ultraThinMaterial, in: Circle())
             }
