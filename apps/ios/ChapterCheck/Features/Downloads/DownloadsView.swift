@@ -55,6 +55,11 @@ struct DownloadsView: View {
                     description: Text("Downloaded books will appear here for offline listening.")
                 )
             }
+
+            Color.clear
+                .frame(height: 80)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
         }
         .navigationTitle("Downloads")
         .confirmationDialog(

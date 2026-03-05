@@ -39,6 +39,11 @@ struct OfflineHomeView: View {
             } header: {
                 Text("Downloaded Books")
             }
+
+            Color.clear
+                .frame(height: 80)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
         }
     }
 

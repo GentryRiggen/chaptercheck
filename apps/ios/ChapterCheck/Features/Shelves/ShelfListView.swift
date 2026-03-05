@@ -23,6 +23,9 @@ struct ShelfListView: View {
             }
             .padding(.horizontal)
             .padding(.top, 8)
+
+            Spacer()
+                .frame(height: 80)
         }
     }
 }

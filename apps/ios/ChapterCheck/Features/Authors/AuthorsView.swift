@@ -84,6 +84,9 @@ struct AuthorsView: View {
                 ProgressView()
                     .padding(.vertical, 16)
             }
+
+            Spacer()
+                .frame(height: 80)
         }
     }
 

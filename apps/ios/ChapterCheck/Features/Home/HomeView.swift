@@ -105,6 +105,9 @@ struct HomeView: View {
 
                 // Browse quick links
                 browseSection
+
+                Spacer()
+                    .frame(height: 80)
             }
             .padding(.top)
         }
