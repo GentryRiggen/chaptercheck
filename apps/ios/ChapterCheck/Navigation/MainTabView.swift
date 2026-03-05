@@ -82,13 +82,18 @@ extension EnvironmentValues {
 /// environment so all child views can access playback state. A persistent
 /// `MiniPlayerView` overlay is shown at the bottom when audio is loaded.
 struct MainView: View {
-    @State private var navigationPath = NavigationPath()
+    @State private var navigationPath: [AppDestination] = []
     @State private var audioPlayer = AudioPlayerManager()
     @State private var downloadManager = DownloadManager()
     @State private var isNowPlayingPresented = false
     @State private var isSettingsPresented = false
     @State private var pendingNavigation: AppDestination?
     @State private var preferencesCancellable: AnyCancellable?
+    @State private var showDeletePartConfirmation = false
+    @State private var completedPartAudioFileId: String?
+    @State private var completedPartBookId: String?
+    @State private var showDeleteDownloadConfirmation = false
+    @State private var deleteDownloadBookId: String?
     @Environment(ThemeManager.self) private var themeManager
     private let networkMonitor = NetworkMonitor.shared
 
@@ -157,10 +162,107 @@ struct MainView: View {
 
             downloadManager.downloadBook(book: book, audioFiles: audioPlayer.streamingEventAudioFiles)
         }
+        .onChange(of: audioPlayer.bookCompletedEventId) { _, newValue in
+            guard newValue != nil,
+                  let bookId = audioPlayer.bookCompletedBookId else { return }
+
+            let isDownloaded = downloadManager.isBookDownloaded(bookId)
+            let deletePref = audioPlayer.deleteDownloadAfterPlay
+
+            // Stop player and dismiss Now Playing
+            audioPlayer.stop()
+
+            // Navigate to the completed book's detail view (skip if already there)
+            let alreadyOnBookDetail = navigationPath.last == .book(id: bookId)
+            if isNowPlayingPresented {
+                if !alreadyOnBookDetail {
+                    pendingNavigation = .book(id: bookId)
+                }
+                isNowPlayingPresented = false
+            } else if !alreadyOnBookDetail {
+                navigationPath.append(.book(id: bookId))
+            }
+
+            // Handle download cleanup
+            guard isDownloaded else { return }
+            switch deletePref {
+            case "auto":
+                downloadManager.deleteBookDownload(bookId: bookId)
+            case "ask":
+                deleteDownloadBookId = bookId
+                if alreadyOnBookDetail && !isNowPlayingPresented {
+                    // Already on book detail with no sheet — show prompt immediately
+                    showDeleteDownloadConfirmation = true
+                } else if !alreadyOnBookDetail {
+                    // Will navigate to book detail — let it handle the prompt
+                    downloadManager.pendingDeletePromptBookId = bookId
+                }
+                // Otherwise: sheet is dismissing, onDismiss will show the prompt
+            default:
+                break // "off" — do nothing
+            }
+        }
+        .onChange(of: audioPlayer.partCompletedEventId) { _, newValue in
+            guard newValue != nil,
+                  let audioFileId = audioPlayer.partCompletedAudioFileId,
+                  let bookId = audioPlayer.partCompletedBookId,
+                  downloadManager.isBookDownloaded(bookId) else { return }
+
+            switch audioPlayer.deleteDownloadAfterPlay {
+            case "auto":
+                downloadManager.deleteAudioFile(audioFileId: audioFileId, bookId: bookId)
+            case "ask":
+                completedPartAudioFileId = audioFileId
+                completedPartBookId = bookId
+                showDeletePartConfirmation = true
+            default:
+                break // "off" — do nothing
+            }
+        }
+        .confirmationDialog(
+            "Delete Completed Part?",
+            isPresented: $showDeletePartConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Part", role: .destructive) {
+                if let audioFileId = completedPartAudioFileId,
+                   let bookId = completedPartBookId {
+                    downloadManager.deleteAudioFile(audioFileId: audioFileId, bookId: bookId)
+                }
+                completedPartAudioFileId = nil
+                completedPartBookId = nil
+            }
+            Button("No, Thank You", ) {
+                completedPartAudioFileId = nil
+                completedPartBookId = nil
+            }
+        } message: {
+            Text("Delete the downloaded file for the part you just finished to free up storage?")
+        }
+        .confirmationDialog(
+            "Delete Download?",
+            isPresented: $showDeleteDownloadConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Download", role: .destructive) {
+                if let bookId = deleteDownloadBookId {
+                    downloadManager.deleteBookDownload(bookId: bookId)
+                }
+                deleteDownloadBookId = nil
+            }
+            Button("No, Thank You", ) {
+                deleteDownloadBookId = nil
+            }
+        } message: {
+            Text("You've finished this book. Delete the downloaded files to free up storage?")
+        }
         .sheet(isPresented: $isNowPlayingPresented, onDismiss: {
             if let pending = pendingNavigation {
                 pendingNavigation = nil
                 navigationPath.append(pending)
+            }
+            if deleteDownloadBookId != nil {
+                showDeleteDownloadConfirmation = true
             }
         }) {
             NowPlayingView()

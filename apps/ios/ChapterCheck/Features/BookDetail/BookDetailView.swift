@@ -10,6 +10,7 @@ struct BookDetailView: View {
     @State private var viewModel = BookDetailViewModel()
     @State private var isReviewSheetPresented = false
     @State private var isAddToShelfPresented = false
+    @State private var showDeleteDownloadConfirmation = false
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.showNowPlaying) private var showNowPlaying
@@ -47,6 +48,11 @@ struct BookDetailView: View {
         .onAppear {
             viewModel.downloadManager = downloadManager
             viewModel.subscribe(bookId: bookId)
+
+            if downloadManager.pendingDeletePromptBookId == bookId {
+                downloadManager.pendingDeletePromptBookId = nil
+                showDeleteDownloadConfirmation = true
+            }
         }
         .onDisappear {
             viewModel.unsubscribe()
@@ -68,6 +74,18 @@ struct BookDetailView: View {
                     isReviewSheetPresented = false
                 }
             )
+        }
+        .confirmationDialog(
+            "Delete Download?",
+            isPresented: $showDeleteDownloadConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Download", role: .destructive) {
+                downloadManager.deleteBookDownload(bookId: bookId)
+            }
+            Button("No, Thank You") {}
+        } message: {
+            Text("You've finished this book. Delete the downloaded files to free up storage?")
         }
     }
 
@@ -102,14 +120,14 @@ struct BookDetailView: View {
                     ratingStats: viewModel.ratingStats
                 )
 
+                // Description
+                if let description = book.description, !description.isEmpty {
+                    descriptionSection(description)
+                }
+
                 // Play / Resume Button
                 if viewModel.hasAudioFiles {
                     playButton(book)
-                }
-
-                // Download Button
-                if viewModel.hasAudioFiles {
-                    BookDownloadButton(book: book, audioFiles: viewModel.audioFiles)
                 }
 
                 // Read Status
@@ -123,11 +141,6 @@ struct BookDetailView: View {
                         isReviewSheetPresented = true
                     }
                 )
-
-                // Description
-                if let description = book.description, !description.isEmpty {
-                    descriptionSection(description)
-                }
 
                 Divider()
                     .padding(.horizontal)
@@ -201,6 +214,11 @@ struct BookDetailView: View {
 
     // MARK: - Description
 
+    @State private var isDescriptionExpanded = false
+    @State private var isDescriptionTruncated = false
+    @State private var truncatedHeight: CGFloat = 0
+    @State private var fullHeight: CGFloat = 0
+
     private func descriptionSection(_ text: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("About")
@@ -209,7 +227,48 @@ struct BookDetailView: View {
             Text(text)
                 .font(.body)
                 .foregroundStyle(.secondary)
-                .lineLimit(6)
+                .lineLimit(isDescriptionExpanded ? nil : 2)
+                .background {
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear { truncatedHeight = geo.size.height }
+                            .onChange(of: geo.size.height) { truncatedHeight = geo.size.height }
+                    }
+                }
+                .overlay {
+                    // Invisible full-height text to measure unconstrained height
+                    Text(text)
+                        .font(.body)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .hidden()
+                        .background {
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        fullHeight = geo.size.height
+                                        isDescriptionTruncated = fullHeight > truncatedHeight + 1
+                                    }
+                                    .onChange(of: geo.size.height) {
+                                        fullHeight = geo.size.height
+                                        isDescriptionTruncated = fullHeight > truncatedHeight + 1
+                                    }
+                            }
+                        }
+                }
+
+            if isDescriptionTruncated || isDescriptionExpanded {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isDescriptionExpanded.toggle()
+                    }
+                } label: {
+                    Text(isDescriptionExpanded ? "Show Less" : "Show More")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)

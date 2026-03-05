@@ -35,7 +35,8 @@ final class PreferencesRepository {
         accentColor: String? = nil,
         colorSchemeMode: String? = nil,
         autoDownloadOnPlay: Bool? = nil,
-        downloadNetwork: String? = nil
+        downloadNetwork: String? = nil,
+        deleteDownloadAfterPlay: String? = nil
     ) {
         var args: [String: ConvexEncodable?] = [:]
         if let skipForwardSeconds { args["skipForwardSeconds"] = skipForwardSeconds }
@@ -47,6 +48,7 @@ final class PreferencesRepository {
         if let colorSchemeMode { args["colorSchemeMode"] = colorSchemeMode }
         if let autoDownloadOnPlay { args["autoDownloadOnPlay"] = autoDownloadOnPlay }
         if let downloadNetwork { args["downloadNetwork"] = downloadNetwork }
+        if let deleteDownloadAfterPlay { args["deleteDownloadAfterPlay"] = deleteDownloadAfterPlay }
 
         guard !args.isEmpty else { return }
 

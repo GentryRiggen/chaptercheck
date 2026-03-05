@@ -18,6 +18,7 @@ export const updatePreferences = mutation({
     colorSchemeMode: v.optional(v.string()),
     autoDownloadOnPlay: v.optional(v.boolean()),
     downloadNetwork: v.optional(v.string()),
+    deleteDownloadAfterPlay: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
@@ -101,6 +102,17 @@ export const updatePreferences = mutation({
       throw new Error(`colorSchemeMode must be one of: ${validColorSchemeModes.join(", ")}`);
     }
 
+    // Validate delete download after play
+    const validDeleteDownloadModes = ["ask", "auto", "off"];
+    if (
+      args.deleteDownloadAfterPlay !== undefined &&
+      !validDeleteDownloadModes.includes(args.deleteDownloadAfterPlay)
+    ) {
+      throw new Error(
+        `deleteDownloadAfterPlay must be one of: ${validDeleteDownloadModes.join(", ")}`
+      );
+    }
+
     // Validate download network
     const validDownloadNetworks = ["wifi", "wifiAndCellular"];
     if (
@@ -123,6 +135,8 @@ export const updatePreferences = mutation({
     if (args.colorSchemeMode !== undefined) patch.colorSchemeMode = args.colorSchemeMode;
     if (args.autoDownloadOnPlay !== undefined) patch.autoDownloadOnPlay = args.autoDownloadOnPlay;
     if (args.downloadNetwork !== undefined) patch.downloadNetwork = args.downloadNetwork;
+    if (args.deleteDownloadAfterPlay !== undefined)
+      patch.deleteDownloadAfterPlay = args.deleteDownloadAfterPlay;
 
     const existing = await ctx.db
       .query("userPreferences")
@@ -145,6 +159,7 @@ export const updatePreferences = mutation({
       colorSchemeMode: args.colorSchemeMode,
       autoDownloadOnPlay: args.autoDownloadOnPlay,
       downloadNetwork: args.downloadNetwork,
+      deleteDownloadAfterPlay: args.deleteDownloadAfterPlay,
       createdAt: now,
       updatedAt: now,
     });

@@ -53,6 +53,7 @@ export default defineSchema({
     colorSchemeMode: v.optional(v.string()), // "system" | "light" | "dark"
     autoDownloadOnPlay: v.optional(v.boolean()), // default: false — silently download instead of prompting
     downloadNetwork: v.optional(v.string()), // "wifi" | "wifiAndCellular" — gates prompts + auto-downloads
+    deleteDownloadAfterPlay: v.optional(v.string()), // "ask" | "auto" | "off" — what to do with downloads after book finishes
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),

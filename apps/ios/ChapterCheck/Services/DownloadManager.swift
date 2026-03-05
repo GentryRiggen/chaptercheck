@@ -30,6 +30,9 @@ final class DownloadManager {
     /// All downloaded books with their file info.
     private(set) var downloadedBooks: [BookDownloadInfo] = []
 
+    /// Set by MainView on book completion; BookDetailView reads this to show a confirmationDialog.
+    var pendingDeletePromptBookId: String?
+
     // MARK: - Dependencies
 
     private let downloadService: DownloadService
@@ -37,6 +40,9 @@ final class DownloadManager {
 
     /// Active download tasks per book, so we can cancel them.
     private var bookDownloadTasks: [String: Task<Void, Never>] = [:]
+
+    /// Active download tasks per individual audio file.
+    private var fileDownloadTasks: [String: Task<Void, Never>] = [:]
 
     init() {
         self.downloadService = DownloadService(audioRepository: AudioRepository())
@@ -150,6 +156,106 @@ final class DownloadManager {
         bookDownloadTasks[bookId] = task
     }
 
+    // MARK: - Download Single File
+
+    /// Download a single audio file for a book.
+    ///
+    /// - Parameters:
+    ///   - audioFile: The audio file to download.
+    ///   - book: The book the file belongs to.
+    ///   - allFiles: All audio files for the book (for metadata storage).
+    func downloadAudioFile(audioFile: AudioFile, book: BookWithDetails, allFiles: [AudioFile]) {
+        let audioFileId = audioFile._id
+        let bookId = book._id
+        guard fileDownloadTasks[audioFileId] == nil else { return }
+
+        // Check disk space
+        let totalBytes = Int64(audioFile.fileSize)
+        if let available = availableDiskSpace(), totalBytes > available {
+            logger.warning("Insufficient disk space: need \(totalBytes), have \(available)")
+            return
+        }
+
+        fileStatuses[audioFileId] = .pending
+        fileProgress[audioFileId] = 0
+
+        let metadata = BookMetadataEntry(
+            bookId: bookId,
+            title: book.title,
+            authorNames: book.authors.map(\.name),
+            coverImageR2Key: book.coverImageR2Key
+        )
+
+        let audioMeta = AudioFileMetadataEntry(
+            audioFileId: audioFile._id,
+            bookId: bookId,
+            fileName: audioFile.fileName,
+            fileSize: audioFile.fileSize,
+            duration: audioFile.duration,
+            format: audioFile.format,
+            partNumber: audioFile.partNumber,
+            displayName: audioFile.displayName
+        )
+
+        let task = Task { [weak self] in
+            guard let self else { return }
+
+            defer {
+                Task { @MainActor [weak self] in
+                    self?.fileDownloadTasks.removeValue(forKey: audioFileId)
+                }
+            }
+
+            await self.downloadService.storeAudioFileMetadata([audioMeta])
+
+            await MainActor.run {
+                self.fileStatuses[audioFileId] = .downloading
+            }
+
+            let stream = await self.downloadService.downloadFile(
+                audioFileId: audioFileId,
+                bookId: bookId,
+                fileName: audioFile.fileName,
+                fileSize: Int64(audioFile.fileSize),
+                bookMetadata: metadata
+            )
+
+            for await (downloaded, total) in stream {
+                guard !Task.isCancelled else { break }
+                let progress = total > 0 ? Double(downloaded) / Double(total) : 0
+                await MainActor.run {
+                    self.fileProgress[audioFileId] = progress
+                }
+            }
+
+            // Update status from manifest
+            let files = await self.downloadService.allDownloadedFiles()
+            if let file = files[audioFileId] {
+                await MainActor.run {
+                    self.fileStatuses[audioFileId] = file.status
+                    if file.status == .completed {
+                        self.fileProgress[audioFileId] = 1.0
+                    }
+                }
+            }
+
+            await self.refreshState()
+        }
+
+        fileDownloadTasks[audioFileId] = task
+    }
+
+    /// Cancel an in-progress single-file download.
+    func cancelFileDownload(audioFileId: String, bookId: String) {
+        fileDownloadTasks[audioFileId]?.cancel()
+        fileDownloadTasks.removeValue(forKey: audioFileId)
+
+        Task {
+            await downloadService.deleteAudioFile(audioFileId: audioFileId, bookId: bookId)
+            await refreshState()
+        }
+    }
+
     // MARK: - Cancel / Delete
 
     /// Cancel an active book download.
@@ -160,6 +266,14 @@ final class DownloadManager {
 
         Task {
             await downloadService.deleteBookDownloads(bookId: bookId)
+            await refreshState()
+        }
+    }
+
+    /// Delete a single completed audio file from a book's download.
+    func deleteAudioFile(audioFileId: String, bookId: String) {
+        Task {
+            await downloadService.deleteAudioFile(audioFileId: audioFileId, bookId: bookId)
             await refreshState()
         }
     }
@@ -196,6 +310,11 @@ final class DownloadManager {
     /// Whether a book is currently downloading.
     func isBookDownloading(_ bookId: String) -> Bool {
         activeBookIds.contains(bookId)
+    }
+
+    /// Whether a single file is currently downloading.
+    func isFileDownloading(_ audioFileId: String) -> Bool {
+        fileDownloadTasks[audioFileId] != nil
     }
 
     /// Get the aggregate download state for a book.

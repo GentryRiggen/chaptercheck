@@ -179,7 +179,11 @@ export default function BookDetailPage() {
       ) : null}
 
       <PremiumGate lockedMessage="Upgrade to Premium to upload audio files">
-        <AudioUpload bookId={bookId} onUploadComplete={() => {}} />
+        <AudioUpload
+          bookId={bookId}
+          existingFileCount={audioFiles?.length ?? 0}
+          onUploadComplete={() => {}}
+        />
       </PremiumGate>
     </div>
   );

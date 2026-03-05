@@ -224,6 +224,33 @@ actor DownloadService {
         }
     }
 
+    /// Delete a single audio file from a book's download.
+    ///
+    /// Removes the file record and physical file but preserves book metadata
+    /// and listening progress (the book still has other parts).
+    func deleteAudioFile(audioFileId: String, bookId: String) {
+        guard let file = manifest.files[audioFileId] else { return }
+
+        // Delete physical file
+        let filePath = Self.downloadsPath + "/" + file.localRelativePath
+        try? FileManager.default.removeItem(atPath: filePath)
+
+        // Remove from manifest (keep bookMetadata and listeningProgress)
+        manifest.files.removeValue(forKey: audioFileId)
+        manifest.audioFileMetadata.removeValue(forKey: audioFileId)
+
+        // Clean up empty book directory
+        let bookDirPath = Self.downloadsPath + "/" + bookId
+        let hasRemainingFiles = manifest.files.values.contains { $0.bookId == bookId }
+        if !hasRemainingFiles {
+            try? FileManager.default.removeItem(atPath: bookDirPath)
+            manifest.bookMetadata.removeValue(forKey: bookId)
+            manifest.listeningProgress.removeValue(forKey: bookId)
+        }
+
+        saveManifestToDisk()
+    }
+
     /// Delete all downloaded files for a book.
     func deleteBookDownloads(bookId: String) {
         // Remove file records

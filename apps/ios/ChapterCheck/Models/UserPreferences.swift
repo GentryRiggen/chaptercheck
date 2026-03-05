@@ -15,6 +15,7 @@ struct UserPreferences: Decodable, Sendable {
     let colorSchemeMode: String?
     let autoDownloadOnPlay: Bool?
     let downloadNetwork: String?
+    let deleteDownloadAfterPlay: String?
     let createdAt: Double
     let updatedAt: Double
 }
@@ -34,4 +35,5 @@ enum PlaybackDefaults {
 enum DownloadDefaults {
     static let autoDownloadOnPlay = false
     static let downloadNetwork = "wifi"
+    static let deleteDownloadAfterPlay = "ask"
 }

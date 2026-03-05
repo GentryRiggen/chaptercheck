@@ -9,6 +9,7 @@ struct DownloadSettingsView: View {
 
     @State private var autoDownloadOnPlay: Bool = DownloadDefaults.autoDownloadOnPlay
     @State private var downloadNetwork: String = DownloadDefaults.downloadNetwork
+    @State private var deleteDownloadAfterPlay: String = DownloadDefaults.deleteDownloadAfterPlay
     @State private var hasInitialized = false
     @State private var cancellables = Set<AnyCancellable>()
 
@@ -38,6 +39,20 @@ struct DownloadSettingsView: View {
             } footer: {
                 Text("Which networks allow download prompts and auto-downloads.")
             }
+
+            Section {
+                Picker("After Finishing a Book", selection: $deleteDownloadAfterPlay) {
+                    Text("Ask").tag("ask")
+                    Text("Automatically Delete").tag("auto")
+                    Text("Off").tag("off")
+                }
+                .onChange(of: deleteDownloadAfterPlay) { _, newValue in
+                    guard hasInitialized else { return }
+                    preferencesRepository.updatePreferences(deleteDownloadAfterPlay: newValue)
+                }
+            } footer: {
+                Text("Whether to delete downloaded files after you finish listening to a book.")
+            }
         }
         .navigationTitle("Download Preferences")
         .onAppear { subscribeToPreferences() }
@@ -57,6 +72,7 @@ struct DownloadSettingsView: View {
                 receiveValue: { prefs in
                     autoDownloadOnPlay = prefs?.autoDownloadOnPlay ?? DownloadDefaults.autoDownloadOnPlay
                     downloadNetwork = prefs?.downloadNetwork ?? DownloadDefaults.downloadNetwork
+                    deleteDownloadAfterPlay = prefs?.deleteDownloadAfterPlay ?? DownloadDefaults.deleteDownloadAfterPlay
                     hasInitialized = true
                 }
             )

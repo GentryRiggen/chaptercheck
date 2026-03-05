@@ -68,6 +68,9 @@ final class AudioPlayerManager {
     /// Network condition for downloads: "wifi" or "any".
     private(set) var downloadNetwork: String = DownloadDefaults.downloadNetwork
 
+    /// What to do with downloads after book finishes: "ask", "auto", or "off".
+    private(set) var deleteDownloadAfterPlay: String = DownloadDefaults.deleteDownloadAfterPlay
+
     /// Seconds remaining on the sleep timer, or 0 if inactive.
     private(set) var sleepTimerRemaining: TimeInterval = 0
 
@@ -170,6 +173,17 @@ final class AudioPlayerManager {
     private(set) var streamingEventId: UUID?
     private(set) var streamingEventBook: BookWithDetails?
     private(set) var streamingEventAudioFiles: [AudioFile] = []
+
+    /// Set when the last part of a book finishes playing.
+    /// MainView observes `bookCompletedEventId` via `.onChange` to trigger download cleanup.
+    private(set) var bookCompletedEventId: UUID?
+    private(set) var bookCompletedBookId: String?
+
+    /// Set when a mid-book part finishes and auto-advance continues.
+    /// MainView observes `partCompletedEventId` to trigger per-file download cleanup.
+    private(set) var partCompletedEventId: UUID?
+    private(set) var partCompletedAudioFileId: String?
+    private(set) var partCompletedBookId: String?
 
     // MARK: - Private State
 
@@ -462,6 +476,17 @@ final class AudioPlayerManager {
         play(book: book, audioFile: nextFile, allFiles: audioFiles, startPosition: 0, rate: playbackRate)
     }
 
+    /// Auto-advance to next part without saving progress for the current file.
+    /// Used by `observePlaybackEnd` which already reset the finished file's progress to 0.
+    private func advanceToNextPart() {
+        guard let currentAudioFile,
+              let nextFile = nextAudioFile(after: currentAudioFile),
+              let book = currentBook
+        else { return }
+
+        play(book: book, audioFile: nextFile, allFiles: audioFiles, startPosition: 0, rate: playbackRate)
+    }
+
     /// Go to the previous audio part, or restart the current part.
     ///
     /// If more than 3 seconds into the current part, restarts it instead
@@ -622,18 +647,37 @@ final class AudioPlayerManager {
                 guard let self else { return }
                 self.logger.info("Playback ended for '\(self.currentAudioFile?.displayName ?? "unknown")'")
 
-                // Save final position at the end of the track
-                self.currentPosition = self.duration
-                self.saveProgressNow()
+                // Reset the finished file's progress to 0 so replaying
+                // starts from the beginning instead of resuming at the end.
+                self.saveProgressWithPosition(0)
 
                 // Auto-advance to next part if available
                 if self.hasNext {
+                    // Capture completed part info before advancing
+                    self.partCompletedAudioFileId = self.currentAudioFile?._id
+                    self.partCompletedBookId = self.currentBook?._id
+                    self.partCompletedEventId = UUID()
+
                     self.logger.info("Auto-advancing to next part")
-                    self.nextPart()
+                    self.advanceToNextPart()
                 } else {
                     self.logger.info("No more parts - playback complete")
+
+                    // Reset progress to the first file at position 0 so
+                    // "Play" starts the book from the beginning.
+                    if let firstFileId = self.audioFiles.first?._id {
+                        self.saveProgressWithPosition(0, audioFileId: firstFileId)
+                    }
+
+                    self.currentPosition = 0
                     self.isPlaying = false
                     self.updateNowPlayingState()
+
+                    // Signal book completion for download cleanup
+                    if let bookId = self.currentBook?._id {
+                        self.bookCompletedBookId = bookId
+                        self.bookCompletedEventId = UUID()
+                    }
                 }
             }
         }
@@ -796,6 +840,80 @@ final class AudioPlayerManager {
                 Task {
                     await OfflineProgressQueue.shared.enqueue(entry)
                 }
+            }
+        }
+    }
+
+    /// Save progress with an explicit position and optional audio file override.
+    /// Used to reset a finished file's progress (position 0) or to reset to the first file on book completion.
+    private func saveProgressWithPosition(_ position: Double, audioFileId overrideAudioFileId: String? = nil) {
+        guard
+            let book = currentBook,
+            let audioFile = currentAudioFile,
+            duration > 0,
+            playbackRate > 0
+        else { return }
+
+        let bookId = book._id
+        let audioFileId = overrideAudioFileId ?? audioFile._id
+        let rate = playbackRate
+        let fileDuration: Double
+        if let overrideAudioFileId,
+           let targetFile = audioFiles.first(where: { $0._id == overrideAudioFileId }) {
+            fileDuration = targetFile.duration
+        } else {
+            fileDuration = duration
+        }
+
+        lastSavedPosition = position
+        lastSavedAt = Date()
+
+        if let dm = downloadManager, dm.isBookDownloaded(bookId) {
+            Task {
+                await dm.updateCachedProgress(
+                    bookId: bookId,
+                    audioFileId: audioFileId,
+                    positionSeconds: position,
+                    playbackRate: rate,
+                    timestamp: Date().timeIntervalSince1970 * 1000
+                )
+            }
+        }
+
+        if !NetworkMonitor.shared.isConnected {
+            let entry = QueuedProgress(
+                bookId: bookId,
+                audioFileId: audioFileId,
+                positionSeconds: position,
+                playbackRate: rate,
+                audioDuration: fileDuration,
+                timestamp: Date().timeIntervalSince1970 * 1000
+            )
+            Task { await OfflineProgressQueue.shared.enqueue(entry) }
+            return
+        }
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await self.progressRepository.saveProgress(
+                    bookId: bookId,
+                    audioFileId: audioFileId,
+                    positionSeconds: position,
+                    playbackRate: rate,
+                    audioDuration: fileDuration
+                )
+            } catch {
+                self.logger.error("Failed to save progress: \(error.localizedDescription)")
+                let entry = QueuedProgress(
+                    bookId: bookId,
+                    audioFileId: audioFileId,
+                    positionSeconds: position,
+                    playbackRate: rate,
+                    audioDuration: fileDuration,
+                    timestamp: Date().timeIntervalSince1970 * 1000
+                )
+                Task { await OfflineProgressQueue.shared.enqueue(entry) }
             }
         }
     }
@@ -1122,6 +1240,7 @@ final class AudioPlayerManager {
 
         autoDownloadOnPlay = prefs?.autoDownloadOnPlay ?? DownloadDefaults.autoDownloadOnPlay
         downloadNetwork = prefs?.downloadNetwork ?? DownloadDefaults.downloadNetwork
+        deleteDownloadAfterPlay = prefs?.deleteDownloadAfterPlay ?? DownloadDefaults.deleteDownloadAfterPlay
 
         // Sync voice boost if changed (without re-persisting to Convex)
         if newVoiceBoost != isVoiceBoostEnabled {
@@ -1151,6 +1270,7 @@ final class AudioPlayerManager {
         defaults.set(isVoiceBoostEnabled, forKey: "\(Self.cacheKeyPrefix)voiceBoost")
         defaults.set(autoDownloadOnPlay, forKey: "\(Self.cacheKeyPrefix)autoDownload")
         defaults.set(downloadNetwork, forKey: "\(Self.cacheKeyPrefix)downloadNetwork")
+        defaults.set(deleteDownloadAfterPlay, forKey: "\(Self.cacheKeyPrefix)deleteDownloadAfterPlay")
     }
 
     private func loadCachedPreferences() {
@@ -1174,6 +1294,9 @@ final class AudioPlayerManager {
         autoDownloadOnPlay = defaults.bool(forKey: "\(Self.cacheKeyPrefix)autoDownload")
         if let cachedNetwork = defaults.string(forKey: "\(Self.cacheKeyPrefix)downloadNetwork"), !cachedNetwork.isEmpty {
             downloadNetwork = cachedNetwork
+        }
+        if let cachedDeleteMode = defaults.string(forKey: "\(Self.cacheKeyPrefix)deleteDownloadAfterPlay"), !cachedDeleteMode.isEmpty {
+            deleteDownloadAfterPlay = cachedDeleteMode
         }
 
         // Validate loaded values
