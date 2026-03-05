@@ -227,7 +227,7 @@ jobs:
         env:
           APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
           APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
-          APPSTORE_APP_ID: ${{ vars.APPSTORE_APP_ID }}
+          APPSTORE_APP_ID: ${{ secrets.APPSTORE_APP_ID }}
         run: |
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install --quiet PyJWT cryptography requests
