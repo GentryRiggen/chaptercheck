@@ -36,7 +36,9 @@ final class PreferencesRepository {
         colorSchemeMode: String? = nil,
         autoDownloadOnPlay: Bool? = nil,
         downloadNetwork: String? = nil,
-        deleteDownloadAfterPlay: String? = nil
+        deleteDownloadAfterPlay: String? = nil,
+        airpodsDoubleClickAction: String? = nil,
+        airpodsTripleClickAction: String? = nil
     ) {
         var args: [String: ConvexEncodable?] = [:]
         if let skipForwardSeconds { args["skipForwardSeconds"] = skipForwardSeconds }
@@ -49,6 +51,8 @@ final class PreferencesRepository {
         if let autoDownloadOnPlay { args["autoDownloadOnPlay"] = autoDownloadOnPlay }
         if let downloadNetwork { args["downloadNetwork"] = downloadNetwork }
         if let deleteDownloadAfterPlay { args["deleteDownloadAfterPlay"] = deleteDownloadAfterPlay }
+        if let airpodsDoubleClickAction { args["airpodsDoubleClickAction"] = airpodsDoubleClickAction }
+        if let airpodsTripleClickAction { args["airpodsTripleClickAction"] = airpodsTripleClickAction }
 
         guard !args.isEmpty else { return }
 

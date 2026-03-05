@@ -19,6 +19,8 @@ export const updatePreferences = mutation({
     autoDownloadOnPlay: v.optional(v.boolean()),
     downloadNetwork: v.optional(v.string()),
     deleteDownloadAfterPlay: v.optional(v.string()),
+    airpodsDoubleClickAction: v.optional(v.string()),
+    airpodsTripleClickAction: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
@@ -122,6 +124,27 @@ export const updatePreferences = mutation({
       throw new Error(`downloadNetwork must be one of: ${validDownloadNetworks.join(", ")}`);
     }
 
+    // Validate AirPods click actions
+    const validAirpodsActions = [
+      "skipForward",
+      "skipBackward",
+      "nextPart",
+      "previousPart",
+      "disabled",
+    ];
+    if (
+      args.airpodsDoubleClickAction !== undefined &&
+      !validAirpodsActions.includes(args.airpodsDoubleClickAction)
+    ) {
+      throw new Error(`airpodsDoubleClickAction must be one of: ${validAirpodsActions.join(", ")}`);
+    }
+    if (
+      args.airpodsTripleClickAction !== undefined &&
+      !validAirpodsActions.includes(args.airpodsTripleClickAction)
+    ) {
+      throw new Error(`airpodsTripleClickAction must be one of: ${validAirpodsActions.join(", ")}`);
+    }
+
     // Build patch from only the fields that were provided
     const patch: Record<string, unknown> = { updatedAt: now };
     if (args.skipForwardSeconds !== undefined) patch.skipForwardSeconds = args.skipForwardSeconds;
@@ -137,6 +160,10 @@ export const updatePreferences = mutation({
     if (args.downloadNetwork !== undefined) patch.downloadNetwork = args.downloadNetwork;
     if (args.deleteDownloadAfterPlay !== undefined)
       patch.deleteDownloadAfterPlay = args.deleteDownloadAfterPlay;
+    if (args.airpodsDoubleClickAction !== undefined)
+      patch.airpodsDoubleClickAction = args.airpodsDoubleClickAction;
+    if (args.airpodsTripleClickAction !== undefined)
+      patch.airpodsTripleClickAction = args.airpodsTripleClickAction;
 
     const existing = await ctx.db
       .query("userPreferences")
@@ -160,6 +187,8 @@ export const updatePreferences = mutation({
       autoDownloadOnPlay: args.autoDownloadOnPlay,
       downloadNetwork: args.downloadNetwork,
       deleteDownloadAfterPlay: args.deleteDownloadAfterPlay,
+      airpodsDoubleClickAction: args.airpodsDoubleClickAction,
+      airpodsTripleClickAction: args.airpodsTripleClickAction,
       createdAt: now,
       updatedAt: now,
     });

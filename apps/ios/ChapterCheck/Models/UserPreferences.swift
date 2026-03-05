@@ -16,6 +16,8 @@ struct UserPreferences: Decodable, Sendable {
     let autoDownloadOnPlay: Bool?
     let downloadNetwork: String?
     let deleteDownloadAfterPlay: String?
+    let airpodsDoubleClickAction: String?
+    let airpodsTripleClickAction: String?
     let createdAt: Double
     let updatedAt: Double
 }
@@ -29,6 +31,8 @@ enum PlaybackDefaults {
     static let voiceBoostEnabled = false
     static let accentColor = "blue"
     static let colorSchemeMode = "system"
+    static let airpodsDoubleClickAction = "skipForward"
+    static let airpodsTripleClickAction = "skipBackward"
 }
 
 /// Default values for download preferences.

@@ -13,6 +13,8 @@ struct PlaybackSettingsView: View {
     @State private var momentumSkipEnabled: Bool = PlaybackDefaults.momentumSkipEnabled
     @State private var smartRewindEnabled: Bool = PlaybackDefaults.smartRewindEnabled
     @State private var voiceBoostEnabled: Bool = PlaybackDefaults.voiceBoostEnabled
+    @State private var airpodsDoubleClick: String = PlaybackDefaults.airpodsDoubleClickAction
+    @State private var airpodsTripleClick: String = PlaybackDefaults.airpodsTripleClickAction
     @State private var hasInitialized = false
     @State private var cancellables = Set<AnyCancellable>()
 
@@ -20,6 +22,14 @@ struct PlaybackSettingsView: View {
 
     private static let forwardOptions: [Double] = [10, 15, 30, 45, 60]
     private static let backwardOptions: [Double] = [5, 10, 15, 30]
+
+    private static let airpodsActions: [(value: String, label: String)] = [
+        ("skipForward", "Skip Forward"),
+        ("skipBackward", "Skip Backward"),
+        ("nextPart", "Next Part"),
+        ("previousPart", "Previous Part"),
+        ("disabled", "Disabled"),
+    ]
 
     var body: some View {
         Form {
@@ -67,6 +77,32 @@ struct PlaybackSettingsView: View {
                     }
             } footer: {
                 Text("Enhances voice clarity and evens out volume.")
+            }
+
+            Section {
+                Picker("Double-Click", selection: $airpodsDoubleClick) {
+                    ForEach(Self.airpodsActions, id: \.value) { option in
+                        Text(option.label).tag(option.value)
+                    }
+                }
+                .onChange(of: airpodsDoubleClick) { _, newValue in
+                    guard hasInitialized else { return }
+                    preferencesRepository.updatePreferences(airpodsDoubleClickAction: newValue)
+                }
+
+                Picker("Triple-Click", selection: $airpodsTripleClick) {
+                    ForEach(Self.airpodsActions, id: \.value) { option in
+                        Text(option.label).tag(option.value)
+                    }
+                }
+                .onChange(of: airpodsTripleClick) { _, newValue in
+                    guard hasInitialized else { return }
+                    preferencesRepository.updatePreferences(airpodsTripleClickAction: newValue)
+                }
+            } header: {
+                Text("AirPods Controls")
+            } footer: {
+                Text("Customize what happens when you double or triple-click your AirPods.")
             }
         }
         .navigationTitle("Playback")
@@ -129,6 +165,8 @@ struct PlaybackSettingsView: View {
                     momentumSkipEnabled = prefs?.momentumSkipEnabled ?? PlaybackDefaults.momentumSkipEnabled
                     smartRewindEnabled = prefs?.smartRewindEnabled ?? PlaybackDefaults.smartRewindEnabled
                     voiceBoostEnabled = prefs?.voiceBoostEnabled ?? PlaybackDefaults.voiceBoostEnabled
+                    airpodsDoubleClick = prefs?.airpodsDoubleClickAction ?? PlaybackDefaults.airpodsDoubleClickAction
+                    airpodsTripleClick = prefs?.airpodsTripleClickAction ?? PlaybackDefaults.airpodsTripleClickAction
                     hasInitialized = true
                 }
             )

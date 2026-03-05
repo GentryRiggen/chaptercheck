@@ -71,6 +71,12 @@ final class AudioPlayerManager {
     /// What to do with downloads after book finishes: "ask", "auto", or "off".
     private(set) var deleteDownloadAfterPlay: String = DownloadDefaults.deleteDownloadAfterPlay
 
+    /// AirPods double-click action: "skipForward", "skipBackward", "nextPart", "previousPart", or "disabled".
+    private(set) var airpodsDoubleClickAction: String = PlaybackDefaults.airpodsDoubleClickAction
+
+    /// AirPods triple-click action: "skipForward", "skipBackward", "nextPart", "previousPart", or "disabled".
+    private(set) var airpodsTripleClickAction: String = PlaybackDefaults.airpodsTripleClickAction
+
     /// Seconds remaining on the sleep timer, or 0 if inactive.
     private(set) var sleepTimerRemaining: TimeInterval = 0
 
@@ -1000,12 +1006,22 @@ final class AudioPlayerManager {
                 Task { @MainActor in self?.seek(to: position) }
             },
             onNextTrack: { [weak self] in
-                Task { @MainActor in self?.skipForward() }
+                Task { @MainActor in self?.performAirpodsAction(self?.airpodsDoubleClickAction) }
             },
             onPreviousTrack: { [weak self] in
-                Task { @MainActor in self?.skipBackward() }
+                Task { @MainActor in self?.performAirpodsAction(self?.airpodsTripleClickAction) }
             }
         )
+    }
+
+    private func performAirpodsAction(_ action: String?) {
+        switch action {
+        case "skipForward": skipForward()
+        case "skipBackward": skipBackward()
+        case "nextPart": nextPart()
+        case "previousPart": previousPart()
+        default: break // "disabled" or nil
+        }
     }
 
     private func observeAppLifecycle() {
@@ -1239,6 +1255,8 @@ final class AudioPlayerManager {
         autoDownloadOnPlay = prefs?.autoDownloadOnPlay ?? DownloadDefaults.autoDownloadOnPlay
         downloadNetwork = prefs?.downloadNetwork ?? DownloadDefaults.downloadNetwork
         deleteDownloadAfterPlay = prefs?.deleteDownloadAfterPlay ?? DownloadDefaults.deleteDownloadAfterPlay
+        airpodsDoubleClickAction = prefs?.airpodsDoubleClickAction ?? PlaybackDefaults.airpodsDoubleClickAction
+        airpodsTripleClickAction = prefs?.airpodsTripleClickAction ?? PlaybackDefaults.airpodsTripleClickAction
 
         // Sync voice boost if changed (without re-persisting to Convex)
         if newVoiceBoost != isVoiceBoostEnabled {
@@ -1269,6 +1287,8 @@ final class AudioPlayerManager {
         defaults.set(autoDownloadOnPlay, forKey: "\(Self.cacheKeyPrefix)autoDownload")
         defaults.set(downloadNetwork, forKey: "\(Self.cacheKeyPrefix)downloadNetwork")
         defaults.set(deleteDownloadAfterPlay, forKey: "\(Self.cacheKeyPrefix)deleteDownloadAfterPlay")
+        defaults.set(airpodsDoubleClickAction, forKey: "\(Self.cacheKeyPrefix)airpodsDoubleClick")
+        defaults.set(airpodsTripleClickAction, forKey: "\(Self.cacheKeyPrefix)airpodsTripleClick")
     }
 
     private func loadCachedPreferences() {
@@ -1295,6 +1315,12 @@ final class AudioPlayerManager {
         }
         if let cachedDeleteMode = defaults.string(forKey: "\(Self.cacheKeyPrefix)deleteDownloadAfterPlay"), !cachedDeleteMode.isEmpty {
             deleteDownloadAfterPlay = cachedDeleteMode
+        }
+        if let cachedDoubleClick = defaults.string(forKey: "\(Self.cacheKeyPrefix)airpodsDoubleClick"), !cachedDoubleClick.isEmpty {
+            airpodsDoubleClickAction = cachedDoubleClick
+        }
+        if let cachedTripleClick = defaults.string(forKey: "\(Self.cacheKeyPrefix)airpodsTripleClick"), !cachedTripleClick.isEmpty {
+            airpodsTripleClickAction = cachedTripleClick
         }
 
         // Validate loaded values

@@ -54,6 +54,8 @@ export default defineSchema({
     autoDownloadOnPlay: v.optional(v.boolean()), // default: false — silently download instead of prompting
     downloadNetwork: v.optional(v.string()), // "wifi" | "wifiAndCellular" — gates prompts + auto-downloads
     deleteDownloadAfterPlay: v.optional(v.string()), // "ask" | "auto" | "off" — what to do with downloads after book finishes
+    airpodsDoubleClickAction: v.optional(v.string()), // "skipForward" | "skipBackward" | "nextPart" | "previousPart" | "disabled"
+    airpodsTripleClickAction: v.optional(v.string()), // "skipForward" | "skipBackward" | "nextPart" | "previousPart" | "disabled"
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
