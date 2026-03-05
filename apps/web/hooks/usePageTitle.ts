@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 
-const APP_NAME = "ChapterCheck";
+const APP_NAME = "Chapter Check";
 
 /**
  * Sets the document title. Pass null/undefined to reset to app name only.
- * Title format: "Page Title | ChapterCheck" or just "ChapterCheck"
+ * Title format: "Page Title | Chapter Check" or just "Chapter Check"
  */
 export function usePageTitle(title: string | null | undefined) {
   useEffect(() => {

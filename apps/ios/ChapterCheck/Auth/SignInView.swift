@@ -25,7 +25,7 @@ struct SignInView: View {
                     .font(.system(size: 48))
                     .foregroundStyle(.tint)
 
-                Text("ChapterCheck")
+                Text("Chapter Check")
                     .font(.largeTitle)
                     .fontWeight(.bold)
 

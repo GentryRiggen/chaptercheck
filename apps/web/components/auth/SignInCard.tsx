@@ -97,7 +97,7 @@ export function SignInCard() {
         <CardTitle className="text-2xl">Welcome back</CardTitle>
         <CardDescription>
           {step === "email"
-            ? "Sign in to your ChapterCheck account"
+            ? "Sign in to your Chapter Check account"
             : "Enter the code we sent to your email"}
         </CardDescription>
       </CardHeader>

@@ -12,7 +12,7 @@ import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "ChapterCheck",
+  title: "Chapter Check",
   description: "Your personal audiobook library",
 };
 

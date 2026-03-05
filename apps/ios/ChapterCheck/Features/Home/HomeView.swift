@@ -39,7 +39,7 @@ struct HomeView: View {
                 scrollContent
             }
         }
-        .navigationTitle("ChapterCheck")
+        .navigationTitle("Chapter Check")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 NavigationLink(value: AppDestination.search) {
@@ -121,7 +121,7 @@ struct HomeView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(.secondary)
 
-            Text("Welcome to ChapterCheck")
+            Text("Welcome to Chapter Check")
                 .font(.title3)
                 .fontWeight(.semibold)
 

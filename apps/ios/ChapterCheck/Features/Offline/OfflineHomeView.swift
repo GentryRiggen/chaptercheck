@@ -19,7 +19,7 @@ struct OfflineHomeView: View {
                 bookList
             }
         }
-        .navigationTitle("ChapterCheck")
+        .navigationTitle("Chapter Check")
     }
 
     // MARK: - Book List

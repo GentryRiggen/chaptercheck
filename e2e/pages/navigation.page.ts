@@ -13,7 +13,7 @@ export class NavigationPage {
   }
 
   get homeLink() {
-    return this.page.getByRole("link", { name: "ChapterCheck" });
+    return this.page.getByRole("link", { name: "Chapter Check" });
   }
 
   get signInButton() {

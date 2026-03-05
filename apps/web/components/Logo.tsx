@@ -11,7 +11,7 @@ export function Logo({ size = 32, className }: LogoProps) {
   return (
     <Image
       src="/app-icon.png"
-      alt="ChapterCheck"
+      alt="Chapter Check"
       width={size}
       height={size}
       className={cn("flex-shrink-0 rounded-lg", className)}

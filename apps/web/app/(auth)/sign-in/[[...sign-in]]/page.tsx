@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { SignInCard } from "@/components/auth/SignInCard";
 
 export const metadata: Metadata = {
-  title: "Sign In | ChapterCheck",
+  title: "Sign In | Chapter Check",
 };
 
 function SignInFallback() {

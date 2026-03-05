@@ -58,7 +58,7 @@ export function Navigation() {
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2 text-left">
                     <Logo size={24} />
-                    ChapterCheck
+                    Chapter Check
                   </SheetTitle>
                 </SheetHeader>
                 <div className="mt-6 flex flex-col gap-1">
@@ -89,7 +89,7 @@ export function Navigation() {
           {/* Logo/Brand */}
           <Link href="/" className="flex items-center gap-2">
             <Logo size={28} />
-            <span className="text-lg font-bold sm:text-xl">ChapterCheck</span>
+            <span className="text-lg font-bold sm:text-xl">Chapter Check</span>
           </Link>
 
           {/* Desktop Navigation Links */}
