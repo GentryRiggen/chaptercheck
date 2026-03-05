@@ -28,23 +28,6 @@ const iconSizes = {
   card: "w-10 h-10 sm:w-12 sm:h-12",
 };
 
-// Generate a consistent gradient based on name
-function getGradientFromName(name: string): string {
-  const gradients = [
-    "from-violet-500/30 via-purple-500/30 to-fuchsia-500/30",
-    "from-blue-500/30 via-cyan-500/30 to-teal-500/30",
-    "from-emerald-500/30 via-green-500/30 to-lime-500/30",
-    "from-amber-500/30 via-orange-500/30 to-red-500/30",
-    "from-rose-500/30 via-pink-500/30 to-purple-500/30",
-    "from-indigo-500/30 via-blue-500/30 to-cyan-500/30",
-    "from-teal-500/30 via-emerald-500/30 to-green-500/30",
-    "from-orange-500/30 via-amber-500/30 to-yellow-500/30",
-  ];
-  const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return gradients[hash % gradients.length];
-}
-
-// Get initials from name
 function getInitials(name: string): string {
   return name
     .split(" ")
@@ -65,13 +48,11 @@ export function AuthorImage({ imageR2Key, name, size = "md", className }: Author
   }
 
   if (!imageUrl) {
-    const gradient = getGradientFromName(name);
     const initials = getInitials(name);
     return (
       <div
         className={cn(
-          "flex items-center justify-center rounded-full border border-border/50 bg-gradient-to-br",
-          gradient,
+          "flex items-center justify-center rounded-full border border-border/50 bg-muted/50",
           sizeClasses[size],
           className
         )}
@@ -79,14 +60,14 @@ export function AuthorImage({ imageR2Key, name, size = "md", className }: Author
         {initials ? (
           <span
             className={cn(
-              "font-semibold text-muted-foreground/80",
+              "font-semibold text-muted-foreground/70",
               isCard ? "text-lg sm:text-xl" : size === "lg" ? "text-lg" : "text-sm"
             )}
           >
             {initials}
           </span>
         ) : (
-          <User className={cn("text-muted-foreground/70", iconSizes[size])} />
+          <User className={cn("text-muted-foreground/50", iconSizes[size])} />
         )}
       </div>
     );

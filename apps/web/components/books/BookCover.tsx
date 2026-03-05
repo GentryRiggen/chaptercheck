@@ -28,22 +28,6 @@ const iconSizes = {
   card: "w-12 h-12",
 };
 
-// Generate a consistent gradient based on title
-function getGradientFromTitle(title: string): string {
-  const gradients = [
-    "from-violet-500/20 via-purple-500/20 to-fuchsia-500/20",
-    "from-blue-500/20 via-cyan-500/20 to-teal-500/20",
-    "from-emerald-500/20 via-green-500/20 to-lime-500/20",
-    "from-amber-500/20 via-orange-500/20 to-red-500/20",
-    "from-rose-500/20 via-pink-500/20 to-purple-500/20",
-    "from-indigo-500/20 via-blue-500/20 to-cyan-500/20",
-    "from-teal-500/20 via-emerald-500/20 to-green-500/20",
-    "from-orange-500/20 via-amber-500/20 to-yellow-500/20",
-  ];
-  const hash = title.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return gradients[hash % gradients.length];
-}
-
 export function BookCover({ coverImageR2Key, title, size = "md", className }: BookCoverProps) {
   const { imageUrl, loading } = useImageUrl(coverImageR2Key);
   const isCard = size === "card";
@@ -61,18 +45,16 @@ export function BookCover({ coverImageR2Key, title, size = "md", className }: Bo
   }
 
   if (!imageUrl) {
-    const gradient = getGradientFromTitle(title);
     return (
       <div
         className={cn(
-          "flex flex-shrink-0 flex-col items-center justify-center rounded-lg border border-border/50 bg-gradient-to-br",
-          gradient,
+          "flex flex-shrink-0 flex-col items-center justify-center rounded-lg border border-border/50 bg-muted/50",
           sizeClasses[size],
           isCard && "gap-3 p-4",
           className
         )}
       >
-        <BookOpen className={cn("text-muted-foreground/70", iconSizes[size])} />
+        <BookOpen className={cn("text-muted-foreground/50", iconSizes[size])} />
         {isCard && (
           <span className="line-clamp-3 text-center text-xs font-medium text-muted-foreground/70">
             {title}
