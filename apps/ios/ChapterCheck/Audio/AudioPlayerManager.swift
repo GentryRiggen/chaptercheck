@@ -199,10 +199,10 @@ final class AudioPlayerManager {
     private static let forwardBaseTierIndex = 1
 
     /// Number of rapid consecutive taps before escalating to the next tier.
-    private static let skipMomentumTaps = 4
+    private static let skipMomentumTaps = 5
 
     /// Maximum time between taps to count as rapid (seconds).
-    private static let skipMomentumWindow: TimeInterval = 0.8
+    private static let skipMomentumWindow: TimeInterval = 0.5
 
     /// Time after last tap before momentum resets (seconds).
     private static let skipResetDelay: TimeInterval = 1.5
