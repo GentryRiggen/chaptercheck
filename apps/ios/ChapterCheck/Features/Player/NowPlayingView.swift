@@ -16,6 +16,11 @@ struct NowPlayingView: View {
     @State private var showSavedIndicator = false
     @State private var isPlayingAnimated = false
 
+    // Carousel state
+    @State private var selectedCarouselPage = 0
+    @State private var isReviewSheetPresented = false
+    @State private var detailsViewModel = NowPlayingDetailsViewModel()
+
     // Download banner state
     @State private var showDownloadPrompt = false
     @State private var downloadPromptBook: BookWithDetails?
@@ -74,14 +79,39 @@ struct NowPlayingView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            // Cover artwork — scales up when playing, down when paused (iOS Music app effect)
-            BookCoverView(r2Key: audioPlayer.currentBook?.coverImageR2Key, displayMode: .fit(maxWidth: artworkSize, maxHeight: artworkSize))
-                .scaleEffect(isPlayingAnimated ? 1.0 : 0.85)
-                .shadow(color: .black.opacity(0.25), radius: isPlayingAnimated ? 20 : 10, y: isPlayingAnimated ? 10 : 5)
+            // Swipeable carousel: cover art ↔ book details
+            NowPlayingCarouselView(
+                book: audioPlayer.currentBook,
+                isPlaying: isPlayingAnimated,
+                artworkSize: artworkSize,
+                viewModel: detailsViewModel,
+                selectedPage: $selectedCarouselPage,
+                onNavigate: { destination in
+                    navigateToDestination(destination)
+                },
+                onOpenReview: {
+                    isReviewSheetPresented = true
+                }
+            )
+            .frame(height: artworkSize)
 
-            Spacer()
+            // Page indicator dots
+            if audioPlayer.currentBook != nil {
+                HStack(spacing: 6) {
+                    ForEach(0..<2, id: \.self) { index in
+                        Circle()
+                            .fill(index == selectedCarouselPage ? Color.primary : Color.secondary.opacity(0.4))
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .padding(.top, 12)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Page \(selectedCarouselPage + 1) of 2")
+            }
+
+            Spacer(minLength: 0)
 
             // Seek bar
             SeekBarView()
@@ -118,6 +148,13 @@ struct NowPlayingView: View {
             isPlayingAnimated = audioPlayer.isPlaying
             // Handle streaming event that fired before this sheet was presented
             handleStreamingEvent()
+            // Subscribe details ViewModel to current book
+            if let bookId = audioPlayer.currentBook?._id {
+                detailsViewModel.subscribe(bookId: bookId)
+            }
+        }
+        .onDisappear {
+            detailsViewModel.unsubscribe()
         }
         .onChange(of: audioPlayer.isPlaying) {
             withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
@@ -135,6 +172,35 @@ struct NowPlayingView: View {
         }
         .onChange(of: audioPlayer.streamingEventId) {
             handleStreamingEvent()
+        }
+        .onChange(of: audioPlayer.currentBook?._id) { oldId, newId in
+            guard newId != oldId else { return }
+            detailsViewModel.unsubscribe()
+            withAnimation(.easeInOut(duration: 0.3)) {
+                selectedCarouselPage = 0
+            }
+            if let newId {
+                detailsViewModel.subscribe(bookId: newId)
+            }
+        }
+        .sheet(isPresented: $isReviewSheetPresented) {
+            if let book = audioPlayer.currentBook {
+                BookReviewSheet(
+                    bookId: book._id,
+                    existingUserData: detailsViewModel.userData,
+                    allGenres: detailsViewModel.allGenres,
+                    existingGenreVoteIds: detailsViewModel.myGenreVoteIds,
+                    onSave: { formData in
+                        isReviewSheetPresented = false
+                        Task {
+                            await detailsViewModel.saveReview(bookId: book._id, formData: formData)
+                        }
+                    },
+                    onCancel: {
+                        isReviewSheetPresented = false
+                    }
+                )
+            }
         }
         .sheet(isPresented: $isPartSelectorPresented) {
             PartSelectorView()
@@ -321,9 +387,9 @@ struct NowPlayingView: View {
 
     private var bottomToolbar: some View {
         ZStack {
-            // Center group: audio settings, info, sleep timer — screen-centered
+            // Center group: audio settings + sleep timer — screen-centered
             HStack(spacing: 12) {
-                // Audio settings — left of center
+                // Audio settings
                 Button {
                     Haptics.light()
                     isAudioSettingsPresented = true
@@ -338,32 +404,7 @@ struct NowPlayingView: View {
                 .contentShape(Circle())
                 .accessibilityLabel("Audio settings")
 
-                // Info button — center
-                if let book = audioPlayer.currentBook {
-                    Menu {
-                        Button {
-                            navigateToDestination(.book(id: book._id))
-                        } label: {
-                            Label("Book Details", systemImage: "book")
-                        }
-                        ForEach(book.authors, id: \._id) { author in
-                            Button {
-                                navigateToDestination(.author(id: author._id))
-                            } label: {
-                                Label(author.name, systemImage: "person")
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "info.circle")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 44, height: 44)
-                            .background(.ultraThinMaterial, in: Circle())
-                    }
-                    .accessibilityLabel("Book info")
-                }
-
-                // Sleep timer — right of center
+                // Sleep timer
                 Button {
                     Haptics.light()
                     isSleepTimerPresented = true
