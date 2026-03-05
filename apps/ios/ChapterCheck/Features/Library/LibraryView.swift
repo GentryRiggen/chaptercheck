@@ -9,6 +9,8 @@ import SwiftUI
 ///
 /// Mode priority: search > genre filter > browse.
 struct LibraryView: View {
+    var initialSort: SortOption = .titleAsc
+
     @State private var viewModel = LibraryViewModel()
     @State private var isGenreFilterPresented = false
 
@@ -39,6 +41,7 @@ struct LibraryView: View {
         .navigationTitle("Books")
         .searchable(
             text: $viewModel.searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
             prompt: "Search books..."
         )
         .onChange(of: viewModel.searchText) {
@@ -76,6 +79,7 @@ struct LibraryView: View {
             GenreFilterSheet(selectedGenreIds: $viewModel.selectedGenreIds)
         }
         .onAppear {
+            viewModel.sortOption = initialSort
             viewModel.subscribe()
         }
         .onDisappear {
@@ -118,10 +122,6 @@ struct LibraryView: View {
                 ProgressView()
                     .padding(.vertical, 16)
             }
-
-            // Bottom spacing for mini player
-            Spacer()
-                .frame(height: 80)
         }
     }
 }

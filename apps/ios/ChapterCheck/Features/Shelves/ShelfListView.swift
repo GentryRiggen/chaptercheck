@@ -23,10 +23,6 @@ struct ShelfListView: View {
             }
             .padding(.horizontal)
             .padding(.top, 8)
-
-            // Bottom spacing for mini player
-            Spacer()
-                .frame(height: 80)
         }
     }
 }

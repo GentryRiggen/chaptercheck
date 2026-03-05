@@ -31,6 +31,9 @@ enum SortOption: String, CaseIterable, Identifiable {
 }
 
 /// Toolbar menu for selecting a sort option.
+///
+/// Shows the current sort name alongside the icon so the user
+/// always knows which sort is active.
 struct SortPicker: View {
     @Binding var selection: SortOption
 
@@ -40,12 +43,19 @@ struct SortPicker: View {
                 Button {
                     selection = option
                 } label: {
-                    Label(option.displayName, systemImage: option.icon)
+                    if option == selection {
+                        Label(option.displayName, systemImage: "checkmark")
+                    } else {
+                        Label(option.displayName, systemImage: option.icon)
+                    }
                 }
             }
         } label: {
-            Label("Sort", systemImage: "arrow.up.arrow.down")
-                .labelStyle(.iconOnly)
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.up.arrow.down")
+                Text(selection.displayName)
+                    .font(.subheadline)
+            }
         }
     }
 }

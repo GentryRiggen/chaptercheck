@@ -93,22 +93,20 @@ struct MainView: View {
     private let networkMonitor = NetworkMonitor.shared
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            NavigationStack(path: $navigationPath) {
-                if networkMonitor.isConnected {
-                    HomeView()
-                        .navigationDestination(for: AppDestination.self) { destination in
-                            destinationView(for: destination)
-                        }
-                } else {
-                    OfflineHomeView()
-                        .navigationDestination(for: AppDestination.self) { destination in
-                            destinationView(for: destination)
-                        }
-                }
+        NavigationStack(path: $navigationPath) {
+            if networkMonitor.isConnected {
+                HomeView()
+                    .navigationDestination(for: AppDestination.self) { destination in
+                        destinationView(for: destination)
+                    }
+            } else {
+                OfflineHomeView()
+                    .navigationDestination(for: AppDestination.self) { destination in
+                        destinationView(for: destination)
+                    }
             }
-
-            // Mini player overlay at the bottom
+        }
+        .safeAreaInset(edge: .bottom) {
             if audioPlayer.hasContent {
                 MiniPlayerView(isNowPlayingPresented: $isNowPlayingPresented)
                     .padding(.horizontal, 8)
@@ -189,8 +187,8 @@ struct MainView: View {
             ProfileView(userId: userId)
         case .search:
             SearchView()
-        case .browseLibrary:
-            LibraryView()
+        case .browseLibrary(let initialSort):
+            LibraryView(initialSort: initialSort)
         case .browseAuthors:
             AuthorsView()
         case .offlineBook(let bookId):

@@ -173,7 +173,7 @@ struct SearchView: View {
     private var browseLinks: some View {
         List {
             Section("Browse") {
-                NavigationLink(value: AppDestination.browseLibrary) {
+                NavigationLink(value: AppDestination.browseLibrary()) {
                     Label("All Books", systemImage: "books.vertical")
                 }
                 NavigationLink(value: AppDestination.browseAuthors) {

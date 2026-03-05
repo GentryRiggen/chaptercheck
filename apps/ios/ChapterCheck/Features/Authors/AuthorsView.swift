@@ -37,6 +37,7 @@ struct AuthorsView: View {
         .navigationTitle("Authors")
         .searchable(
             text: $viewModel.searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
             prompt: "Search authors..."
         )
         .onChange(of: viewModel.searchText) {
@@ -83,10 +84,6 @@ struct AuthorsView: View {
                 ProgressView()
                     .padding(.vertical, 16)
             }
-
-            // Bottom spacing for mini player
-            Spacer()
-                .frame(height: 80)
         }
     }
 
@@ -98,12 +95,19 @@ struct AuthorsView: View {
                 Button {
                     viewModel.sortOption = option
                 } label: {
-                    Label(option.displayName, systemImage: option.icon)
+                    if option == viewModel.sortOption {
+                        Label(option.displayName, systemImage: "checkmark")
+                    } else {
+                        Label(option.displayName, systemImage: option.icon)
+                    }
                 }
             }
         } label: {
-            Label("Sort", systemImage: "arrow.up.arrow.down")
-                .labelStyle(.iconOnly)
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.up.arrow.down")
+                Text(viewModel.sortOption.displayName)
+                    .font(.subheadline)
+            }
         }
     }
 }

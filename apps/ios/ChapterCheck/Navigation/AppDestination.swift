@@ -12,7 +12,7 @@ enum AppDestination: Hashable {
     case shelf(id: String)
     case profile(userId: String)
     case search
-    case browseLibrary
+    case browseLibrary(initialSort: SortOption = .titleAsc)
     case browseAuthors
     case offlineBook(bookId: String)
 }

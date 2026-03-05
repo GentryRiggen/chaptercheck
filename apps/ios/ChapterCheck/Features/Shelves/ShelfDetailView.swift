@@ -102,12 +102,6 @@ struct ShelfDetailView: View {
                     Text("Books")
                 }
             }
-
-            // Bottom spacing for mini player
-            Color.clear
-                .frame(height: 80)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
         }
     }
 

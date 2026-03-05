@@ -6,7 +6,8 @@ import { useDebounce } from "@chaptercheck/shared/hooks/useDebounce";
 import { useQuery } from "convex/react";
 import { ArrowUpDown, Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 import { AuthorCard } from "@/components/authors/AuthorCard";
 import { AuthorDialog } from "@/components/authors/AuthorDialog";
@@ -26,12 +27,43 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useScrolled } from "@/hooks/useScrolled";
 import { cn } from "@/lib/utils";
 
+type SortOption = "name_asc" | "name_desc" | "recent";
+
+const SORT_OPTIONS: Record<SortOption, string> = {
+  name_asc: "Name A-Z",
+  name_desc: "Name Z-A",
+  recent: "Recently Added",
+};
+
+const validSorts = new Set<string>(Object.keys(SORT_OPTIONS));
+
+function isValidSort(value: string | null): value is SortOption {
+  return value !== null && validSorts.has(value);
+}
+
 export default function AuthorsPage() {
+  return (
+    <Suspense>
+      <AuthorsPageContent />
+    </Suspense>
+  );
+}
+
+function AuthorsPageContent() {
   usePageTitle("Authors");
   const { shouldSkipQuery } = useAuthReady();
+  const searchParams = useSearchParams();
+  const sortParam = searchParams.get("sort");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
-  const [sort, setSort] = useState<"name_asc" | "name_desc" | "recent">("name_asc");
+  const [sort, setSort] = useState<SortOption>(isValidSort(sortParam) ? sortParam : "name_asc");
+
+  // Sync URL sort param to state (e.g. navigating from home "View all")
+  useEffect(() => {
+    if (isValidSort(sortParam)) {
+      setSort(sortParam);
+    }
+  }, [sortParam]);
   const debouncedSearch = useDebounce(searchInput, 300);
   const scrolled = useScrolled();
 
@@ -72,14 +104,26 @@ export default function AuthorsPage() {
           )}
         >
           <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
-            <h1
-              className={cn(
-                "shrink-0 font-bold transition-all duration-200",
-                scrolled ? "text-sm sm:text-lg" : "text-lg sm:text-xl"
+            <div className="flex shrink-0 items-baseline gap-1.5">
+              <h1
+                className={cn(
+                  "font-bold transition-all duration-200",
+                  scrolled ? "text-sm sm:text-lg" : "text-lg sm:text-xl"
+                )}
+              >
+                Authors
+              </h1>
+              {!isSearching && (
+                <span
+                  className={cn(
+                    "text-muted-foreground transition-all duration-200",
+                    scrolled ? "text-[10px] sm:text-xs" : "text-xs sm:text-sm"
+                  )}
+                >
+                  · {SORT_OPTIONS[sort]}
+                </span>
               )}
-            >
-              Authors
-            </h1>
+            </div>
             <div className="relative order-last w-full sm:order-none sm:w-auto sm:flex-1">
               <Search
                 className={cn(
@@ -99,7 +143,7 @@ export default function AuthorsPage() {
               />
             </div>
             {!isSearching && (
-              <Select value={sort} onValueChange={(v: typeof sort) => setSort(v)}>
+              <Select value={sort} onValueChange={(v: SortOption) => setSort(v)}>
                 <SelectTrigger
                   className={cn(
                     "w-[130px] shrink-0 transition-all duration-200",
@@ -110,9 +154,11 @@ export default function AuthorsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name_asc">Name A-Z</SelectItem>
-                  <SelectItem value="name_desc">Name Z-A</SelectItem>
-                  <SelectItem value="recent">Recently Added</SelectItem>
+                  {Object.entries(SORT_OPTIONS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             )}

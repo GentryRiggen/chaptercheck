@@ -138,7 +138,7 @@ function Dashboard() {
 
           {/* Recently Added Row */}
           {hasBooks && (
-            <ScrollRow title="Recently Added" viewAllHref="/books">
+            <ScrollRow title="Recently Added" viewAllHref="/books?sort=recent">
               {recentBooks.map((book) => (
                 <div key={book._id} className="w-36 flex-shrink-0 snap-start sm:w-40">
                   <BookCard
@@ -165,7 +165,7 @@ function Dashboard() {
 
           {/* Top Rated Row */}
           {hasTopRated && (
-            <ScrollRow title="Top Rated">
+            <ScrollRow title="Top Rated" viewAllHref="/books?sort=top_rated">
               {topRatedBooks.map((book) => (
                 <div key={book._id} className="w-36 flex-shrink-0 snap-start sm:w-40">
                   <BookCard

@@ -91,7 +91,7 @@ struct HomeView: View {
                     BookRowSection(
                         title: "Top Rated",
                         books: viewModel.topRatedBooks,
-                        seeAllDestination: .browseLibrary
+                        seeAllDestination: .browseLibrary(initialSort: .topRated)
                     )
                 }
 
@@ -99,16 +99,12 @@ struct HomeView: View {
                     BookRowSection(
                         title: "Recently Added",
                         books: viewModel.recentBooks,
-                        seeAllDestination: .browseLibrary
+                        seeAllDestination: .browseLibrary(initialSort: .recent)
                     )
                 }
 
                 // Browse quick links
                 browseSection
-
-                // Bottom spacing for mini player
-                Spacer()
-                    .frame(height: 80)
             }
             .padding(.top)
         }
@@ -131,7 +127,7 @@ struct HomeView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            NavigationLink(value: AppDestination.browseLibrary) {
+            NavigationLink(value: AppDestination.browseLibrary()) {
                 Text("Browse Library")
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -158,7 +154,7 @@ struct HomeView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 8)
 
-            NavigationLink(value: AppDestination.browseLibrary) {
+            NavigationLink(value: AppDestination.browseLibrary()) {
                 HStack {
                     Label("All Books", systemImage: "books.vertical")
                     Spacer()

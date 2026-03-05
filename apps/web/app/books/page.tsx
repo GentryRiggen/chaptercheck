@@ -7,7 +7,8 @@ import { useDebounce } from "@chaptercheck/shared/hooks/useDebounce";
 import { useQuery } from "convex/react";
 import { ArrowUpDown, Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 import { BookCard } from "@/components/books/BookCard";
 import { BookCover } from "@/components/books/BookCover";
@@ -31,12 +32,42 @@ import { cn } from "@/lib/utils";
 
 type SortOption = "title_asc" | "title_desc" | "recent" | "top_rated";
 
+const SORT_OPTIONS: Record<SortOption, string> = {
+  title_asc: "Title A-Z",
+  title_desc: "Title Z-A",
+  recent: "Recently Added",
+  top_rated: "Top Rated",
+};
+
+const validSorts = new Set<string>(Object.keys(SORT_OPTIONS));
+
+function isValidSort(value: string | null): value is SortOption {
+  return value !== null && validSorts.has(value);
+}
+
 export default function BooksPage() {
+  return (
+    <Suspense>
+      <BooksPageContent />
+    </Suspense>
+  );
+}
+
+function BooksPageContent() {
   usePageTitle("Books");
   const { shouldSkipQuery } = useAuthReady();
+  const searchParams = useSearchParams();
+  const sortParam = searchParams.get("sort");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
-  const [sort, setSort] = useState<SortOption>("title_asc");
+  const [sort, setSort] = useState<SortOption>(isValidSort(sortParam) ? sortParam : "title_asc");
+
+  // Sync URL sort param to state (e.g. navigating from home "View all")
+  useEffect(() => {
+    if (isValidSort(sortParam)) {
+      setSort(sortParam);
+    }
+  }, [sortParam]);
   const [genreFilter, setGenreFilter] = useState<Id<"genres">[]>([]);
   const debouncedSearch = useDebounce(searchInput, 300);
   const scrolled = useScrolled();
@@ -89,14 +120,26 @@ export default function BooksPage() {
           )}
         >
           <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
-            <h1
-              className={cn(
-                "shrink-0 font-bold transition-all duration-200",
-                scrolled ? "text-sm sm:text-lg" : "text-lg sm:text-xl"
+            <div className="flex shrink-0 items-baseline gap-1.5">
+              <h1
+                className={cn(
+                  "font-bold transition-all duration-200",
+                  scrolled ? "text-sm sm:text-lg" : "text-lg sm:text-xl"
+                )}
+              >
+                Books
+              </h1>
+              {!isSearching && (
+                <span
+                  className={cn(
+                    "text-muted-foreground transition-all duration-200",
+                    scrolled ? "text-[10px] sm:text-xs" : "text-xs sm:text-sm"
+                  )}
+                >
+                  · {SORT_OPTIONS[sort]}
+                </span>
               )}
-            >
-              Books
-            </h1>
+            </div>
             <div className="relative order-last w-full sm:order-none sm:w-auto sm:flex-1">
               <Search
                 className={cn(
@@ -128,10 +171,11 @@ export default function BooksPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="title_asc">Title A-Z</SelectItem>
-                    <SelectItem value="title_desc">Title Z-A</SelectItem>
-                    <SelectItem value="recent">Recently Added</SelectItem>
-                    <SelectItem value="top_rated">Top Rated</SelectItem>
+                    {Object.entries(SORT_OPTIONS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <GenreFilterPopover
