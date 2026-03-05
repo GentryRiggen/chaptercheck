@@ -12,6 +12,7 @@ struct BookDetailView: View {
     @State private var isAddToShelfPresented = false
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
+    @Environment(\.showNowPlaying) private var showNowPlaying
 
     var body: some View {
         Group {
@@ -180,6 +181,7 @@ struct BookDetailView: View {
                 startPosition: viewModel.resumePosition(smartRewindEnabled: audioPlayer.isSmartRewindEnabled),
                 rate: viewModel.resumeRate
             )
+            showNowPlaying()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "play.fill")

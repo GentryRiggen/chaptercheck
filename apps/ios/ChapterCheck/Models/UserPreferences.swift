@@ -13,6 +13,8 @@ struct UserPreferences: Decodable, Sendable {
     let voiceBoostEnabled: Bool?
     let accentColor: String?
     let colorSchemeMode: String?
+    let autoDownloadOnPlay: Bool?
+    let downloadNetwork: String?
     let createdAt: Double
     let updatedAt: Double
 }
@@ -26,4 +28,10 @@ enum PlaybackDefaults {
     static let voiceBoostEnabled = false
     static let accentColor = "blue"
     static let colorSchemeMode = "system"
+}
+
+/// Default values for download preferences.
+enum DownloadDefaults {
+    static let autoDownloadOnPlay = false
+    static let downloadNetwork = "wifi"
 }

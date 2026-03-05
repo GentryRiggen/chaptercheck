@@ -37,7 +37,7 @@ struct DownloadedFile: Codable, Sendable {
 // MARK: - Book Metadata Entry
 
 /// Lightweight book info stored in the manifest for offline display.
-struct BookMetadataEntry: Codable, Sendable {
+struct BookMetadataEntry: Codable, Sendable, Equatable {
     let bookId: String
     let title: String
     let authorNames: [String]

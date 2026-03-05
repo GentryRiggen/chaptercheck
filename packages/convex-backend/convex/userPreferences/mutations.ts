@@ -16,6 +16,8 @@ export const updatePreferences = mutation({
     voiceBoostEnabled: v.optional(v.boolean()),
     accentColor: v.optional(v.string()),
     colorSchemeMode: v.optional(v.string()),
+    autoDownloadOnPlay: v.optional(v.boolean()),
+    downloadNetwork: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
@@ -99,6 +101,15 @@ export const updatePreferences = mutation({
       throw new Error(`colorSchemeMode must be one of: ${validColorSchemeModes.join(", ")}`);
     }
 
+    // Validate download network
+    const validDownloadNetworks = ["wifi", "wifiAndCellular"];
+    if (
+      args.downloadNetwork !== undefined &&
+      !validDownloadNetworks.includes(args.downloadNetwork)
+    ) {
+      throw new Error(`downloadNetwork must be one of: ${validDownloadNetworks.join(", ")}`);
+    }
+
     // Build patch from only the fields that were provided
     const patch: Record<string, unknown> = { updatedAt: now };
     if (args.skipForwardSeconds !== undefined) patch.skipForwardSeconds = args.skipForwardSeconds;
@@ -110,6 +121,8 @@ export const updatePreferences = mutation({
     if (args.voiceBoostEnabled !== undefined) patch.voiceBoostEnabled = args.voiceBoostEnabled;
     if (args.accentColor !== undefined) patch.accentColor = args.accentColor;
     if (args.colorSchemeMode !== undefined) patch.colorSchemeMode = args.colorSchemeMode;
+    if (args.autoDownloadOnPlay !== undefined) patch.autoDownloadOnPlay = args.autoDownloadOnPlay;
+    if (args.downloadNetwork !== undefined) patch.downloadNetwork = args.downloadNetwork;
 
     const existing = await ctx.db
       .query("userPreferences")
@@ -130,6 +143,8 @@ export const updatePreferences = mutation({
       voiceBoostEnabled: args.voiceBoostEnabled,
       accentColor: args.accentColor,
       colorSchemeMode: args.colorSchemeMode,
+      autoDownloadOnPlay: args.autoDownloadOnPlay,
+      downloadNetwork: args.downloadNetwork,
       createdAt: now,
       updatedAt: now,
     });

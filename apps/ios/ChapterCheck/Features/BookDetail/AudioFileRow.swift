@@ -12,6 +12,7 @@ struct AudioFileRow: View {
     let allFiles: [AudioFile]
 
     @Environment(AudioPlayerManager.self) private var audioPlayer
+    @Environment(\.showNowPlaying) private var showNowPlaying
 
     /// Whether the audio player is currently playing this specific file.
     private var isNowPlaying: Bool {
@@ -96,6 +97,7 @@ struct AudioFileRow: View {
                 startPosition: startPosition,
                 rate: audioPlayer.playbackRate
             )
+            showNowPlaying()
         }
     }
 }

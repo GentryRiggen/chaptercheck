@@ -125,7 +125,27 @@ struct MainView: View {
             if networkMonitor.isConnected {
                 subscribeToPreferences()
                 await OfflineProgressQueue.shared.flush()
+                Task { await downloadManager.refreshDownloadedBookMetadata() }
             }
+        }
+        .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
+            if !wasConnected && isConnected {
+                subscribeToPreferences()
+                Task {
+                    await OfflineProgressQueue.shared.flush()
+                    await downloadManager.refreshDownloadedBookMetadata()
+                }
+            }
+        }
+        .onChange(of: audioPlayer.streamingEventId) { _, newValue in
+            guard newValue != nil,
+                  let book = audioPlayer.streamingEventBook,
+                  audioPlayer.autoDownloadOnPlay else { return }
+
+            // Check network preference — skip on cellular if Wi-Fi only
+            if audioPlayer.downloadNetwork == "wifi" && networkMonitor.isExpensive { return }
+
+            downloadManager.downloadBook(book: book, audioFiles: audioPlayer.streamingEventAudioFiles)
         }
         .sheet(isPresented: $isNowPlayingPresented, onDismiss: {
             if let pending = pendingNavigation {
@@ -135,6 +155,7 @@ struct MainView: View {
         }) {
             NowPlayingView()
                 .environment(audioPlayer)
+                .environment(downloadManager)
                 .environment(\.navigateToDestination, navigateAction)
                 .preferredColorScheme(themeManager.preferredColorScheme)
         }

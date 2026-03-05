@@ -6,6 +6,7 @@ import SwiftUI
 /// seek bar → transport → toolbar anchored at bottom.
 struct NowPlayingView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
+    @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.navigateToDestination) private var navigateToDestination
 
@@ -14,6 +15,16 @@ struct NowPlayingView: View {
     @State private var isSleepTimerPresented = false
     @State private var showSavedIndicator = false
     @State private var isPlayingAnimated = false
+
+    // Download banner state
+    @State private var showDownloadPrompt = false
+    @State private var downloadPromptBook: BookWithDetails?
+    @State private var downloadPromptAudioFiles: [AudioFile] = []
+    @State private var downloadPromptDismissTask: Task<Void, Never>?
+    @State private var isAutoDownloadNoticeVisible = false
+    @State private var autoDownloadNoticeTitle: String = ""
+    @State private var autoDownloadNoticeDismissTask: Task<Void, Never>?
+    @State private var lastHandledEventId: UUID?
 
     /// Artwork fills width minus 48pt padding, capped at 400 for iPad.
     private var artworkSize: CGFloat {
@@ -34,6 +45,29 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss player")
+
+            // Download banners
+            if isAutoDownloadNoticeVisible {
+                AutoDownloadNoticeBanner(bookTitle: autoDownloadNoticeTitle)
+                    .padding(.horizontal, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+
+            if showDownloadPrompt, let book = downloadPromptBook {
+                DownloadPromptBanner(
+                    bookTitle: book.title,
+                    onDownload: {
+                        downloadManager.downloadBook(
+                            book: book,
+                            audioFiles: downloadPromptAudioFiles
+                        )
+                        dismissDownloadPrompt()
+                    },
+                    onDismiss: { dismissDownloadPrompt() }
+                )
+                .padding(.horizontal, 16)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
 
             // Top: category label + title + part info
             topSection
@@ -82,6 +116,8 @@ struct NowPlayingView: View {
         .background(.background)
         .onAppear {
             isPlayingAnimated = audioPlayer.isPlaying
+            // Handle streaming event that fired before this sheet was presented
+            handleStreamingEvent()
         }
         .onChange(of: audioPlayer.isPlaying) {
             withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
@@ -96,6 +132,9 @@ struct NowPlayingView: View {
                     showSavedIndicator = false
                 }
             }
+        }
+        .onChange(of: audioPlayer.streamingEventId) {
+            handleStreamingEvent()
         }
         .sheet(isPresented: $isPartSelectorPresented) {
             PartSelectorView()
@@ -218,6 +257,60 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
             .contentShape(Circle())
+        }
+    }
+
+    // MARK: - Download Banner Helpers
+
+    private func handleStreamingEvent() {
+        guard let eventId = audioPlayer.streamingEventId,
+              eventId != lastHandledEventId,
+              let book = audioPlayer.streamingEventBook else { return }
+
+        lastHandledEventId = eventId
+
+        // Check network preference — skip on cellular if Wi-Fi only
+        if audioPlayer.downloadNetwork == "wifi" && NetworkMonitor.shared.isExpensive { return }
+
+        let files = audioPlayer.streamingEventAudioFiles
+
+        if audioPlayer.autoDownloadOnPlay {
+            // Auto-download notice (3s)
+            autoDownloadNoticeTitle = book.title
+            autoDownloadNoticeDismissTask?.cancel()
+            withAnimation(.spring(duration: 0.3)) {
+                isAutoDownloadNoticeVisible = true
+            }
+            autoDownloadNoticeDismissTask = Task {
+                try? await Task.sleep(for: .seconds(3))
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    withAnimation(.spring(duration: 0.3)) {
+                        isAutoDownloadNoticeVisible = false
+                    }
+                }
+            }
+        } else {
+            // Download prompt (5s auto-dismiss)
+            downloadPromptBook = book
+            downloadPromptAudioFiles = files
+            downloadPromptDismissTask?.cancel()
+            withAnimation(.spring(duration: 0.3)) {
+                showDownloadPrompt = true
+            }
+            downloadPromptDismissTask = Task {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled else { return }
+                await MainActor.run { dismissDownloadPrompt() }
+            }
+        }
+    }
+
+    private func dismissDownloadPrompt() {
+        downloadPromptDismissTask?.cancel()
+        downloadPromptDismissTask = nil
+        withAnimation(.spring(duration: 0.3)) {
+            showDownloadPrompt = false
         }
     }
 

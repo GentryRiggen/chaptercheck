@@ -17,6 +17,7 @@ final class NetworkMonitor {
     static let shared = NetworkMonitor()
 
     private(set) var isConnected: Bool = true
+    private(set) var isExpensive: Bool = false
 
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.chaptercheck.networkMonitor")
@@ -30,6 +31,7 @@ final class NetworkMonitor {
                 let nowConnected = path.status == .satisfied
 
                 self.isConnected = nowConnected
+                self.isExpensive = path.isExpensive
 
                 if !wasConnected && nowConnected {
                     self.logger.info("Network restored")

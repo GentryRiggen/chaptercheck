@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import os
 
@@ -323,6 +324,58 @@ final class DownloadManager {
 
         guard !audioFiles.isEmpty else { return nil }
         return (book, audioFiles)
+    }
+
+    // MARK: - Metadata Refresh
+
+    /// Fetch current book metadata from Convex and update stale manifest entries.
+    func refreshDownloadedBookMetadata() async {
+        let bookIds = Array(downloadedBookIds)
+        guard !bookIds.isEmpty else { return }
+
+        let bookRepository = BookRepository()
+        var updatedEntries: [BookMetadataEntry] = []
+
+        for bookId in bookIds {
+            guard let publisher = bookRepository.subscribeToBook(id: bookId) else { continue }
+
+            do {
+                let book = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<BookWithDetails?, Error>) in
+                    var cancellable: AnyCancellable?
+                    cancellable = publisher
+                        .first()
+                        .sink(
+                            receiveCompletion: { completion in
+                                switch completion {
+                                case .finished:
+                                    break
+                                case .failure(let error):
+                                    continuation.resume(throwing: error)
+                                }
+                                _ = cancellable // prevent premature dealloc
+                            },
+                            receiveValue: { value in
+                                continuation.resume(returning: value)
+                            }
+                        )
+                }
+
+                guard let book else { continue }
+
+                updatedEntries.append(BookMetadataEntry(
+                    bookId: book._id,
+                    title: book.title,
+                    authorNames: book.authors.map(\.name),
+                    coverImageR2Key: book.coverImageR2Key
+                ))
+            } catch {
+                logger.warning("Failed to refresh metadata for book \(bookId): \(error.localizedDescription)")
+            }
+        }
+
+        guard !updatedEntries.isEmpty else { return }
+        await downloadService.updateBookMetadata(updatedEntries)
+        await refreshState()
     }
 
     // MARK: - Private

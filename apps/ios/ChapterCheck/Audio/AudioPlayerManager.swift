@@ -62,6 +62,12 @@ final class AudioPlayerManager {
     /// Whether smart rewind (slight rewind after long pauses) is enabled.
     private(set) var isSmartRewindEnabled: Bool = PlaybackDefaults.smartRewindEnabled
 
+    /// Whether to auto-download books when streaming starts.
+    private(set) var autoDownloadOnPlay: Bool = DownloadDefaults.autoDownloadOnPlay
+
+    /// Network condition for downloads: "wifi" or "any".
+    private(set) var downloadNetwork: String = DownloadDefaults.downloadNetwork
+
     /// Seconds remaining on the sleep timer, or 0 if inactive.
     private(set) var sleepTimerRemaining: TimeInterval = 0
 
@@ -152,6 +158,12 @@ final class AudioPlayerManager {
     /// Optional download manager for offline playback. Set after initialization
     /// from `MainView` once the download manager is available.
     var downloadManager: DownloadManager?
+
+    /// Set when streaming starts for a non-downloaded book.
+    /// MainView observes `streamingEventId` via `.onChange` to trigger prompts/auto-downloads.
+    private(set) var streamingEventId: UUID?
+    private(set) var streamingEventBook: BookWithDetails?
+    private(set) var streamingEventAudioFiles: [AudioFile] = []
 
     // MARK: - Private State
 
@@ -283,6 +295,13 @@ final class AudioPlayerManager {
         isLoading = true
         error = nil
         resetMomentum()
+
+        // Signal streaming of a non-downloaded book (for download prompt / auto-download)
+        if let dm = downloadManager, !dm.isBookDownloaded(book._id), !dm.isBookDownloading(book._id) {
+            streamingEventBook = book
+            streamingEventAudioFiles = allFiles
+            streamingEventId = UUID()
+        }
 
         // Prefetch the stream URL for the next part so transitions are seamless
         if let nextFile = nextAudioFile(after: audioFile) {
@@ -1058,6 +1077,9 @@ final class AudioPlayerManager {
             resetMomentum()
         }
 
+        autoDownloadOnPlay = prefs?.autoDownloadOnPlay ?? DownloadDefaults.autoDownloadOnPlay
+        downloadNetwork = prefs?.downloadNetwork ?? DownloadDefaults.downloadNetwork
+
         // Sync voice boost if changed (without re-persisting to Convex)
         if newVoiceBoost != isVoiceBoostEnabled {
             isVoiceBoostEnabled = newVoiceBoost
@@ -1084,6 +1106,8 @@ final class AudioPlayerManager {
         defaults.set(isMomentumSkipEnabled, forKey: "\(Self.cacheKeyPrefix)momentum")
         defaults.set(isSmartRewindEnabled, forKey: "\(Self.cacheKeyPrefix)smartRewind")
         defaults.set(isVoiceBoostEnabled, forKey: "\(Self.cacheKeyPrefix)voiceBoost")
+        defaults.set(autoDownloadOnPlay, forKey: "\(Self.cacheKeyPrefix)autoDownload")
+        defaults.set(downloadNetwork, forKey: "\(Self.cacheKeyPrefix)downloadNetwork")
     }
 
     private func loadCachedPreferences() {
@@ -1104,6 +1128,10 @@ final class AudioPlayerManager {
         isMomentumSkipEnabled = defaults.bool(forKey: "\(Self.cacheKeyPrefix)momentum")
         isSmartRewindEnabled = defaults.bool(forKey: "\(Self.cacheKeyPrefix)smartRewind")
         isVoiceBoostEnabled = defaults.bool(forKey: "\(Self.cacheKeyPrefix)voiceBoost")
+        autoDownloadOnPlay = defaults.bool(forKey: "\(Self.cacheKeyPrefix)autoDownload")
+        if let cachedNetwork = defaults.string(forKey: "\(Self.cacheKeyPrefix)downloadNetwork"), !cachedNetwork.isEmpty {
+            downloadNetwork = cachedNetwork
+        }
 
         // Validate loaded values
         if baseSkipForward <= 0 { baseSkipForward = PlaybackDefaults.skipForwardSeconds }

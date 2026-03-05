@@ -14,14 +14,23 @@ actor DownloadService {
     private var manifest: DownloadManifest
     private var activeTasks: [String: Task<Void, Never>] = [:]
 
-    /// Root directory for all downloads.
+    /// Root path string for all downloads: Documents/Downloads
+    private static var downloadsPath: String {
+        let docs = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+        return docs + "/Downloads"
+    }
+
+    /// Root directory URL for all downloads.
     private static var downloadsDirectory: URL {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return docs.appendingPathComponent("Downloads", isDirectory: true)
+        URL(fileURLWithPath: downloadsPath, isDirectory: true)
+    }
+
+    private static var manifestPath: String {
+        downloadsPath + "/manifest.json"
     }
 
     private static var manifestURL: URL {
-        downloadsDirectory.appendingPathComponent("manifest.json")
+        URL(fileURLWithPath: manifestPath)
     }
 
     init(audioRepository: AudioRepository) {
@@ -34,18 +43,17 @@ actor DownloadService {
     /// Load the manifest from disk and reset any interrupted downloads.
     func loadManifest() -> DownloadManifest {
         let fm = FileManager.default
-        let dir = Self.downloadsDirectory
+        let dirPath = Self.downloadsPath
 
         // Ensure downloads directory exists
-        if !fm.fileExists(atPath: dir.path) {
-            try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
-            excludeFromBackup(dir)
+        if !fm.fileExists(atPath: dirPath) {
+            try? fm.createDirectory(atPath: dirPath, withIntermediateDirectories: true, attributes: nil)
+            excludeFromBackup(Self.downloadsDirectory)
         }
 
         // Load existing manifest
-        let url = Self.manifestURL
-        if fm.fileExists(atPath: url.path),
-           let data = try? Data(contentsOf: url),
+        if fm.fileExists(atPath: Self.manifestPath),
+           let data = try? Data(contentsOf: Self.manifestURL),
            let loaded = try? JSONDecoder().decode(DownloadManifest.self, from: data)
         {
             manifest = loaded
@@ -71,14 +79,14 @@ actor DownloadService {
         guard let file = manifest.files[audioFileId],
               file.status == .completed else { return nil }
 
-        let url = Self.downloadsDirectory.appendingPathComponent(file.localRelativePath)
-        guard FileManager.default.fileExists(atPath: url.path) else {
+        let filePath = Self.downloadsPath + "/" + file.localRelativePath
+        guard FileManager.default.fileExists(atPath: filePath) else {
             // File was deleted externally — clean up manifest
             manifest.files.removeValue(forKey: audioFileId)
             saveManifestToDisk()
             return nil
         }
-        return url
+        return URL(fileURLWithPath: filePath)
     }
 
     /// Get all downloaded files from the manifest.
@@ -113,6 +121,18 @@ actor DownloadService {
             manifest.audioFileMetadata[entry.audioFileId] = entry
         }
         saveManifestToDisk()
+    }
+
+    /// Update book metadata entries in the manifest (e.g. after a cover image is added).
+    func updateBookMetadata(_ entries: [BookMetadataEntry]) {
+        var changed = false
+        for entry in entries {
+            guard let existing = manifest.bookMetadata[entry.bookId],
+                  existing != entry else { continue }
+            manifest.bookMetadata[entry.bookId] = entry
+            changed = true
+        }
+        if changed { saveManifestToDisk() }
     }
 
     /// Total storage used by all downloaded files.
@@ -199,8 +219,8 @@ actor DownloadService {
             saveManifestToDisk()
 
             // Clean up partial file
-            let url = Self.downloadsDirectory.appendingPathComponent(file.localRelativePath)
-            try? FileManager.default.removeItem(at: url)
+            let filePath = Self.downloadsPath + "/" + file.localRelativePath
+            try? FileManager.default.removeItem(atPath: filePath)
         }
     }
 
@@ -223,8 +243,8 @@ actor DownloadService {
         manifest.listeningProgress.removeValue(forKey: bookId)
 
         // Delete the book's download directory
-        let bookDir = Self.downloadsDirectory.appendingPathComponent(bookId, isDirectory: true)
-        try? FileManager.default.removeItem(at: bookDir)
+        let bookDirPath = Self.downloadsPath + "/" + bookId
+        try? FileManager.default.removeItem(atPath: bookDirPath)
 
         saveManifestToDisk()
     }
@@ -243,10 +263,10 @@ actor DownloadService {
 
         // Remove entire downloads directory contents (keep the directory itself)
         let fm = FileManager.default
-        let dir = Self.downloadsDirectory
-        if let contents = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) {
-            for item in contents where item.lastPathComponent != "manifest.json" {
-                try? fm.removeItem(at: item)
+        let dirPath = Self.downloadsPath
+        if let contents = try? fm.contentsOfDirectory(atPath: dirPath) {
+            for item in contents where item != "manifest.json" {
+                try? fm.removeItem(atPath: dirPath + "/" + item)
             }
         }
     }
@@ -264,6 +284,9 @@ actor DownloadService {
         fileSize: Int64,
         continuation: AsyncStream<(Int64, Int64)>.Continuation
     ) async {
+        let downloadsPath = Self.downloadsPath
+        let fm = FileManager.default
+
         // Update status to downloading
         manifest.files[audioFileId]?.status = .downloading
         saveManifestToDisk()
@@ -276,11 +299,11 @@ actor DownloadService {
             }
 
             // Ensure book directory exists
-            let bookDir = Self.downloadsDirectory.appendingPathComponent(bookId, isDirectory: true)
-            try FileManager.default.createDirectory(at: bookDir, withIntermediateDirectories: true)
+            let bookDirPath = downloadsPath + "/" + bookId
+            try fm.createDirectory(atPath: bookDirPath, withIntermediateDirectories: true, attributes: nil)
 
             // Download using streaming bytes
-            let localURL = Self.downloadsDirectory.appendingPathComponent(relativePath)
+            let localURL = URL(fileURLWithPath: downloadsPath + "/" + relativePath)
             let (bytes, response) = try await URLSession.shared.bytes(for: URLRequest(url: url))
 
             let totalBytes = (response as? HTTPURLResponse)
@@ -362,6 +385,15 @@ actor DownloadService {
     }
 
     private func saveManifestToDisk() {
+        let fm = FileManager.default
+        let dirPath = Self.downloadsPath
+
+        // Ensure directory exists before writing
+        if !fm.fileExists(atPath: dirPath) {
+            try? fm.createDirectory(atPath: dirPath, withIntermediateDirectories: true, attributes: nil)
+            excludeFromBackup(Self.downloadsDirectory)
+        }
+
         do {
             let data = try JSONEncoder().encode(manifest)
             try data.write(to: Self.manifestURL, options: .atomic)

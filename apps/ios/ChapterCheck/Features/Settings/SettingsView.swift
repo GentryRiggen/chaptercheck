@@ -76,6 +76,12 @@ struct SettingsView: View {
                             }
                         }
                     }
+
+                    NavigationLink {
+                        DownloadSettingsView()
+                    } label: {
+                        Label("Download Preferences", systemImage: "arrow.down.to.line.circle")
+                    }
                 } header: {
                     Text("Settings")
                 }

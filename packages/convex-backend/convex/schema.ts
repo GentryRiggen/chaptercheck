@@ -51,6 +51,8 @@ export default defineSchema({
     voiceBoostEnabled: v.optional(v.boolean()), // default: false
     accentColor: v.optional(v.string()), // default: "blue"
     colorSchemeMode: v.optional(v.string()), // "system" | "light" | "dark"
+    autoDownloadOnPlay: v.optional(v.boolean()), // default: false — silently download instead of prompting
+    downloadNetwork: v.optional(v.string()), // "wifi" | "wifiAndCellular" — gates prompts + auto-downloads
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
