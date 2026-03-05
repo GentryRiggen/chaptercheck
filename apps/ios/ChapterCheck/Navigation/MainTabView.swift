@@ -129,6 +129,14 @@ struct MainView: View {
             }
         }
         .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
+            // Going offline: stop playback if current book isn't downloaded
+            if wasConnected && !isConnected {
+                if let bookId = audioPlayer.currentBook?._id,
+                   !downloadManager.isBookDownloaded(bookId) {
+                    audioPlayer.stop()
+                }
+            }
+
             if !wasConnected && isConnected {
                 subscribeToPreferences()
                 Task {
