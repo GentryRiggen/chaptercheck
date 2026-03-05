@@ -72,7 +72,6 @@ struct GenreFilterSheet: View {
             } label: {
                 HStack {
                     Text(genre.name)
-                        .foregroundStyle(.primary)
                     Spacer()
                     if selectedGenreIds.contains(genre._id) {
                         Image(systemName: "checkmark")
@@ -81,6 +80,7 @@ struct GenreFilterSheet: View {
                     }
                 }
             }
+            .buttonStyle(.plain)
         }
     }
 
