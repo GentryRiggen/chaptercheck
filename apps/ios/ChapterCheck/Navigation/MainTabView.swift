@@ -140,7 +140,9 @@ struct MainView: View {
         .onChange(of: audioPlayer.streamingEventId) { _, newValue in
             guard newValue != nil,
                   let book = audioPlayer.streamingEventBook,
-                  audioPlayer.autoDownloadOnPlay else { return }
+                  audioPlayer.autoDownloadOnPlay,
+                  !downloadManager.isBookDownloaded(book._id),
+                  !downloadManager.isBookDownloading(book._id) else { return }
 
             // Check network preference — skip on cellular if Wi-Fi only
             if audioPlayer.downloadNetwork == "wifi" && networkMonitor.isExpensive { return }

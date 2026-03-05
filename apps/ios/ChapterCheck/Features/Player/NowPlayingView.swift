@@ -269,6 +269,9 @@ struct NowPlayingView: View {
 
         lastHandledEventId = eventId
 
+        // Skip if already downloaded or downloading
+        if downloadManager.isBookDownloaded(book._id) || downloadManager.isBookDownloading(book._id) { return }
+
         // Check network preference — skip on cellular if Wi-Fi only
         if audioPlayer.downloadNetwork == "wifi" && NetworkMonitor.shared.isExpensive { return }
 
