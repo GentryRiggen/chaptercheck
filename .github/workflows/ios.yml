@@ -230,10 +230,9 @@ jobs:
           APPSTORE_APP_ID: ${{ vars.APPSTORE_APP_ID }}
         run: |
           python3 -m venv "$RUNNER_TEMP/venv"
-          source "$RUNNER_TEMP/venv/bin/activate"
-          pip install --quiet PyJWT cryptography
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet PyJWT cryptography requests
 
-          python3 << 'PYEOF'
+          "$RUNNER_TEMP/venv/bin/python3" << 'PYEOF'
           import os, sys, time, jwt, requests
 
           # Read ASC API credentials
