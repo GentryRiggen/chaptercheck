@@ -81,8 +81,17 @@ export function SeriesSelect({
         isCurrent: true,
       });
       setLocalOrder(newOrder);
+
+      // Ensure seriesOrder is set so form validation passes
+      // (e.g., when a series is first selected, seriesOrder starts as undefined)
+      if (value.seriesOrder === undefined || value.seriesOrder === null) {
+        onChange({
+          seriesId: value.seriesId,
+          seriesOrder: insertIndex + 1,
+        });
+      }
     }
-  }, [seriesBooks, value?.seriesId, currentBookId, currentBookTitle, value?.seriesOrder]);
+  }, [seriesBooks, value?.seriesId, currentBookId, currentBookTitle, value?.seriesOrder, onChange]);
 
   const isSearching = debouncedSearch.trim().length > 0;
   const isLoadingResults = isSearching && searchResults === undefined;
