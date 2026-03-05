@@ -1,3 +1,4 @@
+import AVKit
 import SwiftUI
 
 /// Full-screen now playing sheet with large artwork and transport controls.
@@ -404,6 +405,12 @@ struct NowPlayingView: View {
                 .contentShape(Circle())
                 .accessibilityLabel("Audio settings")
 
+                // AirPlay route picker
+                AirPlayRoutePicker()
+                    .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .accessibilityLabel("Audio output")
+
                 // Sleep timer
                 Button {
                     Haptics.light()
@@ -447,4 +454,18 @@ struct NowPlayingView: View {
         }
     }
 
+}
+
+// MARK: - AirPlay Route Picker
+
+private struct AirPlayRoutePicker: UIViewRepresentable {
+    func makeUIView(context: Context) -> AVRoutePickerView {
+        let picker = AVRoutePickerView()
+        picker.tintColor = .secondaryLabel
+        picker.activeTintColor = .tintColor
+        picker.prioritizesVideoDevices = false
+        return picker
+    }
+
+    func updateUIView(_ uiView: AVRoutePickerView, context: Context) {}
 }
