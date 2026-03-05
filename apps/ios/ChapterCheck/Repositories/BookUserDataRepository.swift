@@ -7,6 +7,7 @@ struct MarkAsReadResult: Decodable, Sendable {
     let isRead: Bool
 }
 
+
 /// Repository for per-user book data: ratings, reviews, and read status.
 ///
 /// Wraps the `bookUserData` Convex queries. All review queries return

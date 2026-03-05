@@ -3,6 +3,14 @@ import ConvexMobile
 import Foundation
 import os
 
+/// Flexible decodable that accepts any JSON value, used to discard mutation results.
+private struct DiscardedResult: Decodable {
+    init(from decoder: Decoder) throws {
+        // Accept anything — we don't use the value
+        _ = try? decoder.singleValueContainer()
+    }
+}
+
 /// Application-wide singleton that owns the authenticated Convex client.
 ///
 /// Other layers (repositories, view models) access Convex through this service
@@ -134,12 +142,15 @@ final class ConvexService: ObservableObject {
         try await client.mutation(name, with: args)
     }
 
-    /// Execute a Convex mutation that returns no value.
+    /// Execute a Convex mutation whose return value is ignored.
+    ///
+    /// Decodes via `DiscardedResult` to avoid crashes when the backend
+    /// returns an object (e.g. `{ success: true }`) instead of null.
     func mutation(
         _ name: String,
         with args: [String: ConvexEncodable?]? = nil
     ) async throws {
-        try await client.mutation(name, with: args)
+        let _: DiscardedResult = try await client.mutation(name, with: args)
     }
 
     /// Execute a Convex action that returns a decoded value.
@@ -150,11 +161,11 @@ final class ConvexService: ObservableObject {
         try await client.action(name, with: args)
     }
 
-    /// Execute a Convex action that returns no value.
+    /// Execute a Convex action whose return value is ignored.
     func action(
         _ name: String,
         with args: [String: ConvexEncodable?]? = nil
     ) async throws {
-        try await client.action(name, with: args)
+        let _: DiscardedResult = try await client.action(name, with: args)
     }
 }
