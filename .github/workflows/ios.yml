@@ -229,7 +229,9 @@ jobs:
           APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
           APPSTORE_APP_ID: ${{ vars.APPSTORE_APP_ID }}
         run: |
-          pip3 install --quiet PyJWT cryptography
+          python3 -m venv "$RUNNER_TEMP/venv"
+          source "$RUNNER_TEMP/venv/bin/activate"
+          pip install --quiet PyJWT cryptography
 
           python3 << 'PYEOF'
           import os, sys, time, jwt, requests
