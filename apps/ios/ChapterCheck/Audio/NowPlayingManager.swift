@@ -182,26 +182,18 @@ final class NowPlayingManager {
             return .success
         }
 
-        // Next / Previous Track (for multi-part books)
-        center.nextTrackCommand.isEnabled = false
+        // Next / Previous Track (AirPods double/triple-click → skip forward/backward)
+        center.nextTrackCommand.isEnabled = true
         center.nextTrackCommand.addTarget { [weak self] _ in
             self?.handlers.onNextTrack()
             return .success
         }
 
-        center.previousTrackCommand.isEnabled = false
+        center.previousTrackCommand.isEnabled = true
         center.previousTrackCommand.addTarget { [weak self] _ in
             self?.handlers.onPreviousTrack()
             return .success
         }
-    }
-
-    /// Enable or disable the next/previous track commands based on whether
-    /// there are adjacent parts available.
-    func updateTrackCommands(hasNext: Bool, hasPrevious: Bool) {
-        let center = MPRemoteCommandCenter.shared()
-        center.nextTrackCommand.isEnabled = hasNext
-        center.previousTrackCommand.isEnabled = hasPrevious
     }
 
     /// Update the skip intervals shown on the lock screen / Control Center.

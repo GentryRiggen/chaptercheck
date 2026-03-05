@@ -399,9 +399,11 @@ final class AudioPlayerManager {
     }
 
     /// Seek from the slider, capturing the current position for undo.
+    /// Clamps to 10s before the end to prevent accidental end-of-file triggers.
     func seekFromSlider(to seconds: Double) {
         let previousPosition = currentPosition
-        seek(to: seconds)
+        let maxSeek = max(0, duration - 10)
+        seek(to: min(seconds, maxSeek))
 
         sliderSeekUndoPosition = previousPosition
         sliderSeekUndoDeadline = Date().addingTimeInterval(Self.sliderSeekUndoDuration)
@@ -606,10 +608,6 @@ final class AudioPlayerManager {
 
                     self.startProgressSaving()
                     self.updateNowPlayingFull()
-                    self.nowPlayingManager.updateTrackCommands(
-                        hasNext: self.hasNext,
-                        hasPrevious: self.hasPrevious
-                    )
                     self.loadCoverArtwork()
 
                 case .failed:
@@ -1002,10 +1000,10 @@ final class AudioPlayerManager {
                 Task { @MainActor in self?.seek(to: position) }
             },
             onNextTrack: { [weak self] in
-                Task { @MainActor in self?.nextPart() }
+                Task { @MainActor in self?.skipForward() }
             },
             onPreviousTrack: { [weak self] in
-                Task { @MainActor in self?.previousPart() }
+                Task { @MainActor in self?.skipBackward() }
             }
         )
     }
