@@ -82,9 +82,10 @@ export function SeriesSelect({
       });
       setLocalOrder(newOrder);
 
-      // Ensure seriesOrder is set so form validation passes
-      // (e.g., when a series is first selected, seriesOrder starts as undefined)
-      if (value.seriesOrder === undefined || value.seriesOrder === null) {
+      // When a series is first selected, seriesOrder is undefined until books load.
+      // Initialize it based on the computed position so form validation passes
+      // without requiring the user to manually reorder.
+      if (!value.seriesOrder) {
         onChange({
           seriesId: value.seriesId,
           seriesOrder: insertIndex + 1,
