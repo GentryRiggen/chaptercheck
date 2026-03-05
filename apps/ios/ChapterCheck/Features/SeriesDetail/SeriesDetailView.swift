@@ -143,6 +143,7 @@ struct SeriesDetailView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Helpers

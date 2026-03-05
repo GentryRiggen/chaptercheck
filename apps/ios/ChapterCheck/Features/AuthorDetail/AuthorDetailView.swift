@@ -164,6 +164,7 @@ struct AuthorDetailView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Series
@@ -213,6 +214,7 @@ struct AuthorDetailView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 }
 
