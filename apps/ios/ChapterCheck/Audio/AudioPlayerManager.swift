@@ -86,6 +86,12 @@ final class AudioPlayerManager {
     /// Current skip-backward amount in seconds, reflecting momentum.
     private(set) var skipAmountBackward: Double = 15
 
+    /// The position before a slider seek, or nil if no undo is available.
+    private(set) var sliderSeekUndoPosition: Double?
+
+    /// When the slider seek undo expires (for countdown animation).
+    private(set) var sliderSeekUndoDeadline: Date?
+
     // MARK: - Computed Properties
 
     /// Playback progress as a fraction (0.0 to 1.0).
@@ -201,6 +207,9 @@ final class AudioPlayerManager {
     /// Time after last tap before momentum resets (seconds).
     private static let skipResetDelay: TimeInterval = 1.5
 
+    /// Duration of the slider seek undo window (seconds).
+    static let sliderSeekUndoDuration: TimeInterval = 5
+
     private struct SkipDirectionState {
         var count = 0
         var lastTime: Date = .distantPast
@@ -214,6 +223,7 @@ final class AudioPlayerManager {
     private var forwardMomentum = SkipDirectionState(tierIndex: forwardBaseTierIndex)
     private var backwardMomentum = SkipDirectionState(tierIndex: 0)
     private var skipResetTask: Task<Void, Never>?
+    private var sliderSeekUndoTask: Task<Void, Never>?
 
     // MARK: - Initialization
 
@@ -372,6 +382,39 @@ final class AudioPlayerManager {
 
         // Update position immediately for responsive UI
         currentPosition = clamped
+    }
+
+    /// Seek from the slider, capturing the current position for undo.
+    func seekFromSlider(to seconds: Double) {
+        let previousPosition = currentPosition
+        seek(to: seconds)
+
+        sliderSeekUndoPosition = previousPosition
+        sliderSeekUndoDeadline = Date().addingTimeInterval(Self.sliderSeekUndoDuration)
+
+        sliderSeekUndoTask?.cancel()
+        sliderSeekUndoTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.sliderSeekUndoDuration))
+            guard !Task.isCancelled else { return }
+            await MainActor.run { [weak self] in
+                self?.dismissSliderSeekUndo()
+            }
+        }
+    }
+
+    /// Undo the last slider seek by returning to the previous position.
+    func undoSliderSeek() {
+        guard let position = sliderSeekUndoPosition else { return }
+        dismissSliderSeekUndo()
+        seek(to: position)
+    }
+
+    /// Dismiss the slider seek undo banner without seeking.
+    func dismissSliderSeekUndo() {
+        sliderSeekUndoTask?.cancel()
+        sliderSeekUndoTask = nil
+        sliderSeekUndoPosition = nil
+        sliderSeekUndoDeadline = nil
     }
 
     /// Change the playback rate and persist it.

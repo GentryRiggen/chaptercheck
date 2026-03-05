@@ -87,6 +87,7 @@
 		BFC6D99406FF667B67E5FB93 /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = D4387DEBBC5B211CE0D3F8E3 /* ClerkKit */; };
 		BFEF22E11405E2A8D10602C1 /* StreamURLCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840E3752314AD70DCD3CF0D2 /* StreamURLCache.swift */; };
 		C20A39488F2454992E85CCE1 /* AudioPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E1FB2AA73F3411E34E14C8 /* AudioPlayerManager.swift */; };
+		C377BE223C39BC7F261F4B38 /* SliderSeekUndoBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 327608733C08484A8A17A512 /* SliderSeekUndoBanner.swift */; };
 		C43CCCB55AD62DBD31D1700D /* AuthorDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C037E6D8704725B117FC880 /* AuthorDetailView.swift */; };
 		C5F5EECAE7BA2CCDFD04714B /* ShelfFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FC72B8DE0F620382E896CE /* ShelfFormSheet.swift */; };
 		C63F88E3285C32FC4C0431F0 /* Shelf.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47E7D51F2C4AA2D300289921 /* Shelf.swift */; };
@@ -138,6 +139,7 @@
 		25E0FAFE1EEA484A3A4EBD59 /* BookReviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookReviewSheet.swift; sourceTree = "<group>"; };
 		2E7C4A98378FFCFFF14D2196 /* DownloadSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadSettingsView.swift; sourceTree = "<group>"; };
 		30541061F368C414D79E9EA8 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		327608733C08484A8A17A512 /* SliderSeekUndoBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderSeekUndoBanner.swift; sourceTree = "<group>"; };
 		3330254FED7D235DF88CBE7B /* ShelfDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfDetailView.swift; sourceTree = "<group>"; };
 		3349F3E559343AC156177798 /* ChapterCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterCheckApp.swift; sourceTree = "<group>"; };
 		3542D0C04C257DC378A6B338 /* SkeletonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonView.swift; sourceTree = "<group>"; };
@@ -385,6 +387,7 @@
 				500CE407A9E07106D616F75D /* PartSelectorView.swift */,
 				73CAA246C455A27D35019555 /* SeekBarView.swift */,
 				8B323C73E764DCE9D0F57EA4 /* SleepTimerSheet.swift */,
+				327608733C08484A8A17A512 /* SliderSeekUndoBanner.swift */,
 				771D9AFCF517DDC68F274364 /* SpeedControlView.swift */,
 			);
 			path = Player;
@@ -775,6 +778,7 @@
 				9BE7BE29C1A43950149C33C1 /* SignInView.swift in Sources */,
 				F3A7F56C4FB74B7F09A64527 /* SkeletonView.swift in Sources */,
 				DC234313D7578CBA03739D50 /* SleepTimerSheet.swift in Sources */,
+				C377BE223C39BC7F261F4B38 /* SliderSeekUndoBanner.swift in Sources */,
 				ABAEF11D0938A25BC09B31C6 /* SortPicker.swift in Sources */,
 				CE70CF2AF68C7671AA120A44 /* SpeedControlView.swift in Sources */,
 				3BCC2DDFC980DF2688D46634 /* StarRatingInput.swift in Sources */,

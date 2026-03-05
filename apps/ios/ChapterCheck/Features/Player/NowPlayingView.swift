@@ -118,6 +118,9 @@ struct NowPlayingView: View {
             SeekBarView()
                 .padding(.horizontal, 24)
 
+            // Slider seek undo banner
+            sliderSeekUndoSection
+
             // Transport controls — vertically centered between seek bar and bottom toolbar
             Spacer()
             transportControls
@@ -274,6 +277,19 @@ struct NowPlayingView: View {
             }
 
             Spacer()
+        }
+    }
+
+    // MARK: - Slider Seek Undo
+
+    @ViewBuilder
+    private var sliderSeekUndoSection: some View {
+        if audioPlayer.sliderSeekUndoPosition != nil {
+            SliderSeekUndoBanner()
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(duration: 0.3), value: audioPlayer.sliderSeekUndoPosition)
         }
     }
 

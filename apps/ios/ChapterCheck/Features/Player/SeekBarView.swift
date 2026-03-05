@@ -70,7 +70,7 @@ struct SeekBarView: View {
                         .onEnded { value in
                             let finalProgress = max(0, min(1, value.location.x / trackWidth))
                             let seekPosition = finalProgress * audioPlayer.duration
-                            audioPlayer.seek(to: seekPosition)
+                            audioPlayer.seekFromSlider(to: seekPosition)
                             Haptics.selection()
 
                             isDragging = false
