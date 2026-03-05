@@ -81,8 +81,13 @@ struct AuthorsView: View {
             .padding(.top, 8)
 
             if viewModel.isLoadingMore {
-                ProgressView()
-                    .padding(.vertical, 16)
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        AuthorGridCardSkeleton()
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
             }
 
             Spacer()
@@ -112,6 +117,40 @@ struct AuthorsView: View {
                     .font(.subheadline)
             }
         }
+    }
+}
+
+// MARK: - Skeleton
+
+/// Placeholder card matching `AuthorGridCard` layout, shown while loading the next page.
+private struct AuthorGridCardSkeleton: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 8) {
+            // Circular image placeholder
+            Circle()
+                .fill(.fill.tertiary)
+                .frame(width: 80, height: 80)
+
+            // Name placeholder
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.fill.tertiary)
+                .frame(width: 90, height: 14)
+
+            // Subtitle placeholder
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.fill.tertiary)
+                .frame(width: 60, height: 12)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .opacity(isAnimating ? 0.4 : 1.0)
+        .animation(
+            .easeInOut(duration: 1.0).repeatForever(autoreverses: true),
+            value: isAnimating
+        )
+        .onAppear { isAnimating = true }
     }
 }
 

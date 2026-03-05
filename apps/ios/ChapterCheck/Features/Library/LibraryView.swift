@@ -119,13 +119,53 @@ struct LibraryView: View {
             .padding(.top, 8)
 
             if viewModel.isLoadingMore {
-                ProgressView()
-                    .padding(.vertical, 16)
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        BookGridCardSkeleton()
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
             }
 
             Spacer()
                 .frame(height: 80)
         }
+    }
+}
+
+// MARK: - Skeleton
+
+/// Placeholder card matching `BookGridCard` layout, shown while loading the next page.
+private struct BookGridCardSkeleton: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Cover placeholder (2:3 aspect ratio)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(.fill.tertiary)
+                .aspectRatio(2 / 3, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+
+            // Title placeholder
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.fill.tertiary)
+                .frame(height: 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, 24)
+
+            // Author placeholder
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.fill.tertiary)
+                .frame(width: 80, height: 12)
+        }
+        .opacity(isAnimating ? 0.4 : 1.0)
+        .animation(
+            .easeInOut(duration: 1.0).repeatForever(autoreverses: true),
+            value: isAnimating
+        )
+        .onAppear { isAnimating = true }
     }
 }
 
