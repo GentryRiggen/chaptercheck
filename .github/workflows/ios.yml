@@ -20,7 +20,7 @@ jobs:
   build-and-upload:
     name: 🏗️ Build & Upload to TestFlight
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: apps/ios
@@ -28,6 +28,9 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: 🔧 Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -184,6 +187,169 @@ jobs:
 
           echo "### ✅ Upload Complete" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Uploaded:** ChapterCheck $VERSION ($BUILD_NUMBER) to TestFlight" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📝 Generate release notes
+        working-directory: .
+        run: |
+          # Find the last ios-build tag
+          LAST_TAG=$(git tag --list 'ios-build/*' --sort=-version:refname | head -n1)
+
+          if [ -n "$LAST_TAG" ]; then
+            echo "Generating notes since tag: $LAST_TAG"
+            COMMITS=$(git log "$LAST_TAG"..HEAD --oneline --no-merges -- apps/ios/)
+          else
+            echo "No previous ios-build tag found, using last 20 commits"
+            COMMITS=$(git log --oneline --no-merges -20 -- apps/ios/)
+          fi
+
+          if [ -z "$COMMITS" ]; then
+            COMMITS="(no app-specific changes)"
+          fi
+
+          # Format as bulleted list
+          NOTES="v${VERSION} (${BUILD_NUMBER})
+
+          $(echo "$COMMITS" | sed 's/^[a-f0-9]* /• /')"
+
+          # Write to env (multiline)
+          {
+            echo "WHAT_TO_TEST<<NOTES_EOF"
+            echo "$NOTES"
+            echo "NOTES_EOF"
+          } >> "$GITHUB_ENV"
+
+          echo "### 📝 What to Test" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "$NOTES" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 🧪 Set TestFlight "What to Test" notes
+        env:
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+          APPSTORE_APP_ID: ${{ vars.APPSTORE_APP_ID }}
+        run: |
+          pip3 install --quiet PyJWT cryptography
+
+          python3 << 'PYEOF'
+          import os, sys, time, jwt, requests
+
+          # Read ASC API credentials
+          key_id = os.environ["APPSTORE_CONNECT_KEY_ID"]
+          issuer_id = os.environ["APPSTORE_CONNECT_ISSUER_ID"]
+          app_id = os.environ.get("APPSTORE_APP_ID")
+          if not app_id:
+              print("Error: APPSTORE_APP_ID variable is not set. Add it in Settings → Variables → Actions.")
+              sys.exit(1)
+          build_number = os.environ["BUILD_NUMBER"]
+          version = os.environ["VERSION"]
+          what_to_test = os.environ["WHAT_TO_TEST"][:4000]
+
+          key_path = os.path.expanduser(f"~/.private_keys/AuthKey_{key_id}.p8")
+          with open(key_path, "r") as f:
+              private_key = f.read()
+
+          def make_token():
+              now = int(time.time())
+              payload = {
+                  "iss": issuer_id,
+                  "iat": now,
+                  "exp": now + 1200,  # 20 min
+                  "aud": "appstoreconnect-v1",
+              }
+              return jwt.encode(payload, private_key, algorithm="ES256", headers={"kid": key_id})
+
+          BASE = "https://api.appstoreconnect.apple.com/v1"
+
+          def headers():
+              return {"Authorization": f"Bearer {make_token()}", "Content-Type": "application/json"}
+
+          # Poll for build to finish processing (up to 15 min)
+          print(f"Waiting for build {version} ({build_number}) to process...")
+          build_id = None
+          for attempt in range(30):
+              resp = requests.get(
+                  f"{BASE}/builds",
+                  headers=headers(),
+                  params={
+                      "filter[app]": app_id,
+                      "filter[version]": build_number,
+                      "filter[preReleaseVersion.version]": version,
+                      "fields[builds]": "processingState,version",
+                  },
+                  timeout=30,
+              )
+              resp.raise_for_status()
+              data = resp.json().get("data", [])
+
+              if data:
+                  state = data[0]["attributes"]["processingState"]
+                  build_id = data[0]["id"]
+                  print(f"  Attempt {attempt+1}: {state}")
+                  if state == "VALID":
+                      break
+                  if state == "FAILED":
+                      print("Build processing failed!")
+                      sys.exit(1)
+
+              if attempt < 29:
+                  time.sleep(30)
+          else:
+              print("Timed out waiting for build processing")
+              sys.exit(1)
+
+          if build_id is None:
+              print("Error: Build not found in App Store Connect")
+              sys.exit(1)
+
+          print(f"Build processed: {build_id}")
+
+          # Check for existing localization
+          resp = requests.get(
+              f"{BASE}/builds/{build_id}/betaBuildLocalizations",
+              headers=headers(),
+              timeout=30,
+          )
+          resp.raise_for_status()
+          localizations = resp.json().get("data", [])
+
+          en_loc = None
+          for loc in localizations:
+              if loc["attributes"].get("locale") == "en-US":
+                  en_loc = loc
+                  break
+
+          payload = {
+              "data": {
+                  "type": "betaBuildLocalizations",
+                  "attributes": {
+                      "whatsNew": what_to_test,
+                      "locale": "en-US",
+                  },
+              }
+          }
+
+          if en_loc:
+              # Update existing
+              loc_id = en_loc["id"]
+              payload["data"]["id"] = loc_id
+              resp = requests.patch(f"{BASE}/betaBuildLocalizations/{loc_id}", headers=headers(), json=payload, timeout=30)
+          else:
+              # Create new
+              payload["data"]["relationships"] = {
+                  "build": {"data": {"type": "builds", "id": build_id}}
+              }
+              resp = requests.post(f"{BASE}/betaBuildLocalizations", headers=headers(), json=payload, timeout=30)
+
+          resp.raise_for_status()
+          print("What to Test notes set successfully!")
+          PYEOF
+
+      - name: 🏷️ Tag build
+        working-directory: .
+        run: |
+          git tag "ios-build/${BUILD_NUMBER}"
+          git push origin "ios-build/${BUILD_NUMBER}"
 
       - name: 🧹 Cleanup keychain
         if: always()
