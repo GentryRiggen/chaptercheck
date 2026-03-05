@@ -73,20 +73,30 @@ export function usePaginatedList<Query extends PaginatedQueryReference>(
     { initialNumItems: pageSize }
   );
 
+  // Use a ref to track status so the IntersectionObserver callback
+  // always reads the latest value instead of a stale closure.
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
+  const loadMoreRef2 = useRef(convexLoadMore);
+  loadMoreRef2.current = convexLoadMore;
+
   const loadMore = useCallback(() => {
     if (status === "CanLoadMore") {
       convexLoadMore(pageSize);
     }
   }, [status, convexLoadMore, pageSize]);
 
-  // Set up intersection observer for infinite scroll
+  // Set up intersection observer for infinite scroll.
+  // The observer is created once and uses refs for status/loadMore
+  // to avoid recreating on every status change.
   useEffect(() => {
     if (skip) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && status === "CanLoadMore") {
-          convexLoadMore(pageSize);
+        if (entries[0].isIntersecting && statusRef.current === "CanLoadMore") {
+          loadMoreRef2.current(pageSize);
         }
       },
       { threshold: scrollThreshold }
@@ -102,7 +112,7 @@ export function usePaginatedList<Query extends PaginatedQueryReference>(
         observer.unobserve(currentRef);
       }
     };
-  }, [skip, status, convexLoadMore, pageSize, scrollThreshold]);
+  }, [skip, pageSize, scrollThreshold]);
 
   const isLoading = status === "LoadingFirstPage";
   const isLoadingMore = status === "LoadingMore";
