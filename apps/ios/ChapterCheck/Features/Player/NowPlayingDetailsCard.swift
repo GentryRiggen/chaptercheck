@@ -13,6 +13,7 @@ struct NowPlayingDetailsCard: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
+                viewBookSection
                 authorsSection
                 seriesSection
                 ratingSection
@@ -23,6 +24,34 @@ struct NowPlayingDetailsCard: View {
             .padding(.horizontal, 4)
             .padding(.vertical, 8)
         }
+    }
+
+    // MARK: - View Book
+
+    private var viewBookSection: some View {
+        Button {
+            onNavigate(.book(id: book._id))
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "book")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 36, height: 36)
+
+                Text("View Book Details")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Dismisses the player")
     }
 
     // MARK: - Authors
@@ -200,9 +229,15 @@ struct NowPlayingDetailsCard: View {
                 }
                 .buttonStyle(.plain)
             } else {
-                Text("Mark as read to leave a review")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                Button {
+                    Task { await viewModel.markAsRead(bookId: book._id) }
+                } label: {
+                    Text("Mark as Read")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.tint)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

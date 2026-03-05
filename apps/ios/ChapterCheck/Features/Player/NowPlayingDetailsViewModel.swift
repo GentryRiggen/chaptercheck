@@ -91,6 +91,16 @@ final class NowPlayingDetailsViewModel {
 
     // MARK: - Mutations
 
+    /// Mark the current book as read.
+    func markAsRead(bookId: String) async {
+        do {
+            _ = try await bookUserDataRepository.markAsRead(bookId: bookId)
+            Haptics.success()
+        } catch {
+            self.error = "Failed to mark as read"
+        }
+    }
+
     /// Save a review for the current book. Mirrors `BookDetailViewModel.saveReview`.
     func saveReview(bookId: String, formData: ReviewFormData) async {
         var errors: [String] = []
