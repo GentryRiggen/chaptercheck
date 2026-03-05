@@ -239,9 +239,33 @@ function AuthorsPageContent() {
         {!isSearching && (
           <div ref={loadMoreRef} className="py-3">
             {isLoadingMore && (
-              <div className="flex justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
+              <>
+                {/* Mobile skeleton rows */}
+                <div className="divide-y divide-border/50 rounded-lg bg-card/60 sm:hidden">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-3 py-3">
+                      <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                        <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop skeleton cards */}
+                <div className="hidden gap-4 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex flex-col items-center overflow-hidden rounded-xl bg-card/50 p-4 ring-1 ring-border/50"
+                    >
+                      <div className="mb-3 h-24 w-24 animate-pulse rounded-full bg-muted" />
+                      <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                      <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-muted" />
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
             {canLoadMore && !isLoadingMore && (
               <div className="flex justify-center">
