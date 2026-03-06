@@ -1,4 +1,5 @@
 import ClerkKit
+import CropViewController
 import PhotosUI
 import SwiftUI
 
@@ -23,8 +24,16 @@ struct EditProfileView: View {
     @State private var showPhotoOptions = false
     @State private var showCamera = false
     @State private var showPhotoPicker = false
+    @State private var imageToCrop: UIImage?
+    @State private var showCropper = false
 
     // MARK: - Validation
+
+    private var currentEmail: String {
+        Clerk.shared.user?.emailAddresses
+            .first(where: { $0.id == Clerk.shared.user?.primaryEmailAddressId })?
+            .emailAddress ?? ""
+    }
 
     private var firstNameTrimmed: String { firstName.trimmingCharacters(in: .whitespaces) }
     private var lastNameTrimmed: String { lastName.trimmingCharacters(in: .whitespaces) }
@@ -57,6 +66,21 @@ struct EditProfileView: View {
                     Spacer()
                 }
                 .listRowBackground(Color.clear)
+            }
+
+            // Email section
+            Section {
+                HStack {
+                    Text(currentEmail)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    NavigationLink("Change") {
+                        ChangeEmailView()
+                    }
+                    .fixedSize()
+                }
+            } header: {
+                Text("Email")
             }
 
             Section {
@@ -118,7 +142,7 @@ struct EditProfileView: View {
         .onAppear { prefill() }
         .onChange(of: selectedPhoto) { _, item in
             guard let item else { return }
-            loadAndUploadPhoto(item)
+            loadImageForCropping(item)
         }
         .confirmationDialog("Profile Photo", isPresented: $showPhotoOptions) {
             Button("Choose from Library") {
@@ -137,10 +161,19 @@ struct EditProfileView: View {
         }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhoto, matching: .images)
         .fullScreenCover(isPresented: $showCamera) {
-            CameraImagePicker { imageData in
-                uploadImageData(imageData)
+            CameraImagePicker { image in
+                imageToCrop = image
+                showCropper = true
             }
             .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $showCropper, onDismiss: { imageToCrop = nil }) {
+            if let imageToCrop {
+                ProfileImageCropper(image: imageToCrop) { croppedImage in
+                    uploadCroppedImage(croppedImage)
+                }
+                .ignoresSafeArea()
+            }
         }
     }
 
@@ -236,28 +269,27 @@ struct EditProfileView: View {
         }
     }
 
-    private func loadAndUploadPhoto(_ item: PhotosPickerItem) {
+    private func loadImageForCropping(_ item: PhotosPickerItem) {
         Task {
-            guard let data = try? await item.loadTransferable(type: Data.self) else {
+            guard let data = try? await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data) else {
                 errorMessage = "Could not load the selected image."
                 return
             }
-            uploadImageData(data)
+            imageToCrop = image
+            showCropper = true
         }
     }
 
-    private func uploadImageData(_ data: Data) {
+    private func uploadCroppedImage(_ image: UIImage) {
         guard let user = Clerk.shared.user else { return }
         isUploadingPhoto = true
         errorMessage = nil
-
-        if let uiImage = UIImage(data: data) {
-            previewImage = Image(uiImage: uiImage)
-        }
+        previewImage = Image(uiImage: image)
 
         Task {
             do {
-                let jpegData = compressToJPEG(data)
+                let jpegData = compressToJPEG(image)
                 try await user.setProfileImage(imageData: jpegData)
                 Haptics.selection()
                 isUploadingPhoto = false
@@ -287,12 +319,11 @@ struct EditProfileView: View {
         }
     }
 
-    /// Compress image data to JPEG, resizing if needed.
-    private func compressToJPEG(_ data: Data) -> Data {
-        guard let uiImage = UIImage(data: data) else { return data }
-
+    /// Compress a UIImage to JPEG, resizing if needed.
+    private func compressToJPEG(_ uiImage: UIImage) -> Data {
         let maxDimension: CGFloat = 800
         let size = uiImage.size
+        let fallback = uiImage.jpegData(compressionQuality: 0.85) ?? Data()
 
         if size.width > maxDimension || size.height > maxDimension {
             let scale = maxDimension / max(size.width, size.height)
@@ -301,24 +332,24 @@ struct EditProfileView: View {
             let resized = renderer.image { _ in
                 uiImage.draw(in: CGRect(origin: .zero, size: newSize))
             }
-            return resized.jpegData(compressionQuality: 0.85) ?? data
+            return resized.jpegData(compressionQuality: 0.85) ?? fallback
         }
 
-        return uiImage.jpegData(compressionQuality: 0.85) ?? data
+        return fallback
     }
 }
 
 // MARK: - Camera Image Picker
 
-/// UIImagePickerController wrapper for taking a photo with the camera.
+/// UIImagePickerController wrapper that returns the raw UIImage (no built-in crop).
 private struct CameraImagePicker: UIViewControllerRepresentable {
-    let onCapture: (Data) -> Void
+    let onCapture: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.sourceType = .camera
-        picker.allowsEditing = true
+        picker.allowsEditing = false
         picker.delegate = context.coordinator
         return picker
     }
@@ -330,23 +361,66 @@ private struct CameraImagePicker: UIViewControllerRepresentable {
     }
 
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let onCapture: (Data) -> Void
+        let onCapture: (UIImage) -> Void
         let dismiss: DismissAction
 
-        init(onCapture: @escaping (Data) -> Void, dismiss: DismissAction) {
+        init(onCapture: @escaping (UIImage) -> Void, dismiss: DismissAction) {
             self.onCapture = onCapture
             self.dismiss = dismiss
         }
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            let image = (info[.editedImage] as? UIImage) ?? (info[.originalImage] as? UIImage)
-            if let data = image?.jpegData(compressionQuality: 0.9) {
-                onCapture(data)
+            if let image = info[.originalImage] as? UIImage {
+                onCapture(image)
             }
             dismiss()
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            dismiss()
+        }
+    }
+}
+
+// MARK: - Profile Image Cropper
+
+/// Wraps TOCropViewController with a circular crop preset for profile photos.
+private struct ProfileImageCropper: UIViewControllerRepresentable {
+    let image: UIImage
+    let onCropped: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> CropViewController {
+        let cropVC = CropViewController(croppingStyle: .circular, image: image)
+        cropVC.delegate = context.coordinator
+        cropVC.aspectRatioPreset = .presetSquare
+        cropVC.aspectRatioLockEnabled = true
+        cropVC.resetAspectRatioEnabled = false
+        cropVC.aspectRatioPickerButtonHidden = true
+        return cropVC
+    }
+
+    func updateUIViewController(_ uiViewController: CropViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onCropped: onCropped, dismiss: dismiss)
+    }
+
+    final class Coordinator: NSObject, CropViewControllerDelegate {
+        let onCropped: (UIImage) -> Void
+        let dismiss: DismissAction
+
+        init(onCropped: @escaping (UIImage) -> Void, dismiss: DismissAction) {
+            self.onCropped = onCropped
+            self.dismiss = dismiss
+        }
+
+        func cropViewController(_ cropViewController: CropViewController, didCropToCircularImage image: UIImage, withRect cropRect: CGRect, angle: Int) {
+            onCropped(image)
+            dismiss()
+        }
+
+        func cropViewController(_ cropViewController: CropViewController, didFinishCancelled cancelled: Bool) {
             dismiss()
         }
     }

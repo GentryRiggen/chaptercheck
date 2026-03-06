@@ -19,6 +19,9 @@ packages:
   Clerk:
     url: https://github.com/clerk/clerk-ios
     from: 1.0.0
+  CropViewController:
+    url: https://github.com/TimOliver/TOCropViewController
+    from: 2.7.4
 
 targets:
   ChapterCheck:
@@ -50,3 +53,5 @@ targets:
       - package: ConvexMobile
       - package: Clerk
         product: ClerkKit
+      - package: CropViewController
+        product: CropViewController

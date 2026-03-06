@@ -83,6 +83,7 @@
 		ABB828D17FF8FC56AC90AC57 /* AudioFileListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89075E8FAC4E97E7F00B783A /* AudioFileListView.swift */; };
 		ABDD5FD8CC99B0164B0B7BD4 /* BookDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 970B3470E06FC2CB79D92500 /* BookDetailViewModel.swift */; };
 		AF3756FC773EEA1712CEF40B /* PaginatedResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 410D48C86FFB6EAB51E3435F /* PaginatedResult.swift */; };
+		B17CC825C1BA4071C41FEAAB /* CropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 3D3BBED1A8B4D00029492745 /* CropViewController */; };
 		B4F16E8978E6570A46CBFA83 /* ConvexAuthObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EEAAF793FC85FFB9F7FB2E2 /* ConvexAuthObserver.swift */; };
 		B60515F584F5926BEE746E91 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1EDE993B6FC208B50C71598 /* HomeViewModel.swift */; };
 		B89A67ECD0FE8AC80AB8395D /* ShelfCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF6929D98C1E2857AF54FFDA /* ShelfCard.swift */; };
@@ -271,6 +272,7 @@
 			files = (
 				03DFFC4A1F98D1EEFBE03E20 /* ConvexMobile in Frameworks */,
 				BFC6D99406FF667B67E5FB93 /* ClerkKit in Frameworks */,
+				B17CC825C1BA4071C41FEAAB /* CropViewController in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -644,6 +646,7 @@
 			packageProductDependencies = (
 				7CA92B75F78B88C1882BB0E7 /* ConvexMobile */,
 				D4387DEBBC5B211CE0D3F8E3 /* ClerkKit */,
+				3D3BBED1A8B4D00029492745 /* CropViewController */,
 			);
 			productName = ChapterCheck;
 			productReference = CE38A99090831B755E8737E4 /* ChapterCheck.app */;
@@ -676,6 +679,7 @@
 			packageReferences = (
 				E8C649893FE3449F8A2300D7 /* XCRemoteSwiftPackageReference "clerk-ios" */,
 				5CDB1CFC35B8A7908D410F7F /* XCRemoteSwiftPackageReference "convex-swift" */,
+				D2A301828731C6576AD52FE6 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
 			);
 			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
@@ -1040,6 +1044,14 @@
 				version = 0.7.0;
 			};
 		};
+		D2A301828731C6576AD52FE6 /* XCRemoteSwiftPackageReference "TOCropViewController" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TimOliver/TOCropViewController";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.7.4;
+			};
+		};
 		E8C649893FE3449F8A2300D7 /* XCRemoteSwiftPackageReference "clerk-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/clerk/clerk-ios";
@@ -1051,6 +1063,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		3D3BBED1A8B4D00029492745 /* CropViewController */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D2A301828731C6576AD52FE6 /* XCRemoteSwiftPackageReference "TOCropViewController" */;
+			productName = CropViewController;
+		};
 		7CA92B75F78B88C1882BB0E7 /* ConvexMobile */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 5CDB1CFC35B8A7908D410F7F /* XCRemoteSwiftPackageReference "convex-swift" */;

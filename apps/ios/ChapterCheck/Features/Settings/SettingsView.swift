@@ -34,12 +34,6 @@ struct SettingsView: View {
                             Label("Edit Profile", systemImage: "pencil")
                         }
 
-                        NavigationLink {
-                            ChangeEmailView()
-                        } label: {
-                            Label("Change Email", systemImage: "envelope")
-                        }
-
                         Toggle("Private Profile", isOn: $isProfilePrivate)
                             .onChange(of: isProfilePrivate) { _, newValue in
                                 guard hasInitialized else { return }
