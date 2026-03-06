@@ -274,6 +274,7 @@ struct MainView: View {
         }
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView()
+                .environment(audioPlayer)
                 .environment(downloadManager)
                 .preferredColorScheme(themeManager.preferredColorScheme)
         }
@@ -329,6 +330,10 @@ struct MainView: View {
             AuthorsView()
         case .offlineBook(let bookId):
             OfflineBookDetailView(bookId: bookId)
+        case .allReadingHistory(let userId):
+            AllReadingHistoryView(userId: userId)
+        case .allUserReviews(let userId):
+            AllUserReviewsView(userId: userId)
         }
     }
 }

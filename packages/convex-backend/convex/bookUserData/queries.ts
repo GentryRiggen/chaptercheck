@@ -127,7 +127,7 @@ export const getPublicReviewsForBookPaginated = query({
 
     // Manual pagination
     const { cursor, numItems } = args.paginationOpts;
-    const startIndex = cursor ? parseInt(cursor as string, 10) : 0;
+    const startIndex = cursor ? Math.max(0, parseInt(cursor as string, 10) || 0) : 0;
     const endIndex = startIndex + numItems;
     const paginatedReviews = publicReviews.slice(startIndex, endIndex);
     const hasMore = endIndex < publicReviews.length;
@@ -271,6 +271,184 @@ export const getUserPublicReviews = query({
     );
 
     return reviewsWithBooks;
+  },
+});
+
+/**
+ * Get a user's public reviews with manual pagination
+ * Same logic as getUserPublicReviews but with cursor-based slicing
+ */
+export const getUserReviewsPaginated = query({
+  args: {
+    userId: v.id("users"),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
+    const currentUser = await getCurrentUser(ctx);
+    const isOwnProfile = currentUser?._id === args.userId;
+
+    const allUserData = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const reviews = allUserData.filter((data) => {
+      const hasReviewContent = data.rating !== undefined || data.reviewText;
+      if (!hasReviewContent) return false;
+      if (isOwnProfile) return true;
+      return !data.isReviewPrivate;
+    });
+
+    reviews.sort((a, b) => {
+      const aTime = a.reviewedAt ?? 0;
+      const bTime = b.reviewedAt ?? 0;
+      return bTime - aTime;
+    });
+
+    // Manual pagination
+    const { cursor, numItems } = args.paginationOpts;
+    const startIndex = cursor ? Math.max(0, parseInt(cursor as string, 10) || 0) : 0;
+    const endIndex = startIndex + numItems;
+    const paginatedReviews = reviews.slice(startIndex, endIndex);
+    const hasMore = endIndex < reviews.length;
+
+    const reviewsWithBooks = await Promise.all(
+      paginatedReviews.map(async (review) => {
+        const book = await ctx.db.get(review.bookId);
+
+        let authors: { _id: Id<"authors">; name: string }[] = [];
+        if (book) {
+          const bookAuthors = await ctx.db
+            .query("bookAuthors")
+            .withIndex("by_book", (q) => q.eq("bookId", book._id))
+            .collect();
+
+          authors = (
+            await Promise.all(
+              bookAuthors.map(async (ba) => {
+                const author = await ctx.db.get(ba.authorId);
+                return author ? { _id: author._id, name: author.name } : null;
+              })
+            )
+          ).filter((a): a is { _id: Id<"authors">; name: string } => a !== null);
+        }
+
+        return {
+          ...review,
+          book: book
+            ? {
+                _id: book._id,
+                title: book.title,
+                coverImageR2Key: book.coverImageR2Key,
+                authors,
+              }
+            : null,
+        };
+      })
+    );
+
+    return {
+      page: reviewsWithBooks,
+      isDone: !hasMore,
+      continueCursor: hasMore ? String(endIndex) : String(startIndex),
+    };
+  },
+});
+
+/**
+ * Get books a user has marked as read with manual pagination
+ * Returns paginated list with book details, respecting privacy settings
+ */
+export const getUserReadBooksPaginated = query({
+  args: {
+    userId: v.id("users"),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getCurrentUser(ctx);
+    if (!currentUser) {
+      throw new Error("Not authenticated");
+    }
+
+    const isOwnProfile = currentUser._id === args.userId;
+
+    const allUserData = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    let readData = allUserData.filter((d) => d.isRead);
+    if (!isOwnProfile) {
+      readData = readData.filter((d) => !d.isReadPrivate);
+    }
+
+    readData.sort((a, b) => {
+      const aTime = a.readAt ?? a.createdAt;
+      const bTime = b.readAt ?? b.createdAt;
+      return bTime - aTime;
+    });
+
+    // Manual pagination
+    const { cursor, numItems } = args.paginationOpts;
+    const startIndex = cursor ? Math.max(0, parseInt(cursor as string, 10) || 0) : 0;
+    const endIndex = startIndex + numItems;
+    const paginatedData = readData.slice(startIndex, endIndex);
+    const hasMore = endIndex < readData.length;
+
+    const booksWithDetails = await Promise.all(
+      paginatedData.map(async (data) => {
+        const book = await ctx.db.get(data.bookId);
+        if (!book) return null;
+
+        const bookAuthors = await ctx.db
+          .query("bookAuthors")
+          .withIndex("by_book", (q) => q.eq("bookId", book._id))
+          .collect();
+
+        const authors = (
+          await Promise.all(
+            bookAuthors.map(async (ba) => {
+              const author = await ctx.db.get(ba.authorId);
+              return author ? { _id: author._id, name: author.name } : null;
+            })
+          )
+        ).filter((a): a is { _id: Id<"authors">; name: string } => a !== null);
+
+        let series: { _id: Id<"series">; name: string } | null = null;
+        if (book.seriesId) {
+          const seriesDoc = await ctx.db.get(book.seriesId);
+          if (seriesDoc) {
+            series = { _id: seriesDoc._id, name: seriesDoc.name };
+          }
+        }
+
+        return {
+          _id: book._id,
+          title: book.title,
+          coverImageR2Key: book.coverImageR2Key,
+          seriesOrder: book.seriesOrder,
+          averageRating: book.averageRating,
+          ratingCount: book.ratingCount,
+          authors,
+          series,
+          readAt: data.readAt,
+          userRating: data.rating,
+          userReviewText: data.reviewText,
+          isReviewPrivate: data.isReviewPrivate,
+          isReadPrivate: data.isReadPrivate,
+        };
+      })
+    );
+
+    const filtered = booksWithDetails.filter((b) => b !== null);
+
+    return {
+      page: filtered,
+      isDone: !hasMore,
+      continueCursor: hasMore ? String(endIndex) : String(startIndex),
+    };
   },
 });
 

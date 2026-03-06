@@ -21,7 +21,7 @@ export const searchAll = query({
       .withSearchIndex("search_books", (q) => q.search("title", searchTerm))
       .take(20);
 
-    // Also search series by name and include their books
+    // --- Series ---
     const matchingSeries = await ctx.db
       .query("series")
       .withSearchIndex("search_series", (q) => q.search("name", searchTerm))
@@ -35,6 +35,12 @@ export const searchAll = query({
           .collect()
       )
     );
+
+    const seriesWithCounts = matchingSeries.map((s, i) => ({
+      ...s,
+      bookCount: seriesBookArrays[i].length,
+    }));
+
     const seriesBooks = seriesBookArrays.flat();
 
     // Merge and deduplicate (title results first for relevance)
@@ -95,6 +101,11 @@ export const searchAll = query({
         imageUrl: u.imageUrl,
       }));
 
-    return { books: enrichedBooks, authors: authorsWithCounts, users };
+    return {
+      books: enrichedBooks,
+      authors: authorsWithCounts,
+      series: seriesWithCounts,
+      users,
+    };
   },
 });

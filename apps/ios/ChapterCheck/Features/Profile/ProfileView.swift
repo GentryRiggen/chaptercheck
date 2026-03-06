@@ -54,32 +54,6 @@ struct ProfileView: View {
                     statsSection(stats)
                 }
 
-                // Reviews
-                if !viewModel.reviews.isEmpty {
-                    Section {
-                        ForEach(viewModel.reviews) { review in
-                            if let book = review.book {
-                                NavigationLink(value: AppDestination.book(id: book._id)) {
-                                    profileReviewRow(review, book: book)
-                                }
-                            }
-                        }
-                    } header: {
-                        Text("Reviews")
-                    }
-                }
-
-                // Reading history
-                if !viewModel.readBooks.isEmpty {
-                    Section {
-                        ForEach(viewModel.readBooks) { book in
-                            LibraryBookCard(book: book)
-                        }
-                    } header: {
-                        Text("Reading History")
-                    }
-                }
-
                 // Shelves
                 if !viewModel.shelves.isEmpty {
                     Section {
@@ -90,6 +64,48 @@ struct ProfileView: View {
                         }
                     } header: {
                         Text("Shelves")
+                    }
+                }
+
+                // Reviews (show up to 3)
+                if !viewModel.reviews.isEmpty {
+                    Section {
+                        ForEach(viewModel.reviews.prefix(3)) { review in
+                            if let book = review.book {
+                                NavigationLink(value: AppDestination.book(id: book._id)) {
+                                    profileReviewRow(review, book: book)
+                                }
+                            }
+                        }
+
+                        if viewModel.reviews.count > 3 {
+                            NavigationLink(value: AppDestination.allUserReviews(userId: userId)) {
+                                Text("Show All")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    } header: {
+                        Text("Reviews")
+                    }
+                }
+
+                // Reading history (show up to 3)
+                if !viewModel.readBooks.isEmpty {
+                    Section {
+                        ForEach(viewModel.readBooks.prefix(3)) { book in
+                            LibraryBookCard(book: book)
+                        }
+
+                        if viewModel.readBooks.count > 3 {
+                            NavigationLink(value: AppDestination.allReadingHistory(userId: userId)) {
+                                Text("Show All")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    } header: {
+                        Text("Reading History")
                     }
                 }
 

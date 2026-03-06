@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// Unified search screen for books and authors.
+/// Unified search screen for books, authors, series, and profiles.
 ///
 /// Pushes onto the navigation stack from the home screen. Shows a searchable
-/// list with debounced queries returning both book and author results.
+/// list with debounced queries returning book, author, series, and user results.
+/// Filter pills allow narrowing results to a specific category.
 /// When the query is empty, shows quick links to browse the full library.
 struct SearchView: View {
     @State private var viewModel = SearchViewModel()
@@ -21,7 +22,7 @@ struct SearchView: View {
         .searchable(
             text: $viewModel.searchText,
             placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Books, authors, series..."
+            prompt: "Books, authors, series, profiles..."
         )
         .onChange(of: viewModel.searchText) {
             viewModel.onSearchTextChanged()
@@ -48,44 +49,100 @@ struct SearchView: View {
         } else if !viewModel.hasResults {
             ContentUnavailableView.search(text: viewModel.searchText)
         } else {
-            List {
-                if !viewModel.bookResults.isEmpty {
-                    Section("Books") {
-                        ForEach(viewModel.bookResults) { book in
-                            NavigationLink(value: AppDestination.book(id: book._id)) {
-                                bookRow(book)
-                            }
-                        }
-                    }
-                }
-
-                if !viewModel.authorResults.isEmpty {
-                    Section("Authors") {
-                        ForEach(viewModel.authorResults) { author in
-                            NavigationLink(value: AppDestination.author(id: author._id)) {
-                                authorRow(author)
-                            }
-                        }
-                    }
-                }
-
-                if !viewModel.userResults.isEmpty {
-                    Section("People") {
-                        ForEach(viewModel.userResults) { user in
-                            NavigationLink(value: AppDestination.profile(userId: user._id)) {
-                                userRow(user)
-                            }
-                        }
-                    }
-                }
-
-                Color.clear
-                    .frame(height: 80)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+            VStack(spacing: 0) {
+                filterPills
+                filteredResultsList
             }
-            .listStyle(.plain)
         }
+    }
+
+    // MARK: - Filter Pills
+
+    private var filterPills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(viewModel.availableFilters, id: \.self) { filter in
+                    filterPill(filter)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+    }
+
+    private func filterPill(_ filter: SearchFilter) -> some View {
+        let isSelected = viewModel.selectedFilter == filter
+        return Text(filter.rawValue)
+            .font(.subheadline)
+            .fontWeight(isSelected ? .semibold : .regular)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(isSelected ? Color.accentColor : Color(.systemGray5))
+            .foregroundStyle(isSelected ? .white : .primary)
+            .clipShape(Capsule())
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.selectedFilter = filter
+                }
+            }
+    }
+
+    // MARK: - Filtered Results List
+
+    @ViewBuilder
+    private var filteredResultsList: some View {
+        let showBooks = (viewModel.selectedFilter == .all || viewModel.selectedFilter == .books) && !viewModel.bookResults.isEmpty
+        let showAuthors = (viewModel.selectedFilter == .all || viewModel.selectedFilter == .authors) && !viewModel.authorResults.isEmpty
+        let showSeries = (viewModel.selectedFilter == .all || viewModel.selectedFilter == .series) && !viewModel.seriesResults.isEmpty
+        let showProfiles = (viewModel.selectedFilter == .all || viewModel.selectedFilter == .profiles) && !viewModel.userResults.isEmpty
+
+        List {
+            if showBooks {
+                Section("Books") {
+                    ForEach(viewModel.bookResults) { book in
+                        NavigationLink(value: AppDestination.book(id: book._id)) {
+                            bookRow(book)
+                        }
+                    }
+                }
+            }
+
+            if showAuthors {
+                Section("Authors") {
+                    ForEach(viewModel.authorResults) { author in
+                        NavigationLink(value: AppDestination.author(id: author._id)) {
+                            authorRow(author)
+                        }
+                    }
+                }
+            }
+
+            if showSeries {
+                Section("Series") {
+                    ForEach(viewModel.seriesResults) { series in
+                        NavigationLink(value: AppDestination.series(id: series._id)) {
+                            seriesRow(series)
+                        }
+                    }
+                }
+            }
+
+            if showProfiles {
+                Section("Profiles") {
+                    ForEach(viewModel.userResults) { user in
+                        NavigationLink(value: AppDestination.profile(userId: user._id)) {
+                            userRow(user)
+                        }
+                    }
+                }
+            }
+
+            Color.clear
+                .frame(height: 80)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        }
+        .listStyle(.plain)
     }
 
     // MARK: - Book Row
@@ -126,6 +183,33 @@ struct SearchView: View {
                     .lineLimit(1)
 
                 Text("\(author.bookCountInt) \(author.bookCountInt == 1 ? "book" : "books")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    // MARK: - Series Row
+
+    private func seriesRow(_ series: SearchSeries) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(.fill.tertiary)
+                .frame(width: 40, height: 40)
+                .overlay {
+                    Image(systemName: "books.vertical")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary)
+                }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(series.name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+
+                Text("\(series.bookCountInt) \(series.bookCountInt == 1 ? "book" : "books")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -70,6 +70,44 @@ final class BookUserDataRepository {
         )
     }
 
+    /// Subscribe to a paginated list of books a user has marked as read.
+    func subscribeToUserReadBooksPaginated(
+        userId: String,
+        numItems: Int = 20,
+        cursor: String? = nil
+    ) -> AnyPublisher<PaginatedResult<UserReadBook>, ClientError>? {
+        let paginationOpts: [String: ConvexEncodable?] = [
+            "numItems": Double(numItems),
+            "cursor": cursor,
+        ]
+        return convex.subscribe(
+            to: "bookUserData/queries:getUserReadBooksPaginated",
+            with: [
+                "userId": userId,
+                "paginationOpts": paginationOpts,
+            ]
+        )
+    }
+
+    /// Subscribe to a paginated list of a user's reviews.
+    func subscribeToUserReviewsPaginated(
+        userId: String,
+        numItems: Int = 20,
+        cursor: String? = nil
+    ) -> AnyPublisher<PaginatedResult<UserReview>, ClientError>? {
+        let paginationOpts: [String: ConvexEncodable?] = [
+            "numItems": Double(numItems),
+            "cursor": cursor,
+        ]
+        return convex.subscribe(
+            to: "bookUserData/queries:getUserReviewsPaginated",
+            with: [
+                "userId": userId,
+                "paginationOpts": paginationOpts,
+            ]
+        )
+    }
+
     // MARK: - Mutations
 
     /// Toggle the read status for a book.

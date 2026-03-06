@@ -3,7 +3,7 @@
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { useDebounce } from "@chaptercheck/shared/hooks/useDebounce";
 import { useQuery } from "convex/react";
-import { BookOpen, Search, User, Users } from "lucide-react";
+import { BookOpen, Library, Search, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -53,8 +53,13 @@ export function GlobalSearch() {
   );
 
   const users = results?.users ?? [];
+  const series = results?.series ?? [];
   const hasResults =
-    results && (results.books.length > 0 || results.authors.length > 0 || users.length > 0);
+    results &&
+    (results.books.length > 0 ||
+      results.authors.length > 0 ||
+      series.length > 0 ||
+      users.length > 0);
   const isSearching = debouncedSearch.trim().length > 0;
 
   return (
@@ -79,7 +84,7 @@ export function GlobalSearch() {
           <DialogTitle className="sr-only">Search</DialogTitle>
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Search books, authors, people..."
+              placeholder="Search books, authors, series, people..."
               value={search}
               onValueChange={setSearch}
             />
@@ -139,6 +144,28 @@ export function GlobalSearch() {
                         <p className="text-xs text-muted-foreground">
                           {author.bookCount} {author.bookCount === 1 ? "book" : "books"}
                           {author.seriesCount > 0 && ` · ${author.seriesCount} series`}
+                        </p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {/* Series */}
+              {series.length > 0 && (
+                <CommandGroup heading="Series">
+                  {series.slice(0, 5).map((s) => (
+                    <CommandItem
+                      key={s._id}
+                      value={`series-${s._id}`}
+                      onSelect={() => handleSelect(`/series/${s._id}`)}
+                      className="gap-3"
+                    >
+                      <Library className="h-4 w-4 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{s.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.bookCount} {s.bookCount === 1 ? "book" : "books"}
                         </p>
                       </div>
                     </CommandItem>

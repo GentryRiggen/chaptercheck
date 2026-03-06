@@ -128,6 +128,10 @@ struct SettingsView: View {
             ShelfDetailView(shelfId: id)
         case .profile(let userId):
             ProfileView(userId: userId)
+        case .allReadingHistory(let userId):
+            AllReadingHistoryView(userId: userId)
+        case .allUserReviews(let userId):
+            AllUserReviewsView(userId: userId)
         case .search, .browseLibrary, .browseAuthors, .offlineBook:
             EmptyView()
         }

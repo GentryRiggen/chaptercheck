@@ -3,10 +3,19 @@ import ConvexMobile
 import Foundation
 import os
 
+/// Filter categories for search results.
+enum SearchFilter: String, CaseIterable {
+    case all = "All"
+    case books = "Books"
+    case authors = "Authors"
+    case series = "Series"
+    case profiles = "Profiles"
+}
+
 /// View model for the unified search screen.
 ///
 /// Debounces the search query by 300ms, then subscribes to `search/queries:searchAll`
-/// which returns both book and author results in a single reactive subscription.
+/// which returns book, author, series, and user results in a single reactive subscription.
 @Observable
 @MainActor
 final class SearchViewModel {
@@ -14,14 +23,39 @@ final class SearchViewModel {
     // MARK: - Public State
 
     var searchText: String = ""
+    var selectedFilter: SearchFilter = .all
     var bookResults: [BookWithDetails] = []
     var authorResults: [AuthorWithCounts] = []
+    var seriesResults: [SearchSeries] = []
     var userResults: [SearchUser] = []
     var isLoading = false
     var error: String?
 
-    var hasResults: Bool { !bookResults.isEmpty || !authorResults.isEmpty || !userResults.isEmpty }
+    var hasResults: Bool {
+        !bookResults.isEmpty || !authorResults.isEmpty || !seriesResults.isEmpty || !userResults.isEmpty
+    }
+
+    var hasFilteredResults: Bool {
+        switch selectedFilter {
+        case .all: return hasResults
+        case .books: return !bookResults.isEmpty
+        case .authors: return !authorResults.isEmpty
+        case .series: return !seriesResults.isEmpty
+        case .profiles: return !userResults.isEmpty
+        }
+    }
+
     var isSearchActive: Bool { !searchText.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// Filters that have at least one result, used to show only relevant pills.
+    var availableFilters: [SearchFilter] {
+        var filters: [SearchFilter] = [.all]
+        if !bookResults.isEmpty { filters.append(.books) }
+        if !authorResults.isEmpty { filters.append(.authors) }
+        if !seriesResults.isEmpty { filters.append(.series) }
+        if !userResults.isEmpty { filters.append(.profiles) }
+        return filters
+    }
 
     // MARK: - Dependencies
 
@@ -54,9 +88,11 @@ final class SearchViewModel {
             cancellables.removeAll()
             bookResults = []
             authorResults = []
+            seriesResults = []
             userResults = []
             isLoading = false
             error = nil
+            selectedFilter = .all
             return
         }
 
@@ -98,11 +134,16 @@ final class SearchViewModel {
                     }
                 },
                 receiveValue: { [weak self] result in
-                    self?.logger.info("search: \(result.books.count) books, \(result.authors.count) authors, \(result.users?.count ?? 0) people")
+                    self?.logger.info("search: \(result.books.count) books, \(result.authors.count) authors, \(result.series?.count ?? 0) series, \(result.users?.count ?? 0) people")
                     self?.bookResults = result.books
                     self?.authorResults = result.authors
+                    self?.seriesResults = result.series ?? []
                     self?.userResults = result.users ?? []
                     self?.isLoading = false
+                    // Reset to .all if current filter has no results
+                    if let self, !self.hasFilteredResults {
+                        self.selectedFilter = .all
+                    }
                 }
             )
             .store(in: &cancellables)
