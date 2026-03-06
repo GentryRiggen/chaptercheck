@@ -288,7 +288,11 @@ export function BookForm({
             <FormItem>
               <FormLabel>Genres</FormLabel>
               <FormControl>
-                <GenreMultiSelect value={field.value || []} onChange={field.onChange} />
+                <GenreMultiSelect
+                  value={field.value || []}
+                  onChange={field.onChange}
+                  bookId={bookId}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

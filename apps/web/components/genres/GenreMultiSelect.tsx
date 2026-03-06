@@ -2,9 +2,10 @@
 
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
-import { useQuery } from "convex/react";
-import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { Check, ChevronsUpDown, Loader2, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { RoleGate } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
@@ -21,21 +22,20 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-import { GenreDialog } from "./GenreDialog";
-
 interface GenreMultiSelectProps {
   value: string[];
   onChange: (value: string[]) => void;
-  /** Book ID to pre-load user's existing votes (for review form) */
+  /** Book ID to pre-load user's existing genre votes when editing */
   bookId?: Id<"books">;
 }
 
 export function GenreMultiSelect({ value, onChange, bookId }: GenreMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [initialGenreName, setInitialGenreName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+
+  const createGenre = useMutation(api.genres.mutations.createGenre);
 
   const genres = useQuery(api.genres.queries.getAllGenres, {});
   const myVotes = useQuery(
@@ -77,8 +77,19 @@ export function GenreMultiSelect({ value, onChange, bookId }: GenreMultiSelectPr
     onChange(value.filter((id) => id !== genreId));
   };
 
-  const handleGenreCreated = (genreId: Id<"genres">) => {
-    onChange([...value, genreId]);
+  const handleCreateGenre = async () => {
+    const name = search.trim();
+    if (!name || isCreating) return;
+    setIsCreating(true);
+    try {
+      const genreId = await createGenre({ name });
+      onChange([...value, genreId]);
+      setSearch("");
+    } catch {
+      toast.error("Failed to create genre");
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -124,21 +135,21 @@ export function GenreMultiSelect({ value, onChange, bookId }: GenreMultiSelectPr
                   ))}
                 </CommandGroup>
               )}
-              <RoleGate minRole="editor">
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => {
-                      setInitialGenreName(search.trim());
-                      setOpen(false);
-                      setCreateDialogOpen(true);
-                    }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create new genre{search.trim() ? ` "${search.trim()}"` : ""}
-                  </CommandItem>
-                </CommandGroup>
-              </RoleGate>
+              {search.trim() && (
+                <RoleGate minRole="editor">
+                  <CommandSeparator />
+                  <CommandGroup>
+                    <CommandItem onSelect={handleCreateGenre} disabled={isCreating}>
+                      {isCreating ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="mr-2 h-4 w-4" />
+                      )}
+                      Create &quot;{search.trim()}&quot;
+                    </CommandItem>
+                  </CommandGroup>
+                </RoleGate>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>
@@ -161,17 +172,6 @@ export function GenreMultiSelect({ value, onChange, bookId }: GenreMultiSelectPr
           ))}
         </div>
       )}
-
-      <GenreDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        onCreated={(genreId) => {
-          handleGenreCreated(genreId);
-          setSearch("");
-          setInitialGenreName("");
-        }}
-        initialName={initialGenreName}
-      />
     </div>
   );
 }
