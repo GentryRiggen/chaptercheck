@@ -22,6 +22,7 @@ struct EditProfileView: View {
     @State private var isUploadingPhoto = false
     @State private var showPhotoOptions = false
     @State private var showCamera = false
+    @State private var showPhotoPicker = false
 
     // MARK: - Validation
 
@@ -120,8 +121,8 @@ struct EditProfileView: View {
             loadAndUploadPhoto(item)
         }
         .confirmationDialog("Profile Photo", isPresented: $showPhotoOptions) {
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Text("Choose from Library")
+            Button("Choose from Library") {
+                showPhotoPicker = true
             }
 
             Button("Take Photo") {
@@ -134,6 +135,7 @@ struct EditProfileView: View {
                 }
             }
         }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhoto, matching: .images)
         .fullScreenCover(isPresented: $showCamera) {
             CameraImagePicker { imageData in
                 uploadImageData(imageData)
