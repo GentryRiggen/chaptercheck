@@ -8,7 +8,8 @@ import os
 /// Manages three concurrent Convex subscriptions for real-time updates:
 /// continue listening, recently added books, and top rated books.
 ///
-/// Subscriptions auto-retry transient server errors before surfacing failures.
+/// Observes Convex auth state — subscriptions are only created when authenticated
+/// and automatically torn down / recreated on auth state transitions.
 /// A full-screen error only appears when ALL sections fail — partial successes
 /// show whatever data loaded.
 @Observable
@@ -28,9 +29,11 @@ final class HomeViewModel {
     // MARK: - Dependencies
 
     private let logger = Logger(subsystem: "com.chaptercheck", category: "HomeViewModel")
+    private let convexService = ConvexService.shared
     private let bookRepository = BookRepository()
     private let progressRepository = ProgressRepository()
     private var cancellables = Set<AnyCancellable>()
+    private var authCancellable: AnyCancellable?
 
     /// Tracks which subscriptions have emitted at least once,
     /// so we can dismiss the loading state after initial data arrives.
@@ -38,23 +41,24 @@ final class HomeViewModel {
     private var failedSections: Set<String> = []
     private var retryTimer: Task<Void, Never>?
 
+    /// Whether the view wants subscriptions active (between onAppear/onDisappear).
+    private var wantsSubscription = false
+
     private static let allSections: Set<String> = ["recentlyListening", "recentBooks", "topRatedBooks"]
 
     // MARK: - Subscriptions
 
     func subscribe() {
-        guard cancellables.isEmpty else { return }
-        logger.info("Subscribing to all home sections")
-        subscribeToRecentlyListening()
-        subscribeToRecentBooks()
-        subscribeToTopRatedBooks()
-        startRetryTimer()
+        wantsSubscription = true
+        observeAuthState()
+        subscribeIfAuthenticated()
     }
 
     func unsubscribe() {
-        cancellables.removeAll()
-        retryTimer?.cancel()
-        retryTimer = nil
+        wantsSubscription = false
+        authCancellable?.cancel()
+        authCancellable = nil
+        tearDownSubscriptions()
     }
 
     func retry() {
@@ -64,20 +68,65 @@ final class HomeViewModel {
         error = nil
         loadedSections.removeAll()
         failedSections.removeAll()
+        tearDownSubscriptions()
+        subscribeIfAuthenticated()
+    }
+
+    // MARK: - Auth State Observation
+
+    private func observeAuthState() {
+        guard authCancellable == nil else { return }
+        authCancellable = convexService.$authState
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                guard let self, wantsSubscription else { return }
+                switch state {
+                case .authenticated:
+                    if cancellables.isEmpty {
+                        logger.info("Auth restored — resubscribing")
+                        subscribeIfAuthenticated()
+                    }
+                default:
+                    if !cancellables.isEmpty {
+                        logger.info("Auth lost — tearing down subscriptions")
+                        tearDownSubscriptions()
+                    }
+                }
+            }
+    }
+
+    private func subscribeIfAuthenticated() {
+        guard case .authenticated = convexService.authState else {
+            logger.info("Skipping subscribe — not authenticated yet")
+            startRetryTimer()
+            return
+        }
+        guard cancellables.isEmpty else { return }
+
+        logger.info("Subscribing to all home sections")
+        subscribeToRecentlyListening()
+        subscribeToRecentBooks()
+        subscribeToTopRatedBooks()
+        startRetryTimer()
+    }
+
+    private func tearDownSubscriptions() {
         cancellables.removeAll()
-        subscribe()
+        retryTimer?.cancel()
+        retryTimer = nil
+        loadedSections.removeAll()
+        failedSections.removeAll()
     }
 
     // MARK: - Private Subscription Setup
 
     private func subscribeToRecentlyListening() {
         progressRepository.subscribeToRecentlyListening(limit: 6)?
-            .retry(2)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.logger.error("recentlyListening FAILED after retries: \(error)")
+                        self?.logger.error("recentlyListening FAILED: \(error)")
                         self?.handleSectionError("recentlyListening", message: error.localizedDescription)
                     }
                 },
@@ -92,12 +141,11 @@ final class HomeViewModel {
 
     private func subscribeToRecentBooks() {
         bookRepository.subscribeToRecentBooks(limit: 10)?
-            .retry(2)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.logger.error("recentBooks FAILED after retries: \(error)")
+                        self?.logger.error("recentBooks FAILED: \(error)")
                         self?.handleSectionError("recentBooks", message: error.localizedDescription)
                     }
                 },
@@ -112,12 +160,11 @@ final class HomeViewModel {
 
     private func subscribeToTopRatedBooks() {
         bookRepository.subscribeToTopRatedBooks(limit: 10)?
-            .retry(2)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.logger.error("topRatedBooks FAILED after retries: \(error)")
+                        self?.logger.error("topRatedBooks FAILED: \(error)")
                         self?.handleSectionError("topRatedBooks", message: error.localizedDescription)
                     }
                 },
