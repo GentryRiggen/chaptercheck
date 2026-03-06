@@ -49,6 +49,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         SWIFT_EMIT_LOC_STRINGS: "YES"
         CODE_SIGN_STYLE: Automatic
+        PROVISIONING_PROFILE_SPECIFIER: $(CI_PROVISIONING_PROFILE)
     dependencies:
       - package: ConvexMobile
       - package: Clerk

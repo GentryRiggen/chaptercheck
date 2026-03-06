@@ -112,6 +112,10 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -o pipefail
+          # CI_PROVISIONING_PROFILE is a custom build setting referenced only
+          # by the app target (via project.yml). This avoids applying
+          # PROVISIONING_PROFILE_SPECIFIER globally, which breaks SPM
+          # packages like TOCropViewController.
           xcodebuild archive \
             -project ChapterCheck.xcodeproj \
             -scheme ChapterCheck \
@@ -120,8 +124,8 @@ jobs:
             -destination 'generic/platform=iOS' \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CI_PROVISIONING_PROFILE="$PROFILE_UUID" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             MARKETING_VERSION="$VERSION" \
             2>&1 | tee "$RUNNER_TEMP/xcodebuild.log" | xcpretty || {
