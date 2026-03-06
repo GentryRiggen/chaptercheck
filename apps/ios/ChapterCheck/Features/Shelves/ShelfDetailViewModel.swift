@@ -20,15 +20,32 @@ final class ShelfDetailViewModel {
     // MARK: - Dependencies
 
     private let repository = ShelfRepository()
+    private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
     private var currentShelfId: String?
 
     // MARK: - Lifecycle
 
     func subscribe(shelfId: String) {
-        guard cancellables.isEmpty else { return }
         currentShelfId = shelfId
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty, let shelfId = currentShelfId else { return }
+                self.setupSubscription(shelfId: shelfId)
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+            }
+        )
+    }
 
+    func unsubscribe() {
+        authObserver.cancel()
+        cancellables.removeAll()
+        currentShelfId = nil
+    }
+
+    private func setupSubscription(shelfId: String) {
         repository.subscribeToShelf(shelfId: shelfId)
             .receive(on: DispatchQueue.main)
             .sink(
@@ -36,6 +53,7 @@ final class ShelfDetailViewModel {
                     if case .failure(let err) = completion {
                         self?.error = err.localizedDescription
                         self?.isLoading = false
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] shelf in
@@ -44,11 +62,6 @@ final class ShelfDetailViewModel {
                 }
             )
             .store(in: &cancellables)
-    }
-
-    func unsubscribe() {
-        cancellables.removeAll()
-        currentShelfId = nil
     }
 
     // MARK: - Mutations

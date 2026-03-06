@@ -27,6 +27,7 @@ final class SearchViewModel {
 
     private let logger = Logger(subsystem: "com.chaptercheck", category: "SearchViewModel")
     private let searchRepository = SearchRepository()
+    private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Debounce
@@ -37,6 +38,7 @@ final class SearchViewModel {
     // MARK: - Lifecycle
 
     func unsubscribe() {
+        authObserver.cancel()
         cancellables.removeAll()
         searchDebounceTask?.cancel()
     }
@@ -72,6 +74,11 @@ final class SearchViewModel {
         cancellables.removeAll()
         error = nil
 
+        guard authObserver.isAuthenticated else {
+            isLoading = false
+            return
+        }
+
         guard let pub = searchRepository.subscribeToUnifiedSearch(query: query) else {
             isLoading = false
             return
@@ -87,6 +94,7 @@ final class SearchViewModel {
                         self?.logger.error("search FAILED: \(error)")
                         self?.error = error.localizedDescription
                         self?.isLoading = false
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] result in

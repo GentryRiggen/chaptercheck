@@ -27,7 +27,9 @@ final class ProfileViewModel {
     private let userRepository = UserRepository()
     private let shelfRepository = ShelfRepository()
     private let bookUserDataRepository = BookUserDataRepository()
+    private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
+    private var currentUserId: String?
 
     /// Tracks which data sections have received their first value.
     private var loadedSections: Set<String> = []
@@ -35,14 +37,24 @@ final class ProfileViewModel {
     // MARK: - Lifecycle
 
     func subscribe(userId: String) {
-        guard cancellables.isEmpty else { return }
-        subscribeToProfile(userId: userId)
-        subscribeToShelves(userId: userId)
-        subscribeToReadBooks(userId: userId)
-        subscribeToReviews(userId: userId)
+        currentUserId = userId
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty, let userId = currentUserId else { return }
+                subscribeToProfile(userId: userId)
+                subscribeToShelves(userId: userId)
+                subscribeToReadBooks(userId: userId)
+                subscribeToReviews(userId: userId)
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+                self?.loadedSections.removeAll()
+            }
+        )
     }
 
     func unsubscribe() {
+        authObserver.cancel()
         cancellables.removeAll()
         loadedSections.removeAll()
     }
@@ -61,6 +73,7 @@ final class ProfileViewModel {
                     if case .failure(let err) = completion {
                         self?.error = err.localizedDescription
                         self?.markLoaded(section: "profile")
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] profile in
@@ -79,6 +92,7 @@ final class ProfileViewModel {
                     if case .failure(let err) = completion {
                         self?.error = err.localizedDescription
                         self?.markLoaded(section: "shelves")
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] response in
@@ -102,6 +116,7 @@ final class ProfileViewModel {
                     if case .failure(let err) = completion {
                         self?.error = err.localizedDescription
                         self?.markLoaded(section: "readBooks")
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] books in
@@ -124,6 +139,7 @@ final class ProfileViewModel {
                     if case .failure(let err) = completion {
                         self?.error = err.localizedDescription
                         self?.markLoaded(section: "reviews")
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] reviews in

@@ -29,11 +29,10 @@ final class HomeViewModel {
     // MARK: - Dependencies
 
     private let logger = Logger(subsystem: "com.chaptercheck", category: "HomeViewModel")
-    private let convexService = ConvexService.shared
     private let bookRepository = BookRepository()
     private let progressRepository = ProgressRepository()
+    private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
-    private var authCancellable: AnyCancellable?
 
     /// Tracks which subscriptions have emitted at least once,
     /// so we can dismiss the loading state after initial data arrives.
@@ -41,23 +40,30 @@ final class HomeViewModel {
     private var failedSections: Set<String> = []
     private var retryTimer: Task<Void, Never>?
 
-    /// Whether the view wants subscriptions active (between onAppear/onDisappear).
-    private var wantsSubscription = false
-
     private static let allSections: Set<String> = ["recentlyListening", "recentBooks", "topRatedBooks"]
 
     // MARK: - Subscriptions
 
     func subscribe() {
-        wantsSubscription = true
-        observeAuthState()
-        subscribeIfAuthenticated()
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty else { return }
+                logger.info("Auth ready — subscribing to all home sections")
+                subscribeToRecentlyListening()
+                subscribeToRecentBooks()
+                subscribeToTopRatedBooks()
+                startRetryTimer()
+            },
+            onUnauthenticated: { [weak self] in
+                guard let self else { return }
+                logger.info("Auth lost — tearing down subscriptions")
+                tearDownSubscriptions()
+            }
+        )
     }
 
     func unsubscribe() {
-        wantsSubscription = false
-        authCancellable?.cancel()
-        authCancellable = nil
+        authObserver.cancel()
         tearDownSubscriptions()
     }
 
@@ -66,48 +72,9 @@ final class HomeViewModel {
         isLoading = true
         showRetry = false
         error = nil
-        loadedSections.removeAll()
-        failedSections.removeAll()
         tearDownSubscriptions()
-        subscribeIfAuthenticated()
-    }
-
-    // MARK: - Auth State Observation
-
-    private func observeAuthState() {
-        guard authCancellable == nil else { return }
-        authCancellable = convexService.$authState
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in
-                guard let self, wantsSubscription else { return }
-                switch state {
-                case .authenticated:
-                    if cancellables.isEmpty {
-                        logger.info("Auth restored — resubscribing")
-                        subscribeIfAuthenticated()
-                    }
-                default:
-                    if !cancellables.isEmpty {
-                        logger.info("Auth lost — tearing down subscriptions")
-                        tearDownSubscriptions()
-                    }
-                }
-            }
-    }
-
-    private func subscribeIfAuthenticated() {
-        guard case .authenticated = convexService.authState else {
-            logger.info("Skipping subscribe — not authenticated yet")
-            startRetryTimer()
-            return
-        }
-        guard cancellables.isEmpty else { return }
-
-        logger.info("Subscribing to all home sections")
-        subscribeToRecentlyListening()
-        subscribeToRecentBooks()
-        subscribeToTopRatedBooks()
-        startRetryTimer()
+        authObserver.cancel()
+        subscribe()
     }
 
     private func tearDownSubscriptions() {
@@ -194,6 +161,9 @@ final class HomeViewModel {
         if failedSections.union(loadedSections) == Self.allSections {
             if loadedSections.isEmpty {
                 error = message
+                // All subscriptions dead — allow re-subscription on next auth cycle
+                cancellables.removeAll()
+                authObserver.needsResubscription()
             }
             isLoading = false
             retryTimer?.cancel()

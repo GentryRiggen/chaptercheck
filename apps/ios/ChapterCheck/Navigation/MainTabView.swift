@@ -1,5 +1,6 @@
 import Combine
 import ClerkKit
+import ConvexMobile
 import SwiftUI
 
 // MARK: - Show Now Playing Environment Key
@@ -287,6 +288,7 @@ struct MainView: View {
 
     private func subscribeToPreferences() {
         guard preferencesCancellable == nil,
+              case .authenticated = ConvexService.shared.authState,
               let publisher = PreferencesRepository().subscribeToPreferences() else { return }
 
         preferencesCancellable = publisher

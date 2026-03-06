@@ -20,18 +20,30 @@ final class SeriesDetailViewModel {
     // MARK: - Dependencies
 
     private let seriesRepository = SeriesRepository()
+    private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
+    private var currentSeriesId: String?
     private var loadedSections: Set<String> = []
 
     // MARK: - Lifecycle
 
     func subscribe(seriesId: String) {
-        guard cancellables.isEmpty else { return }
-        subscribeToSeries(seriesId: seriesId)
-        subscribeToBooks(seriesId: seriesId)
+        currentSeriesId = seriesId
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty, let seriesId = currentSeriesId else { return }
+                subscribeToSeries(seriesId: seriesId)
+                subscribeToBooks(seriesId: seriesId)
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+                self?.loadedSections.removeAll()
+            }
+        )
     }
 
     func unsubscribe() {
+        authObserver.cancel()
         cancellables.removeAll()
     }
 
@@ -44,6 +56,7 @@ final class SeriesDetailViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.error = error.localizedDescription
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] series in
@@ -61,6 +74,7 @@ final class SeriesDetailViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.error = error.localizedDescription
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] books in

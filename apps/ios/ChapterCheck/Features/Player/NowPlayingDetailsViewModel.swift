@@ -21,7 +21,9 @@ final class NowPlayingDetailsViewModel {
 
     private let bookUserDataRepository = BookUserDataRepository()
     private let genreRepository = GenreRepository()
+    private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
+    private var currentBookId: String?
 
     // MARK: - Computed
 
@@ -38,8 +40,31 @@ final class NowPlayingDetailsViewModel {
     // MARK: - Lifecycle
 
     func subscribe(bookId: String) {
+        currentBookId = bookId
         cancellables.removeAll()
+        authObserver.cancel()
 
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, let bookId = currentBookId, cancellables.isEmpty else { return }
+                self.setupSubscriptions(bookId: bookId)
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+            }
+        )
+    }
+
+    func unsubscribe() {
+        authObserver.cancel()
+        cancellables.removeAll()
+        userData = nil
+        ratingStats = nil
+        allGenres = []
+        myGenreVoteIds = []
+    }
+
+    private func setupSubscriptions(bookId: String) {
         bookUserDataRepository.subscribeToMyBookData(bookId: bookId)?
             .receive(on: DispatchQueue.main)
             .sink(
@@ -79,14 +104,6 @@ final class NowPlayingDetailsViewModel {
                 }
             )
             .store(in: &cancellables)
-    }
-
-    func unsubscribe() {
-        cancellables.removeAll()
-        userData = nil
-        ratingStats = nil
-        allGenres = []
-        myGenreVoteIds = []
     }
 
     // MARK: - Mutations

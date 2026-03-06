@@ -63,7 +63,9 @@ final class BookDetailViewModel {
     private let progressRepository = ProgressRepository()
     private let bookUserDataRepository = BookUserDataRepository()
     private let genreRepository = GenreRepository()
+    private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
+    private var currentBookId: String?
 
     private var loadedSections: Set<String> = []
 
@@ -134,18 +136,28 @@ final class BookDetailViewModel {
     // MARK: - Lifecycle
 
     func subscribe(bookId: String) {
-        guard cancellables.isEmpty else { return }
-        subscribeToBook(bookId: bookId)
-        subscribeToAudioFiles(bookId: bookId)
-        subscribeToProgress(bookId: bookId)
-        subscribeToUserData(bookId: bookId)
-        subscribeToRatingStats(bookId: bookId)
-        subscribeToReviews(bookId: bookId)
-        subscribeToAllGenres()
-        subscribeToMyGenreVotes(bookId: bookId)
+        currentBookId = bookId
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty, let bookId = currentBookId else { return }
+                subscribeToBook(bookId: bookId)
+                subscribeToAudioFiles(bookId: bookId)
+                subscribeToProgress(bookId: bookId)
+                subscribeToUserData(bookId: bookId)
+                subscribeToRatingStats(bookId: bookId)
+                subscribeToReviews(bookId: bookId)
+                subscribeToAllGenres()
+                subscribeToMyGenreVotes(bookId: bookId)
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+                self?.loadedSections.removeAll()
+            }
+        )
     }
 
     func unsubscribe() {
+        authObserver.cancel()
         cancellables.removeAll()
     }
 
@@ -210,6 +222,7 @@ final class BookDetailViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.error = error.localizedDescription
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] book in
@@ -227,6 +240,7 @@ final class BookDetailViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.error = error.localizedDescription
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] files in
@@ -244,6 +258,7 @@ final class BookDetailViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.error = error.localizedDescription
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] progress in

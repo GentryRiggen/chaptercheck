@@ -78,6 +78,7 @@
 		ABB828D17FF8FC56AC90AC57 /* AudioFileListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89075E8FAC4E97E7F00B783A /* AudioFileListView.swift */; };
 		ABDD5FD8CC99B0164B0B7BD4 /* BookDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 970B3470E06FC2CB79D92500 /* BookDetailViewModel.swift */; };
 		AF3756FC773EEA1712CEF40B /* PaginatedResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 410D48C86FFB6EAB51E3435F /* PaginatedResult.swift */; };
+		B4F16E8978E6570A46CBFA83 /* ConvexAuthObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EEAAF793FC85FFB9F7FB2E2 /* ConvexAuthObserver.swift */; };
 		B60515F584F5926BEE746E91 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1EDE993B6FC208B50C71598 /* HomeViewModel.swift */; };
 		B89A67ECD0FE8AC80AB8395D /* ShelfCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF6929D98C1E2857AF54FFDA /* ShelfCard.swift */; };
 		BA6174D30A8D3DDB30620D2D /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B7B94E47A2CD32EC9C457BF /* DownloadsView.swift */; };
@@ -174,6 +175,7 @@
 		6B7B94E47A2CD32EC9C457BF /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsView.swift; sourceTree = "<group>"; };
 		6DBB304D77084A82DDC5B10D /* UnifiedSearchResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedSearchResult.swift; sourceTree = "<group>"; };
 		6E8D9B44A2F1C161E17C4391 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
+		6EEAAF793FC85FFB9F7FB2E2 /* ConvexAuthObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvexAuthObserver.swift; sourceTree = "<group>"; };
 		6F649495DB626BB5915E48AD /* BookUserData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookUserData.swift; sourceTree = "<group>"; };
 		6FE4D41FB4E6B82B28C75571 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		7162384D8B872D395DE51CD2 /* ThemeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsView.swift; sourceTree = "<group>"; };
@@ -314,6 +316,7 @@
 		23D7A4B8E6531D83E1C87CF7 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				6EEAAF793FC85FFB9F7FB2E2 /* ConvexAuthObserver.swift */,
 				F5A687255BED3850C59E66E9 /* ConvexService.swift */,
 				5D22CEFC589F33A4E05E8BFB /* DownloadManager.swift */,
 				D263B0F1D2A6E2C692CEE477 /* DownloadService.swift */,
@@ -712,6 +715,7 @@
 				5C7A481B5A830651A4A56972 /* ChapterCheckApp.swift in Sources */,
 				F6BD2D6E405FC178B9EFE2B7 /* ClerkConvexAuthProvider.swift in Sources */,
 				360652BC30EAA9B3D6FA9709 /* ContinueListeningSection.swift in Sources */,
+				B4F16E8978E6570A46CBFA83 /* ConvexAuthObserver.swift in Sources */,
 				89EBA98735C2710D1FA6EF77 /* ConvexService.swift in Sources */,
 				FF212EBC80A3EBD8B3F96833 /* Download.swift in Sources */,
 				ED310AE24DF8A1FC5C385119 /* DownloadManager.swift in Sources */,

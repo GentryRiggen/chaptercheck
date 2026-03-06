@@ -21,19 +21,31 @@ final class AuthorDetailViewModel {
     // MARK: - Dependencies
 
     private let authorRepository = AuthorRepository()
+    private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
+    private var currentAuthorId: String?
     private var loadedSections: Set<String> = []
 
     // MARK: - Lifecycle
 
     func subscribe(authorId: String) {
-        guard cancellables.isEmpty else { return }
-        subscribeToAuthor(authorId: authorId)
-        subscribeToBooks(authorId: authorId)
-        subscribeToSeries(authorId: authorId)
+        currentAuthorId = authorId
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty, let authorId = currentAuthorId else { return }
+                subscribeToAuthor(authorId: authorId)
+                subscribeToBooks(authorId: authorId)
+                subscribeToSeries(authorId: authorId)
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+                self?.loadedSections.removeAll()
+            }
+        )
     }
 
     func unsubscribe() {
+        authObserver.cancel()
         cancellables.removeAll()
     }
 
@@ -46,6 +58,7 @@ final class AuthorDetailViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.error = error.localizedDescription
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] author in
@@ -63,6 +76,7 @@ final class AuthorDetailViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.error = error.localizedDescription
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] books in

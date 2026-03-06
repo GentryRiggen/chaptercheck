@@ -36,6 +36,7 @@ final class LibraryViewModel {
 
     private let logger = Logger(subsystem: "com.chaptercheck", category: "LibraryViewModel")
     private let bookRepository = BookRepository()
+    private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Pagination State
@@ -52,11 +53,20 @@ final class LibraryViewModel {
     // MARK: - Lifecycle
 
     func subscribe() {
-        logger.info("subscribe() called, isSearchMode=\(self.isSearchMode), sort=\(self.sortOption.rawValue)")
-        loadFirstPage()
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty else { return }
+                logger.info("subscribe() called, isSearchMode=\(self.isSearchMode), sort=\(self.sortOption.rawValue)")
+                loadFirstPage()
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+            }
+        )
     }
 
     func unsubscribe() {
+        authObserver.cancel()
         cancellables.removeAll()
         searchDebounceTask?.cancel()
     }
@@ -158,6 +168,7 @@ final class LibraryViewModel {
                         self?.logger.error("search FAILED: \(error)")
                         self?.error = error.localizedDescription
                         self?.isLoading = false
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] results in
@@ -184,6 +195,7 @@ final class LibraryViewModel {
                         self?.logger.error("genreFilter FAILED: \(error)")
                         self?.error = error.localizedDescription
                         self?.isLoading = false
+                        self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] results in
@@ -214,6 +226,7 @@ final class LibraryViewModel {
                     self?.error = error.localizedDescription
                     self?.isLoading = false
                     self?.isLoadingMore = false
+                    self?.authObserver.needsResubscription()
                 }
             },
             receiveValue: { [weak self] result in
