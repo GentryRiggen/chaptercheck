@@ -37,6 +37,21 @@ struct NowPlayingView: View {
         min(UIScreen.main.bounds.width - 48, 400)
     }
 
+    /// Whether the carousel is showing the details card (page 1).
+    private var isDetailsPage: Bool { selectedCarouselPage == 1 }
+
+    /// Carousel height expands when showing details to give more room for content.
+    private var carouselHeight: CGFloat {
+        isDetailsPage ? artworkSize * 1.45 : artworkSize
+    }
+
+    /// Transport icon size shrinks on the details page.
+    private var transportSkipSize: CGFloat { isDetailsPage ? 32 : 42 }
+    private var transportPlaySize: CGFloat { isDetailsPage ? 42 : 56 }
+    private var transportSkipFrame: CGFloat { isDetailsPage ? 52 : 72 }
+    private var transportPlayFrame: CGFloat { isDetailsPage ? 60 : 80 }
+    private var transportSpacing: CGFloat { isDetailsPage ? 20 : 24 }
+
     var body: some View {
         VStack(spacing: 0) {
             // Drag handle — tapping dismisses the sheet
@@ -96,7 +111,7 @@ struct NowPlayingView: View {
                     isReviewSheetPresented = true
                 }
             )
-            .frame(height: artworkSize)
+            .frame(height: carouselHeight)
 
             // Page indicator dots
             if audioPlayer.currentBook != nil {
@@ -147,6 +162,7 @@ struct NowPlayingView: View {
             .accessibilityHidden(!showSavedIndicator)
             .padding(.bottom, -6)
         }
+        .animation(.smooth(duration: 0.45), value: selectedCarouselPage)
         .background(.background)
         .onAppear {
             isPlayingAnimated = audioPlayer.isPlaying
@@ -296,16 +312,16 @@ struct NowPlayingView: View {
     // MARK: - Transport Controls
 
     private var transportControls: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: transportSpacing) {
             Button {
                 Haptics.light()
                 audioPlayer.skipBackward()
             } label: {
                 Image(systemName: audioPlayer.skipBackwardSymbol)
                     .contentTransition(.symbolEffect(.replace))
-                    .font(.system(size: 42))
+                    .font(.system(size: transportSkipSize))
                     .foregroundStyle(.tint)
-                    .frame(width: 72, height: 72)
+                    .frame(width: transportSkipFrame, height: transportSkipFrame)
             }
             .buttonStyle(.plain)
             .contentShape(Circle())
@@ -316,13 +332,13 @@ struct NowPlayingView: View {
             } label: {
                 if audioPlayer.isLoading {
                     ProgressView()
-                        .frame(width: 80, height: 80)
+                        .frame(width: transportPlayFrame, height: transportPlayFrame)
                 } else {
                     Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 56))
+                        .font(.system(size: transportPlaySize))
                         .foregroundStyle(.tint)
                         .offset(x: audioPlayer.isPlaying ? 0 : 3)
-                        .frame(width: 80, height: 80)
+                        .frame(width: transportPlayFrame, height: transportPlayFrame)
                 }
             }
             .buttonStyle(.plain)
@@ -334,9 +350,9 @@ struct NowPlayingView: View {
             } label: {
                 Image(systemName: audioPlayer.skipForwardSymbol)
                     .contentTransition(.symbolEffect(.replace))
-                    .font(.system(size: 42))
+                    .font(.system(size: transportSkipSize))
                     .foregroundStyle(.tint)
-                    .frame(width: 72, height: 72)
+                    .frame(width: transportSkipFrame, height: transportSkipFrame)
             }
             .buttonStyle(.plain)
             .contentShape(Circle())
