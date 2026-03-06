@@ -1,0 +1,39 @@
+# Dedicated Convex backend deployment
+# Deploys immediately on backend changes without waiting for the full web pipeline
+name: 🗄️ Deploy Convex
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/convex-backend/**"
+  workflow_dispatch:
+
+concurrency:
+  group: convex-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: 🗄️ Deploy Convex Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Enable Corepack
+        run: corepack enable
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+
+      - name: 📚 Install dependencies
+        run: yarn install --immutable
+
+      - name: 🗄️ Deploy Convex
+        run: npx convex deploy
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
