@@ -4,8 +4,8 @@ import UIKit
 /// Persistent mini player bar floating at the bottom of the screen.
 ///
 /// Uses a capsule (pill) shape with glass material to match the iOS 26
-/// liquid glass tab bar style. Displays cover image, centered transport
-/// controls, and an expand chevron. Tapping the bar presents the full `NowPlayingView`.
+/// liquid glass tab bar style. Displays expand chevron, centered transport
+/// controls, and cover image. Tapping the bar presents the full `NowPlayingView`.
 struct MiniPlayerView: View {
     @Binding var isNowPlayingPresented: Bool
     @Environment(AudioPlayerManager.self) private var audioPlayer
@@ -15,12 +15,12 @@ struct MiniPlayerView: View {
             isNowPlayingPresented = true
         } label: {
             HStack(spacing: 0) {
-                // Cover image — leading
-                BookCoverView(
-                    r2Key: audioPlayer.currentBook?.coverImageR2Key,
-                    size: 48
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                // Expand chevron — leading (decorative, outer button handles tap)
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.tint)
+                    .frame(width: 48, height: 48)
+                    .accessibilityHidden(true)
 
                 Spacer(minLength: 0)
 
@@ -64,15 +64,15 @@ struct MiniPlayerView: View {
 
                 Spacer(minLength: 0)
 
-                // Expand chevron — trailing (decorative, outer button handles tap)
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.tint)
-                    .frame(width: 48, height: 48)
-                    .accessibilityHidden(true)
+                // Cover image — trailing
+                BookCoverView(
+                    r2Key: audioPlayer.currentBook?.coverImageR2Key,
+                    size: 48
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            .padding(.leading, 14)
-            .padding(.trailing, 10)
+            .padding(.leading, 10)
+            .padding(.trailing, 14)
             .padding(.vertical, 8)
             .contentShape(.capsule)
             .glassEffect(.regular.interactive(), in: .capsule)
