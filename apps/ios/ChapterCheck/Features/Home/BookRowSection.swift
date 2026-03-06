@@ -27,7 +27,7 @@ struct BookRowSection: View {
                             Image(systemName: "chevron.right")
                                 .font(.caption)
                         }
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tint)
                     }
                 }
             }
