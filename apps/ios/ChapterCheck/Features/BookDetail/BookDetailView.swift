@@ -125,22 +125,26 @@ struct BookDetailView: View {
                     descriptionSection(description)
                 }
 
-                // Play / Resume Button
+                // Play / Resume Button + Read Status
                 if viewModel.hasAudioFiles {
-                    playButton(book)
-                }
-
-                // Read Status
-                BookReadStatusView(
-                    userData: viewModel.userData,
-                    isLoading: viewModel.isLoading,
-                    onMarkAsRead: {
-                        Task { await viewModel.markAsRead() }
-                    },
-                    onOpenReview: {
-                        isReviewSheetPresented = true
+                    if viewModel.userData?.isRead == true {
+                        // Read: full-width play button, read status below
+                        playButton(book)
+                            .padding(.horizontal)
+                        readStatusView
+                            .padding(.horizontal)
+                    } else {
+                        // Unread: play button + compact "Mark as Read" side-by-side
+                        HStack(spacing: 12) {
+                            playButton(book)
+                            readStatusView
+                        }
+                        .padding(.horizontal)
                     }
-                )
+                } else {
+                    readStatusView
+                        .padding(.horizontal)
+                }
 
                 Divider()
                     .padding(.horizontal)
@@ -205,11 +209,23 @@ struct BookDetailView: View {
             .padding(.vertical, 14)
         }
         .buttonStyle(.borderedProminent)
-        .padding(.horizontal)
     }
 
     private var hasExistingProgress: Bool {
         viewModel.progress != nil && viewModel.resumePosition(smartRewindEnabled: audioPlayer.isSmartRewindEnabled) > 0
+    }
+
+    private var readStatusView: some View {
+        BookReadStatusView(
+            userData: viewModel.userData,
+            isLoading: viewModel.isLoading,
+            onMarkAsRead: {
+                Task { await viewModel.markAsRead() }
+            },
+            onOpenReview: {
+                isReviewSheetPresented = true
+            }
+        )
     }
 
     // MARK: - Description

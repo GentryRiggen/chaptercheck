@@ -26,11 +26,9 @@ struct BookReadStatusView: View {
                 Spacer()
                 reviewButton
             } else {
-                Spacer()
                 markAsReadButton
             }
         }
-        .padding(.horizontal)
         .confirmationDialog(
             "Unmark as Read?",
             isPresented: $isUnmarkConfirmationPresented,
@@ -100,8 +98,7 @@ struct BookReadStatusView: View {
             onMarkAsRead()
         } label: {
             Label("Mark as Read", systemImage: "checkmark.circle")
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, 6)
         }
         .buttonStyle(.bordered)
         .disabled(isLoading)
