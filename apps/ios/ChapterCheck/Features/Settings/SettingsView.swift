@@ -1,19 +1,19 @@
 import Combine
-import ClerkKit
+import ConvexMobile
 import SwiftUI
 
-/// Settings screen with user profile header, privacy toggle, account info, and sign out.
+/// Settings screen with privacy toggle, account info, storage, and sign out.
 ///
 /// Presented as a sheet from `MainView`. Wraps content in its own `NavigationStack`
 /// since it's no longer inside a tab with a dedicated navigation stack.
 struct SettingsView: View {
     @ObservedObject private var convexService = ConvexService.shared
     @Environment(DownloadManager.self) private var downloadManager
-    @Environment(ThemeManager.self) private var themeManager
     @Environment(\.dismiss) private var dismiss
     @State private var convexUser: UserWithPermissions?
     @State private var isProfilePrivate = false
     @State private var hasInitialized = false
+    @State private var storageStats: StorageStats?
     @State private var cancellables = Set<AnyCancellable>()
 
     private let userRepository = UserRepository()
@@ -21,18 +21,23 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // User header section
-                if let user = Clerk.shared.user {
-                    Section {
-                        userHeader(user)
-                    }
-                }
-
                 // Profile section — only available once the Convex user is loaded
                 if let convexUser {
                     Section {
                         NavigationLink(value: AppDestination.profile(userId: convexUser._id)) {
                             Label("View Profile", systemImage: "person.crop.circle")
+                        }
+
+                        NavigationLink {
+                            EditProfileView()
+                        } label: {
+                            Label("Edit Profile", systemImage: "pencil")
+                        }
+
+                        NavigationLink {
+                            ChangeEmailView()
+                        } label: {
+                            Label("Change Email", systemImage: "envelope")
                         }
 
                         Toggle("Private Profile", isOn: $isProfilePrivate)
@@ -86,6 +91,11 @@ struct SettingsView: View {
                     Text("Settings")
                 }
 
+                // Storage section
+                if let stats = storageStats {
+                    storageSection(stats)
+                }
+
                 // Sign out
                 Section {
                     Button("Sign Out", role: .destructive) {
@@ -108,7 +118,10 @@ struct SettingsView: View {
                     }
                 }
             }
-            .onAppear { subscribeToUser() }
+            .onAppear {
+                subscribeToUser()
+                subscribeToStorageStats()
+            }
             .onDisappear { cancellables.removeAll() }
         }
     }
@@ -137,36 +150,37 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - User Header
+    // MARK: - Storage Section
 
     @ViewBuilder
-    private func userHeader(_ user: User) -> some View {
-        VStack(spacing: 8) {
-            Circle()
-                .fill(themeManager.accentGradient)
-                .frame(width: 60, height: 60)
-                .overlay {
-                    Image(systemName: "person.fill")
-                        .font(.title2)
-                        .foregroundStyle(.white)
+    private func storageSection(_ stats: StorageStats) -> some View {
+        let usedBytes = Int64(stats.totalBytesUsed)
+        let limitBytes: Double = 2 * 1_024 * 1_024 * 1_024 * 1_024 // 2 TB
+        let fraction = stats.totalBytesUsed / limitBytes
+        let fileCount = Int(stats.fileCount)
+
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(ByteCountFormatter.string(fromByteCount: usedBytes, countStyle: .file))
+                        .font(.subheadline.bold())
+                    Spacer()
+                    Text("of 2 TB")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-
-            let fullName = [user.firstName, user.lastName]
-                .compactMap { $0 }
-                .joined(separator: " ")
-            if !fullName.isEmpty {
-                Text(fullName)
-                    .font(.headline)
-            }
-
-            if let email = user.emailAddresses.first?.emailAddress {
-                Text(email)
+                ProgressView(value: fraction)
+                    .tint(fraction > 0.9 ? .red : nil)
+                Text("\(fileCount) file\(fileCount == 1 ? "" : "s")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            .padding(.vertical, 4)
+        } header: {
+            Text("Storage")
+        } footer: {
+            Text("Storage used by your uploaded audiobook files.")
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
     }
 
     // MARK: - Subscriptions
@@ -186,6 +200,23 @@ struct SettingsView: View {
                         hasInitialized = true
                     }
                 }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToStorageStats() {
+        // Guard: subscribeToUser() adds to cancellables first;
+        // if storage is already subscribed the set will have > 1 entry.
+        guard cancellables.count <= 1 else { return }
+
+        let publisher: AnyPublisher<StorageStats, ClientError> = ConvexService.shared.subscribe(
+            to: "storageAccounts/queries:getStorageStats"
+        )
+        publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { stats in storageStats = stats }
             )
             .store(in: &cancellables)
     }
