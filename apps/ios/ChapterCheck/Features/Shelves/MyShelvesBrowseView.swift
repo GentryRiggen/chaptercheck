@@ -54,6 +54,14 @@ struct MyShelvesBrowseView: View {
 
     private var shelvesGrid: some View {
         ScrollView {
+            Text("Organize your audiobooks into custom collections — track what you've read, plan what's next, or curate your favorites to share.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.top, 4)
+                .padding(.bottom, 4)
+
             LazyVGrid(
                 columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                 spacing: 16
