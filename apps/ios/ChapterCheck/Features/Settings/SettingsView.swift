@@ -139,6 +139,8 @@ struct SettingsView: View {
             AllReadingHistoryView(userId: userId)
         case .allUserReviews(let userId):
             AllUserReviewsView(userId: userId)
+        case .browseShelves:
+            MyShelvesBrowseView()
         case .search, .browseLibrary, .browseAuthors, .offlineBook:
             EmptyView()
         }

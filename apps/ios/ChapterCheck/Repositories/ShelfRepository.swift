@@ -21,6 +21,11 @@ final class ShelfRepository {
         convex.subscribe(to: "shelves/queries:getUserShelves", with: ["userId": userId])
     }
 
+    /// Subscribe to the current user's shelves (home screen / browse).
+    func subscribeToMyShelves() -> AnyPublisher<[Shelf], ClientError> {
+        convex.subscribe(to: "shelves/queries:getMyShelves", with: [:])
+    }
+
     /// Subscribe to a single shelf with its full book list.
     func subscribeToShelf(shelfId: String) -> AnyPublisher<ShelfDetail?, ClientError> {
         convex.subscribe(to: "shelves/queries:getShelf", with: ["shelfId": shelfId])

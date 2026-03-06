@@ -5,8 +5,8 @@ import os
 
 /// View model for the home screen.
 ///
-/// Manages three concurrent Convex subscriptions for real-time updates:
-/// continue listening, recently added books, and top rated books.
+/// Manages four concurrent Convex subscriptions for real-time updates:
+/// continue listening, recently added books, top rated books, and user shelves.
 ///
 /// Observes Convex auth state — subscriptions are only created when authenticated
 /// and automatically torn down / recreated on auth state transitions.
@@ -21,6 +21,7 @@ final class HomeViewModel {
     var recentlyListening: [RecentListeningProgress] = []
     var recentBooks: [BookWithDetails] = []
     var topRatedBooks: [BookWithDetails] = []
+    var myShelves: [Shelf] = []
 
     var isLoading = true
     var showRetry = false
@@ -31,6 +32,7 @@ final class HomeViewModel {
     private let logger = Logger(subsystem: "com.chaptercheck", category: "HomeViewModel")
     private let bookRepository = BookRepository()
     private let progressRepository = ProgressRepository()
+    private let shelfRepository = ShelfRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
 
@@ -40,7 +42,7 @@ final class HomeViewModel {
     private var failedSections: Set<String> = []
     private var retryTimer: Task<Void, Never>?
 
-    private static let allSections: Set<String> = ["recentlyListening", "recentBooks", "topRatedBooks"]
+    private static let allSections: Set<String> = ["recentlyListening", "recentBooks", "topRatedBooks", "myShelves"]
 
     // MARK: - Subscriptions
 
@@ -52,6 +54,7 @@ final class HomeViewModel {
                 subscribeToRecentlyListening()
                 subscribeToRecentBooks()
                 subscribeToTopRatedBooks()
+                subscribeToMyShelves()
                 startRetryTimer()
             },
             onUnauthenticated: { [weak self] in
@@ -139,6 +142,25 @@ final class HomeViewModel {
                     self?.logger.info("topRatedBooks: received \(books.count) books")
                     self?.topRatedBooks = books
                     self?.markLoaded("topRatedBooks")
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToMyShelves() {
+        shelfRepository.subscribeToMyShelves()
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.logger.error("myShelves FAILED: \(error)")
+                        self?.handleSectionError("myShelves", message: error.localizedDescription)
+                    }
+                },
+                receiveValue: { [weak self] shelves in
+                    self?.logger.info("myShelves: received \(shelves.count) shelves")
+                    self?.myShelves = shelves
+                    self?.markLoaded("myShelves")
                 }
             )
             .store(in: &cancellables)

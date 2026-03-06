@@ -9,6 +9,7 @@ struct ShelfDetailView: View {
 
     @State private var viewModel = ShelfDetailViewModel()
     @State private var isEditShelfPresented = false
+    @State private var isAddBooksPresented = false
     @State private var isDeleteConfirmationPresented = false
     @Environment(\.dismiss) private var dismiss
 
@@ -50,6 +51,14 @@ struct ShelfDetailView: View {
                 ShelfFormSheet(existingShelf: shelf)
             }
         }
+        .sheet(isPresented: $isAddBooksPresented) {
+            if let shelf = viewModel.shelf {
+                AddBooksToShelfSheet(
+                    shelfId: shelf._id,
+                    existingBookIds: Set(shelf.books.map { $0._id })
+                )
+            }
+        }
         .confirmationDialog(
             "Delete Shelf",
             isPresented: $isDeleteConfirmationPresented,
@@ -88,11 +97,27 @@ struct ShelfDetailView: View {
             // Books section
             if shelf.books.isEmpty {
                 Section {
-                    EmptyStateView(
-                        icon: "text.book.closed",
-                        title: "No Books Yet",
-                        subtitle: "Add books to this shelf from any book detail page."
-                    )
+                    VStack(spacing: 12) {
+                        EmptyStateView(
+                            icon: "text.book.closed",
+                            title: "No Books Yet",
+                            subtitle: "Search and add books to this bookshelf."
+                        )
+
+                        if shelf.isOwner {
+                            Button {
+                                isAddBooksPresented = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "plus")
+                                    Text("Add Books")
+                                }
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
                     .listRowBackground(Color.clear)
                 }
             } else {
@@ -199,6 +224,12 @@ struct ShelfDetailView: View {
 
     private func ownerMenu(_ shelf: ShelfDetail) -> some View {
         Menu {
+            Button {
+                isAddBooksPresented = true
+            } label: {
+                Label("Add Books", systemImage: "plus")
+            }
+
             Button {
                 isEditShelfPresented = true
             } label: {

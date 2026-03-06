@@ -328,6 +328,8 @@ struct MainView: View {
             LibraryView(initialSort: initialSort)
         case .browseAuthors:
             AuthorsView()
+        case .browseShelves:
+            MyShelvesBrowseView()
         case .offlineBook(let bookId):
             OfflineBookDetailView(bookId: bookId)
         case .allReadingHistory(let userId):

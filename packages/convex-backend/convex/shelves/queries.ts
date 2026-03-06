@@ -119,6 +119,47 @@ export const getUserShelves = query({
   },
 });
 
+// Get current user's shelves (for home screen / browse)
+export const getMyShelves = query({
+  args: {},
+  handler: async (ctx) => {
+    const { user } = await requireAuth(ctx);
+
+    const shelves = await ctx.db
+      .query("shelves")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    const shelvesWithCounts = await Promise.all(
+      shelves.map(async (shelf) => {
+        const shelfBooks = await ctx.db
+          .query("shelfBooks")
+          .withIndex("by_shelf", (q) => q.eq("shelfId", shelf._id))
+          .collect();
+
+        const previewBooks = await Promise.all(
+          shelfBooks.slice(0, 4).map(async (sb) => {
+            const book = await ctx.db.get(sb.bookId);
+            return book
+              ? { _id: book._id, title: book.title, coverImageR2Key: book.coverImageR2Key }
+              : null;
+          })
+        );
+
+        return {
+          ...shelf,
+          bookCount: shelfBooks.length,
+          previewBooks: previewBooks.filter((b) => b !== null),
+        };
+      })
+    );
+
+    shelvesWithCounts.sort((a, b) => b.updatedAt - a.updatedAt);
+
+    return shelvesWithCounts;
+  },
+});
+
 // Get current user's shelves with containsBook boolean (for AddToShelfPopover)
 export const getMyShelvesForBook = query({
   args: { bookId: v.id("books") },

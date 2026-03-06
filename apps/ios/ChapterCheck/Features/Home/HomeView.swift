@@ -87,6 +87,9 @@ struct HomeView: View {
                     welcomeSection
                 }
 
+                // My Shelves (always show — empty state has create button)
+                ShelfRowSection(shelves: viewModel.myShelves)
+
                 if !viewModel.topRatedBooks.isEmpty {
                     BookRowSection(
                         title: "Top Rated",
@@ -177,6 +180,23 @@ struct HomeView: View {
             NavigationLink(value: AppDestination.browseAuthors) {
                 HStack {
                     Label("All Authors", systemImage: "person.2")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+                .padding(.leading, 52)
+
+            NavigationLink(value: AppDestination.browseShelves) {
+                HStack {
+                    Label("My Bookshelves", systemImage: "tray.full")
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption)

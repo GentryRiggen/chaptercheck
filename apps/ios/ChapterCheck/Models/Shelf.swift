@@ -1,6 +1,6 @@
 import Foundation
 
-/// A shelf summary for list views. Matches `shelves/queries:getUserShelves` response items.
+/// A shelf summary for list views. Matches `shelves/queries:getUserShelves` and `getMyShelves` response items.
 struct Shelf: Decodable, Identifiable, Sendable {
     let _id: String
     let userId: String

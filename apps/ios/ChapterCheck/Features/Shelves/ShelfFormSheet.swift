@@ -7,6 +7,7 @@ import SwiftUI
 /// The save action calls the appropriate repository mutation and dismisses.
 struct ShelfFormSheet: View {
     let existingShelf: ShelfDetail?
+    var onCreated: ((String) -> Void)?
 
     @State private var name: String
     @State private var description: String
@@ -24,8 +25,9 @@ struct ShelfFormSheet: View {
 
     // MARK: - Init
 
-    init(existingShelf: ShelfDetail? = nil) {
+    init(existingShelf: ShelfDetail? = nil, onCreated: ((String) -> Void)? = nil) {
         self.existingShelf = existingShelf
+        self.onCreated = onCreated
         _name = State(initialValue: existingShelf?.name ?? "")
         _description = State(initialValue: existingShelf?.description ?? "")
         _isOrdered = State(initialValue: existingShelf?.isOrdered ?? false)
@@ -113,12 +115,13 @@ struct ShelfFormSheet: View {
                     isPublic: isPublic
                 )
             } else {
-                try await repository.createShelf(
+                let shelfId = try await repository.createShelf(
                     name: trimmedName,
                     description: trimmedDescription.isEmpty ? nil : trimmedDescription,
                     isOrdered: isOrdered,
                     isPublic: isPublic
                 )
+                onCreated?(shelfId)
             }
             dismiss()
         } catch {
