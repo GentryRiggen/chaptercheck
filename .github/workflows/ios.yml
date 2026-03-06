@@ -124,7 +124,12 @@ jobs:
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             MARKETING_VERSION="$VERSION" \
-            | xcpretty
+            2>&1 | tee "$RUNNER_TEMP/xcodebuild.log" | xcpretty || {
+              echo "::group::Raw xcodebuild output (last 100 lines)"
+              tail -100 "$RUNNER_TEMP/xcodebuild.log"
+              echo "::endgroup::"
+              exit 1
+            }
 
       - name: 📦 Export IPA
         env:

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Horizontal scroll section for bookshelves on the home page.
+/// Horizontal scroll section for bookshelves on the home screen.
 ///
 /// Shows a header with "My Bookshelves", a "See All" link, and a horizontal
 /// scroll of shelf cards. Includes a leading "+" card to create a new shelf.
