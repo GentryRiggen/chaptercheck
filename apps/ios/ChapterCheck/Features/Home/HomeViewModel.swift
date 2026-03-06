@@ -7,6 +7,10 @@ import os
 ///
 /// Manages three concurrent Convex subscriptions for real-time updates:
 /// continue listening, recently added books, and top rated books.
+///
+/// Subscriptions auto-retry transient server errors before surfacing failures.
+/// A full-screen error only appears when ALL sections fail — partial successes
+/// show whatever data loaded.
 @Observable
 @MainActor
 final class HomeViewModel {
@@ -31,7 +35,10 @@ final class HomeViewModel {
     /// Tracks which subscriptions have emitted at least once,
     /// so we can dismiss the loading state after initial data arrives.
     private var loadedSections: Set<String> = []
+    private var failedSections: Set<String> = []
     private var retryTimer: Task<Void, Never>?
+
+    private static let allSections: Set<String> = ["recentlyListening", "recentBooks", "topRatedBooks"]
 
     // MARK: - Subscriptions
 
@@ -56,6 +63,7 @@ final class HomeViewModel {
         showRetry = false
         error = nil
         loadedSections.removeAll()
+        failedSections.removeAll()
         cancellables.removeAll()
         subscribe()
     }
@@ -64,12 +72,13 @@ final class HomeViewModel {
 
     private func subscribeToRecentlyListening() {
         progressRepository.subscribeToRecentlyListening(limit: 6)?
+            .retry(2)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.logger.error("recentlyListening FAILED: \(error)")
-                        self?.handleError(error.localizedDescription)
+                        self?.logger.error("recentlyListening FAILED after retries: \(error)")
+                        self?.handleSectionError("recentlyListening", message: error.localizedDescription)
                     }
                 },
                 receiveValue: { [weak self] items in
@@ -83,12 +92,13 @@ final class HomeViewModel {
 
     private func subscribeToRecentBooks() {
         bookRepository.subscribeToRecentBooks(limit: 10)?
+            .retry(2)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.logger.error("recentBooks FAILED: \(error)")
-                        self?.handleError(error.localizedDescription)
+                        self?.logger.error("recentBooks FAILED after retries: \(error)")
+                        self?.handleSectionError("recentBooks", message: error.localizedDescription)
                     }
                 },
                 receiveValue: { [weak self] books in
@@ -102,12 +112,13 @@ final class HomeViewModel {
 
     private func subscribeToTopRatedBooks() {
         bookRepository.subscribeToTopRatedBooks(limit: 10)?
+            .retry(2)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.logger.error("topRatedBooks FAILED: \(error)")
-                        self?.handleError(error.localizedDescription)
+                        self?.logger.error("topRatedBooks FAILED after retries: \(error)")
+                        self?.handleSectionError("topRatedBooks", message: error.localizedDescription)
                     }
                 },
                 receiveValue: { [weak self] books in
@@ -121,6 +132,8 @@ final class HomeViewModel {
 
     private func markLoaded(_ section: String) {
         loadedSections.insert(section)
+        // Any successful section clears the error — show partial content
+        error = nil
         if loadedSections.count >= 1 {
             isLoading = false
             retryTimer?.cancel()
@@ -128,9 +141,17 @@ final class HomeViewModel {
         }
     }
 
-    private func handleError(_ message: String) {
-        error = message
-        isLoading = false
+    private func handleSectionError(_ section: String, message: String) {
+        failedSections.insert(section)
+        // Only show full-screen error if ALL sections failed and none loaded
+        if failedSections.union(loadedSections) == Self.allSections {
+            if loadedSections.isEmpty {
+                error = message
+            }
+            isLoading = false
+            retryTimer?.cancel()
+            retryTimer = nil
+        }
     }
 
     private func startRetryTimer() {
