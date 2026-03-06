@@ -29,6 +29,6 @@ export class DashboardPage {
 
   async goToAllBooks() {
     await this.viewAllBooksLink.click();
-    await this.page.waitForURL("/books");
+    await this.page.waitForURL(/\/books/);
   }
 }

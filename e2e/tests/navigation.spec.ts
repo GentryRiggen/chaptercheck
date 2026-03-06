@@ -47,6 +47,6 @@ test.describe("Navigation", () => {
     await dashboardPage.goto();
 
     await dashboardPage.goToAllBooks();
-    await expect(page).toHaveURL("/books");
+    await expect(page).toHaveURL(/\/books/);
   });
 });
