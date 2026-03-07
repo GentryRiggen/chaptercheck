@@ -37,20 +37,14 @@ struct NowPlayingView: View {
         min(UIScreen.main.bounds.width - 48, 400)
     }
 
-    /// Whether the carousel is showing the details card (page 1).
-    private var isDetailsPage: Bool { selectedCarouselPage == 1 }
+    /// Fixed carousel height.
+    private var carouselHeight: CGFloat { artworkSize }
 
-    /// Carousel height expands when showing details to give more room for content.
-    private var carouselHeight: CGFloat {
-        isDetailsPage ? artworkSize * 1.45 : artworkSize
-    }
-
-    /// Transport icon size shrinks on the details page.
-    private var transportSkipSize: CGFloat { isDetailsPage ? 32 : 42 }
-    private var transportPlaySize: CGFloat { isDetailsPage ? 42 : 56 }
-    private var transportSkipFrame: CGFloat { isDetailsPage ? 52 : 72 }
-    private var transportPlayFrame: CGFloat { isDetailsPage ? 60 : 80 }
-    private var transportSpacing: CGFloat { isDetailsPage ? 20 : 24 }
+    private let transportSkipSize: CGFloat = 42
+    private let transportPlaySize: CGFloat = 56
+    private let transportSkipFrame: CGFloat = 72
+    private let transportPlayFrame: CGFloat = 80
+    private let transportSpacing: CGFloat = 24
 
     var body: some View {
         VStack(spacing: 0) {
@@ -162,7 +156,6 @@ struct NowPlayingView: View {
             .accessibilityHidden(!showSavedIndicator)
             .padding(.bottom, -6)
         }
-        .animation(.smooth(duration: 0.45), value: selectedCarouselPage)
         .background(.background)
         .onAppear {
             isPlayingAnimated = audioPlayer.isPlaying
