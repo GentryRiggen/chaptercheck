@@ -13,6 +13,10 @@ struct ListeningCard: View {
     @State private var isResuming = false
     @State private var resumeCancellables = Set<AnyCancellable>()
 
+    private var isCurrentBook: Bool {
+        audioPlayer.currentBook?._id == item.bookId
+    }
+
     var body: some View {
         Button {
             resumePlayback()
@@ -69,6 +73,14 @@ struct ListeningCard: View {
 
     private func resumePlayback() {
         Haptics.medium()
+
+        // If the player already has this book loaded, just resume from its current position
+        if isCurrentBook {
+            if !audioPlayer.isPlaying { audioPlayer.resume() }
+            showNowPlaying()
+            return
+        }
+
         isResuming = true
 
         let bookRepo = BookRepository()

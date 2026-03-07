@@ -13,6 +13,38 @@ struct HeroListeningCard: View {
     @State private var isResuming = false
     @State private var resumeCancellables = Set<AnyCancellable>()
 
+    /// Whether the audio player currently has this book loaded.
+    private var isCurrentBook: Bool {
+        audioPlayer.currentBook?._id == item.bookId
+    }
+
+    /// Live position in seconds — from the player when this book is loaded, otherwise Convex data.
+    private var livePosition: Double {
+        guard isCurrentBook, audioPlayer.duration > 0 else { return item.positionSeconds }
+        return audioPlayer.currentPosition
+    }
+
+    /// Live part duration — from the player when this book is loaded, otherwise Convex data.
+    private var liveDuration: Double {
+        guard isCurrentBook, audioPlayer.duration > 0 else { return item.audioFile.duration }
+        return audioPlayer.duration
+    }
+
+    /// Live progress fraction from the player when this book is loaded, otherwise Convex data.
+    private var liveProgressFraction: Double {
+        guard liveDuration > 0 else { return item.progressFraction }
+        return min(livePosition / liveDuration, 1)
+    }
+
+    /// Formatted time string like "1h 34m · 5h 39m left"
+    private var liveTimeProgress: String {
+        let position = livePosition
+        let duration = liveDuration
+        guard duration > 0 else { return item.formattedProgress }
+        let remaining = max(0, duration - position)
+        return "\(TimeFormatting.formatDuration(position)) · \(TimeFormatting.formatDuration(remaining)) left"
+    }
+
     var body: some View {
         Button {
             resumePlayback()
@@ -51,9 +83,9 @@ struct HeroListeningCard: View {
                     Spacer()
 
                     VStack(alignment: .leading, spacing: 4) {
-                        ProgressView(value: item.progressFraction)
+                        ProgressView(value: liveProgressFraction)
 
-                        Text(item.formattedProgress)
+                        Text(liveTimeProgress)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -88,6 +120,14 @@ struct HeroListeningCard: View {
 
     private func resumePlayback() {
         Haptics.medium()
+
+        // If the player already has this book loaded, just resume from its current position
+        if isCurrentBook {
+            if !audioPlayer.isPlaying { audioPlayer.resume() }
+            showNowPlaying()
+            return
+        }
+
         isResuming = true
 
         let bookRepo = BookRepository()
@@ -122,8 +162,6 @@ struct HeroListeningCard: View {
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { _ in
-                    // Finished (success or failure) — always reset loading state.
-                    // The value handler already started playback on success.
                     isResuming = false
                     resumeCancellables.removeAll()
                 },
