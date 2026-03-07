@@ -52,6 +52,7 @@ final class BookDetailViewModel {
 
     var isLoading = true
     var error: String?
+    private(set) var isShowingOfflineData = false
 
     // MARK: - Dependencies
 
@@ -143,6 +144,7 @@ final class BookDetailViewModel {
 
         // Offline: load from download manifest if available
         if isOffline {
+            isShowingOfflineData = true
             loadFromManifest(bookId: bookId)
             return
         }
@@ -169,6 +171,32 @@ final class BookDetailViewModel {
     func unsubscribe() {
         authObserver.cancel()
         cancellables.removeAll()
+    }
+
+    /// Transition from offline manifest data to live Convex subscriptions.
+    func recoverFromOffline() {
+        guard isShowingOfflineData, let bookId = currentBookId else { return }
+        isShowingOfflineData = false
+        error = nil
+
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty, let bookId = currentBookId else { return }
+                subscribeToBook(bookId: bookId)
+                subscribeToAudioFiles(bookId: bookId)
+                subscribeToProgress(bookId: bookId)
+                subscribeToUserData(bookId: bookId)
+                subscribeToRatingStats(bookId: bookId)
+                subscribeToReviews(bookId: bookId)
+                subscribeToAllGenres()
+                subscribeToMyGenreVotes(bookId: bookId)
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+                self?.loadedSections.removeAll()
+            }
+        )
+        authObserver.needsResubscription()
     }
 
     // MARK: - Mutations

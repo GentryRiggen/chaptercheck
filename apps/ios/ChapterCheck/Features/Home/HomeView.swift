@@ -108,8 +108,8 @@ struct HomeView: View {
                     welcomeSection
                 }
 
-                // My Shelves (hide when no data — e.g., launched offline)
-                if !viewModel.myShelves.isEmpty || !viewModel.isOffline {
+                // My Shelves
+                if !viewModel.myShelves.isEmpty {
                     ShelfRowSection(shelves: viewModel.myShelves)
                 }
 

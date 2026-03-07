@@ -11,11 +11,11 @@ struct SearchView: View {
     @FocusState private var isSearchFocused: Bool
     private let networkMonitor = NetworkMonitor.shared
 
+    private var isOffline: Bool { !networkMonitor.isConnected }
+
     var body: some View {
         Group {
-            if !networkMonitor.isConnected {
-                offlineContent
-            } else if viewModel.isSearchActive {
+            if viewModel.isSearchActive && !isOffline {
                 searchResults
             } else {
                 browseLinks
@@ -25,14 +25,16 @@ struct SearchView: View {
         .searchable(
             text: $viewModel.searchText,
             placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Books, authors, series, profiles..."
+            prompt: isOffline ? "Search unavailable offline" : "Books, authors, series, profiles..."
         )
         .onChange(of: viewModel.searchText) {
             viewModel.onSearchTextChanged()
         }
         .searchFocused($isSearchFocused)
         .onAppear {
-            isSearchFocused = true
+            if !isOffline {
+                isSearchFocused = true
+            }
         }
         .onDisappear {
             viewModel.unsubscribe()
@@ -260,25 +262,17 @@ struct SearchView: View {
             }
     }
 
-    // MARK: - Offline
-
-    private var offlineContent: some View {
-        VStack(spacing: 20) {
-            OfflineBanner()
-                .padding(.top, 12)
-
-            ContentUnavailableView(
-                "Search Unavailable Offline",
-                systemImage: "magnifyingglass",
-                description: Text("Connect to the internet to search your library.")
-            )
-        }
-    }
-
     // MARK: - Browse Links (empty query state)
 
     private var browseLinks: some View {
         List {
+            if isOffline {
+                Section {
+                    OfflineBanner()
+                }
+                .listRowBackground(Color.clear)
+            }
+
             Section("Browse") {
                 NavigationLink(value: AppDestination.browseLibrary()) {
                     Label("All Books", systemImage: "books.vertical")

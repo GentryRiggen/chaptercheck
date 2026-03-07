@@ -59,6 +59,7 @@ final class AuthorsViewModel {
     var downloadManager: DownloadManager?
     private let networkMonitor = NetworkMonitor.shared
     var isOffline: Bool { !networkMonitor.isConnected }
+    private(set) var isShowingOfflineData = false
 
     private let logger = Logger(subsystem: "com.chaptercheck", category: "AuthorsViewModel")
     private let authorRepository = AuthorRepository()
@@ -79,10 +80,12 @@ final class AuthorsViewModel {
 
     func subscribe() {
         if isOffline {
+            isShowingOfflineData = true
             loadOfflineAuthors()
             return
         }
 
+        isShowingOfflineData = false
         authObserver.start(
             onAuthenticated: { [weak self] in
                 guard let self, cancellables.isEmpty else { return }
@@ -99,6 +102,23 @@ final class AuthorsViewModel {
         authObserver.cancel()
         cancellables.removeAll()
         searchDebounceTask?.cancel()
+    }
+
+    /// Transition from offline data to live Convex subscriptions.
+    func recoverFromOffline() {
+        guard isShowingOfflineData else { return }
+        isShowingOfflineData = false
+
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty else { return }
+                loadFirstPage()
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+            }
+        )
+        authObserver.needsResubscription()
     }
 
     // MARK: - Search

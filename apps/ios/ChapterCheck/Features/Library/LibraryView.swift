@@ -14,6 +14,7 @@ struct LibraryView: View {
     @State private var viewModel = LibraryViewModel()
     @State private var isGenreFilterPresented = false
     @Environment(DownloadManager.self) private var downloadManager
+    private let networkMonitor = NetworkMonitor.shared
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -86,6 +87,11 @@ struct LibraryView: View {
         }
         .onDisappear {
             viewModel.unsubscribe()
+        }
+        .onChange(of: networkMonitor.isConnected) { _, isConnected in
+            if isConnected {
+                viewModel.recoverFromOffline()
+            }
         }
     }
 

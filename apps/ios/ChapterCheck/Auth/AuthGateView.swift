@@ -32,7 +32,7 @@ struct AuthGateView: View {
     }
 
     private var showMainTab: Bool {
-        // Offline bypass — show main UI to access downloaded books
+        // Offline bypass — keep MainView mounted to preserve playback state
         if allowOfflineBypass { return true }
 
         guard Clerk.shared.isLoaded, Clerk.shared.session != nil else { return false }
@@ -44,10 +44,15 @@ struct AuthGateView: View {
 
     var body: some View {
         Group {
-            if allowOfflineBypass {
+            if showMainTab {
                 MainView()
                     .onAppear {
-                        logger.info("Offline bypass — showing MainView with downloaded content")
+                        if allowOfflineBypass {
+                            logger.info("Offline bypass — showing MainView with downloaded content")
+                        } else {
+                            hasAuthenticated = true
+                            UserDefaults.standard.set(true, forKey: Self.hasAuthenticatedBeforeKey)
+                        }
                     }
             } else if !Clerk.shared.isLoaded {
                 loadingView
@@ -59,12 +64,6 @@ struct AuthGateView: View {
                     .onAppear {
                         hasAuthenticated = false
                         logger.info("Clerk loaded but no session, showing SignInView")
-                    }
-            } else if showMainTab {
-                MainView()
-                    .onAppear {
-                        hasAuthenticated = true
-                        UserDefaults.standard.set(true, forKey: Self.hasAuthenticatedBeforeKey)
                     }
             } else {
                 // Initial authentication (not yet authenticated this session)

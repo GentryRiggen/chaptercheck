@@ -37,6 +37,7 @@ final class LibraryViewModel {
     var downloadManager: DownloadManager?
     private let networkMonitor = NetworkMonitor.shared
     var isOffline: Bool { !networkMonitor.isConnected }
+    private(set) var isShowingOfflineData = false
 
     private let logger = Logger(subsystem: "com.chaptercheck", category: "LibraryViewModel")
     private let bookRepository = BookRepository()
@@ -58,10 +59,12 @@ final class LibraryViewModel {
 
     func subscribe() {
         if isOffline {
+            isShowingOfflineData = true
             loadOfflineBooks()
             return
         }
 
+        isShowingOfflineData = false
         authObserver.start(
             onAuthenticated: { [weak self] in
                 guard let self, cancellables.isEmpty else { return }
@@ -78,6 +81,23 @@ final class LibraryViewModel {
         authObserver.cancel()
         cancellables.removeAll()
         searchDebounceTask?.cancel()
+    }
+
+    /// Transition from offline data to live Convex subscriptions.
+    func recoverFromOffline() {
+        guard isShowingOfflineData else { return }
+        isShowingOfflineData = false
+
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty else { return }
+                loadFirstPage()
+            },
+            onUnauthenticated: { [weak self] in
+                self?.cancellables.removeAll()
+            }
+        )
+        authObserver.needsResubscription()
     }
 
     // MARK: - Search

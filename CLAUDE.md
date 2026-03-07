@@ -146,7 +146,7 @@ ChapterCheck/
 - Files stored in `Documents/Downloads/{bookId}/` with `manifest.json`
 - `OfflineProgressQueue` (actor) queues progress saves when offline, flushes on network restore
 - `NetworkMonitor` (NWPathMonitor) tracks connectivity
-- When offline: `OfflineHomeView` shows downloaded books only
+- When offline: same UI gracefully degrades — stale Convex data stays visible, offline banner shown, features like search/shelves disabled. Downloaded books populate Continue Listening. Views recover to live subscriptions when network returns.
 
 ### Mini Player Layout
 

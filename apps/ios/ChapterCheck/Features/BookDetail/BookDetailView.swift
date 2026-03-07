@@ -14,6 +14,7 @@ struct BookDetailView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.showNowPlaying) private var showNowPlaying
+    private let networkMonitor = NetworkMonitor.shared
 
     var body: some View {
         Group {
@@ -57,6 +58,11 @@ struct BookDetailView: View {
         }
         .onDisappear {
             viewModel.unsubscribe()
+        }
+        .onChange(of: networkMonitor.isConnected) { _, isConnected in
+            if isConnected {
+                viewModel.recoverFromOffline()
+            }
         }
         .sheet(isPresented: $isAddToShelfPresented) {
             AddToShelfSheet(bookId: bookId)

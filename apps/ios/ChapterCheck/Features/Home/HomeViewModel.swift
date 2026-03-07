@@ -60,7 +60,7 @@ final class HomeViewModel {
 
     func subscribe() {
         if isOffline {
-            logger.info("Offline — loading downloaded books")
+            logger.info("Offline — loading downloaded books for continue listening")
             isShowingOfflineData = true
             loadOfflineData()
             return
@@ -329,9 +329,8 @@ final class HomeViewModel {
             items.sort { ($0.lastListenedAt) > ($1.lastListenedAt) }
 
             recentlyListening = items
-            recentBooks = []
-            topRatedBooks = []
-            myShelves = []
+            // Keep existing section data (stale Convex data) — only clear if truly empty
+            // This preserves sections when going offline mid-session
             isLoading = false
         }
     }
