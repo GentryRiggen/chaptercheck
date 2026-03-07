@@ -95,6 +95,7 @@ struct MainView: View {
     @State private var completedPartBookId: String?
     @State private var showDeleteDownloadConfirmation = false
     @State private var deleteDownloadBookId: String?
+    @State private var stopStreamingTask: Task<Void, Never>?
     @Environment(ThemeManager.self) private var themeManager
     private let networkMonitor = NetworkMonitor.shared
 
@@ -128,15 +129,30 @@ struct MainView: View {
             }
         }
         .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
-            // Going offline: stop playback if current book isn't downloaded
+            // Going offline: stop streaming (non-downloaded) playback after a
+            // grace period so brief network blips don't interrupt audio.
             if wasConnected && !isConnected {
+                stopStreamingTask?.cancel()
                 if let bookId = audioPlayer.currentBook?._id,
                    !downloadManager.isBookDownloaded(bookId) {
-                    audioPlayer.stop()
+                    stopStreamingTask = Task {
+                        try? await Task.sleep(for: .seconds(5))
+                        guard !Task.isCancelled else { return }
+                        // Still offline and still playing a non-downloaded book
+                        if !networkMonitor.isConnected,
+                           let currentId = audioPlayer.currentBook?._id,
+                           !downloadManager.isBookDownloaded(currentId) {
+                            audioPlayer.stop()
+                        }
+                    }
                 }
             }
 
             if !wasConnected && isConnected {
+                // Network restored — cancel pending stop and resume normal ops
+                stopStreamingTask?.cancel()
+                stopStreamingTask = nil
+
                 subscribeToPreferences()
                 Task {
                     await OfflineProgressQueue.shared.flush()
