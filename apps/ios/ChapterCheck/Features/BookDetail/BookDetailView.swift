@@ -43,6 +43,7 @@ struct BookDetailView: View {
                 } label: {
                     Image(systemName: "bookmark")
                 }
+                .disabled(viewModel.isOffline)
             }
         }
         .onAppear {
@@ -95,6 +96,10 @@ struct BookDetailView: View {
     private func bookContent(_ book: BookWithDetails) -> some View {
         ScrollView {
             VStack(spacing: 24) {
+                if viewModel.isOffline {
+                    OfflineBanner()
+                }
+
                 // Cover Image
                 BookCoverView(r2Key: book.coverImageR2Key, displayMode: .fit(maxWidth: 200, maxHeight: 300))
                     .frame(maxWidth: .infinity)
@@ -131,17 +136,21 @@ struct BookDetailView: View {
                         // Read: full-width play button, read status below
                         playButton(book)
                             .padding(.horizontal)
-                        readStatusView
-                            .padding(.horizontal)
+                        if !viewModel.isOffline {
+                            readStatusView
+                                .padding(.horizontal)
+                        }
                     } else {
                         // Unread: play button + compact "Mark as Read" side-by-side
                         HStack(spacing: 12) {
                             playButton(book)
-                            readStatusView
+                            if !viewModel.isOffline {
+                                readStatusView
+                            }
                         }
                         .padding(.horizontal)
                     }
-                } else {
+                } else if !viewModel.isOffline {
                     readStatusView
                         .padding(.horizontal)
                 }
@@ -158,8 +167,8 @@ struct BookDetailView: View {
                     )
                 }
 
-                // Reviews
-                if !viewModel.sortedReviews.isEmpty || viewModel.userData?.isRead == true {
+                // Reviews (hidden when offline)
+                if !viewModel.isOffline, !viewModel.sortedReviews.isEmpty || viewModel.userData?.isRead == true {
                     Divider()
                         .padding(.horizontal)
 

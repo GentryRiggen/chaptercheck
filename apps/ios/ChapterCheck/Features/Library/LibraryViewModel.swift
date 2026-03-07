@@ -34,6 +34,10 @@ final class LibraryViewModel {
 
     // MARK: - Dependencies
 
+    var downloadManager: DownloadManager?
+    private let networkMonitor = NetworkMonitor.shared
+    var isOffline: Bool { !networkMonitor.isConnected }
+
     private let logger = Logger(subsystem: "com.chaptercheck", category: "LibraryViewModel")
     private let bookRepository = BookRepository()
     private let authObserver = ConvexAuthObserver()
@@ -53,6 +57,11 @@ final class LibraryViewModel {
     // MARK: - Lifecycle
 
     func subscribe() {
+        if isOffline {
+            loadOfflineBooks()
+            return
+        }
+
         authObserver.start(
             onAuthenticated: { [weak self] in
                 guard let self, cancellables.isEmpty else { return }
@@ -251,5 +260,23 @@ final class LibraryViewModel {
             }
         )
         .store(in: &cancellables)
+    }
+
+    // MARK: - Offline
+
+    private func loadOfflineBooks() {
+        guard let dm = downloadManager else {
+            isLoading = false
+            return
+        }
+
+        let offlineBooks = dm.downloadedBooks
+            .filter(\.isComplete)
+            .compactMap { dm.offlinePlaybackData(for: $0.bookId)?.0 }
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+
+        books = offlineBooks
+        hasMore = false
+        isLoading = false
     }
 }

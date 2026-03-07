@@ -13,6 +13,7 @@ struct LibraryView: View {
 
     @State private var viewModel = LibraryViewModel()
     @State private var isGenreFilterPresented = false
+    @Environment(DownloadManager.self) private var downloadManager
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -42,7 +43,7 @@ struct LibraryView: View {
         .searchable(
             text: $viewModel.searchText,
             placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Search books..."
+            prompt: viewModel.isOffline ? "Search unavailable offline" : "Search books..."
         )
         .onChange(of: viewModel.searchText) {
             viewModel.onSearchTextChanged()
@@ -79,6 +80,7 @@ struct LibraryView: View {
             GenreFilterSheet(selectedGenreIds: $viewModel.selectedGenreIds)
         }
         .onAppear {
+            viewModel.downloadManager = downloadManager
             viewModel.sortOption = initialSort
             viewModel.subscribe()
         }
@@ -101,6 +103,13 @@ struct LibraryView: View {
 
     private var bookGrid: some View {
         ScrollView {
+            if viewModel.isOffline {
+                OfflineBanner()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+            }
+
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(viewModel.books) { book in
                     NavigationLink(value: AppDestination.book(id: book._id)) {

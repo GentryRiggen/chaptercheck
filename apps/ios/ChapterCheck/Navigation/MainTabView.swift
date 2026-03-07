@@ -101,17 +101,10 @@ struct MainView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             NavigationStack(path: $navigationPath) {
-                if networkMonitor.isConnected {
-                    HomeView()
-                        .navigationDestination(for: AppDestination.self) { destination in
-                            destinationView(for: destination)
-                        }
-                } else {
-                    OfflineHomeView()
-                        .navigationDestination(for: AppDestination.self) { destination in
-                            destinationView(for: destination)
-                        }
-                }
+                HomeView()
+                    .navigationDestination(for: AppDestination.self) { destination in
+                        destinationView(for: destination)
+                    }
             }
 
             if audioPlayer.hasContent {
@@ -330,8 +323,6 @@ struct MainView: View {
             AuthorsView()
         case .browseShelves:
             MyShelvesBrowseView()
-        case .offlineBook(let bookId):
-            OfflineBookDetailView(bookId: bookId)
         case .allReadingHistory(let userId):
             AllReadingHistoryView(userId: userId)
         case .allUserReviews(let userId):

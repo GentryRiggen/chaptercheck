@@ -9,10 +9,13 @@ import SwiftUI
 struct SearchView: View {
     @State private var viewModel = SearchViewModel()
     @FocusState private var isSearchFocused: Bool
+    private let networkMonitor = NetworkMonitor.shared
 
     var body: some View {
         Group {
-            if viewModel.isSearchActive {
+            if !networkMonitor.isConnected {
+                offlineContent
+            } else if viewModel.isSearchActive {
                 searchResults
             } else {
                 browseLinks
@@ -255,6 +258,21 @@ struct SearchView: View {
                     .font(.system(size: 16))
                     .foregroundStyle(.secondary)
             }
+    }
+
+    // MARK: - Offline
+
+    private var offlineContent: some View {
+        VStack(spacing: 20) {
+            OfflineBanner()
+                .padding(.top, 12)
+
+            ContentUnavailableView(
+                "Search Unavailable Offline",
+                systemImage: "magnifyingglass",
+                description: Text("Connect to the internet to search your library.")
+            )
+        }
     }
 
     // MARK: - Browse Links (empty query state)

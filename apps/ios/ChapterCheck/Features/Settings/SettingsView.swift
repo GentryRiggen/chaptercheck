@@ -141,7 +141,7 @@ struct SettingsView: View {
             AllUserReviewsView(userId: userId)
         case .browseShelves:
             MyShelvesBrowseView()
-        case .search, .browseLibrary, .browseAuthors, .offlineBook:
+        case .search, .browseLibrary, .browseAuthors:
             EmptyView()
         }
     }

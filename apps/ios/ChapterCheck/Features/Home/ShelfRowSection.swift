@@ -32,14 +32,14 @@ struct ShelfRowSection: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 12) {
-                    createShelfButton
-
                     ForEach(shelves) { shelf in
                         NavigationLink(value: AppDestination.shelf(id: shelf._id)) {
                             HomeShelfCard(shelf: shelf)
                         }
                         .buttonStyle(.plain)
                     }
+
+                    createShelfButton
                 }
                 .padding(.horizontal)
             }

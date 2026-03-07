@@ -8,10 +8,12 @@ import SwiftUI
 struct HeroListeningCard: View {
     let item: RecentListeningProgress
     @Environment(AudioPlayerManager.self) private var audioPlayer
+    @Environment(DownloadManager.self) private var downloadManager
 
     @Environment(\.showNowPlaying) private var showNowPlaying
     @State private var isResuming = false
     @State private var resumeCancellables = Set<AnyCancellable>()
+    private let networkMonitor = NetworkMonitor.shared
 
     /// Whether the audio player currently has this book loaded.
     private var isCurrentBook: Bool {
@@ -128,6 +130,12 @@ struct HeroListeningCard: View {
             return
         }
 
+        // Offline path: use downloaded data directly
+        if !networkMonitor.isConnected && downloadManager.isBookDownloaded(item.bookId) {
+            resumeFromDownload()
+            return
+        }
+
         isResuming = true
 
         let bookRepo = BookRepository()
@@ -159,6 +167,7 @@ struct HeroListeningCard: View {
                 return (book, targetFile, files)
             }
             .first()
+            .timeout(.seconds(8), scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { _ in
@@ -177,6 +186,28 @@ struct HeroListeningCard: View {
                 }
             )
             .store(in: &resumeCancellables)
+    }
+
+    private func resumeFromDownload() {
+        guard let (book, allFiles) = downloadManager.offlinePlaybackData(for: item.bookId) else { return }
+
+        let targetFile = allFiles.first(where: { $0._id == item.audioFile._id }) ?? allFiles.first
+        guard let audioFile = targetFile else { return }
+
+        let position = AudioPlayerManager.smartRewindPosition(
+            from: item.positionSeconds,
+            lastListenedAt: item.lastListenedAt,
+            enabled: audioPlayer.isSmartRewindEnabled
+        )
+
+        audioPlayer.play(
+            book: book,
+            audioFile: audioFile,
+            allFiles: allFiles,
+            startPosition: position,
+            rate: item.playbackRate
+        )
+        showNowPlaying()
     }
 }
 

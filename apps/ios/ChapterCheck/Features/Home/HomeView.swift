@@ -8,8 +8,11 @@ import SwiftUI
 /// and quick links to browse the full library and authors.
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
+    @State private var offlineDebounceTask: Task<Void, Never>?
     @Environment(\.showSettings) private var showSettings
+    @Environment(DownloadManager.self) private var downloadManager
     @Environment(ThemeManager.self) private var themeManager
+    private let networkMonitor = NetworkMonitor.shared
 
     var body: some View {
         Group {
@@ -45,6 +48,8 @@ struct HomeView: View {
                 NavigationLink(value: AppDestination.search) {
                     Image(systemName: "magnifyingglass")
                 }
+                .disabled(viewModel.isOffline)
+                .opacity(viewModel.isOffline ? 0.4 : 1)
 
                 Button {
                     showSettings()
@@ -55,10 +60,33 @@ struct HomeView: View {
             }
         }
         .onAppear {
+            viewModel.downloadManager = downloadManager
             viewModel.subscribe()
         }
         .onDisappear {
             viewModel.unsubscribe()
+        }
+        .onChange(of: networkMonitor.isConnected) { _, isConnected in
+            // Cancel any pending transition to avoid overlapping offline/online switches
+            offlineDebounceTask?.cancel()
+
+            if isConnected {
+                // Back online — brief debounce to let the websocket stabilize
+                offlineDebounceTask = Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard !Task.isCancelled else { return }
+                    viewModel.retry()
+                }
+            } else {
+                // Going offline — longer debounce to avoid reacting to brief blips
+                offlineDebounceTask = Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    guard !Task.isCancelled else { return }
+                    viewModel.unsubscribe()
+                    viewModel.downloadManager = downloadManager
+                    viewModel.subscribe()
+                }
+            }
         }
     }
 
@@ -80,6 +108,11 @@ struct HomeView: View {
     private var scrollContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                if viewModel.isOffline {
+                    OfflineBanner()
+                        .padding(.horizontal)
+                }
+
                 // Continue Listening (hero card + horizontal scroll)
                 if !viewModel.recentlyListening.isEmpty {
                     ContinueListeningSection(items: viewModel.recentlyListening)
@@ -87,8 +120,10 @@ struct HomeView: View {
                     welcomeSection
                 }
 
-                // My Shelves (always show — empty state has create button)
-                ShelfRowSection(shelves: viewModel.myShelves)
+                // My Shelves (hide when offline — data unavailable)
+                if !viewModel.isOffline {
+                    ShelfRowSection(shelves: viewModel.myShelves)
+                }
 
                 if !viewModel.topRatedBooks.isEmpty {
                     BookRowSection(
@@ -173,6 +208,8 @@ struct HomeView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .disabled(viewModel.isOffline)
+            .opacity(viewModel.isOffline ? 0.4 : 1)
 
             Divider()
                 .padding(.leading, 52)
@@ -190,6 +227,8 @@ struct HomeView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .disabled(viewModel.isOffline)
+            .opacity(viewModel.isOffline ? 0.4 : 1)
 
             Divider()
                 .padding(.leading, 52)
@@ -207,6 +246,8 @@ struct HomeView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .disabled(viewModel.isOffline)
+            .opacity(viewModel.isOffline ? 0.4 : 1)
         }
     }
 }

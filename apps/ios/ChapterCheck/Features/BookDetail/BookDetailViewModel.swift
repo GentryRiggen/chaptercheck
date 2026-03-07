@@ -58,6 +58,9 @@ final class BookDetailViewModel {
     /// Optional download manager for warming the offline progress cache.
     var downloadManager: DownloadManager?
 
+    private let networkMonitor = NetworkMonitor.shared
+    var isOffline: Bool { !networkMonitor.isConnected }
+
     private let bookRepository = BookRepository()
     private let audioRepository = AudioRepository()
     private let progressRepository = ProgressRepository()
@@ -137,6 +140,13 @@ final class BookDetailViewModel {
 
     func subscribe(bookId: String) {
         currentBookId = bookId
+
+        // Offline: load from download manifest if available
+        if isOffline {
+            loadFromManifest(bookId: bookId)
+            return
+        }
+
         authObserver.start(
             onAuthenticated: { [weak self] in
                 guard let self, cancellables.isEmpty, let bookId = currentBookId else { return }
@@ -345,6 +355,40 @@ final class BookDetailViewModel {
     private func markLoaded(_ section: String) {
         loadedSections.insert(section)
         if loadedSections.count >= 2 {
+            isLoading = false
+        }
+    }
+
+    // MARK: - Offline
+
+    private func loadFromManifest(bookId: String) {
+        guard let dm = downloadManager,
+              let (offlineBook, offlineFiles) = dm.offlinePlaybackData(for: bookId) else {
+            // Not downloaded — show limited info
+            book = nil
+            isLoading = false
+            error = "Book details unavailable offline."
+            return
+        }
+
+        book = offlineBook
+        audioFiles = offlineFiles
+
+        Task {
+            if let cached = await dm.cachedProgress(for: bookId) {
+                progress = ListeningProgress(
+                    _id: "offline-progress",
+                    _creationTime: cached.timestamp,
+                    userId: "",
+                    bookId: bookId,
+                    audioFileId: cached.audioFileId,
+                    positionSeconds: cached.positionSeconds,
+                    playbackRate: cached.playbackRate,
+                    lastListenedAt: cached.timestamp,
+                    createdAt: cached.timestamp,
+                    updatedAt: cached.timestamp
+                )
+            }
             isLoading = false
         }
     }

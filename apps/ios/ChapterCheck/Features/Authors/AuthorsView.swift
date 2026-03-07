@@ -7,6 +7,7 @@ import SwiftUI
 /// - **Search**: Debounced full-text search when the search field is active.
 struct AuthorsView: View {
     @State private var viewModel = AuthorsViewModel()
+    @Environment(DownloadManager.self) private var downloadManager
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -52,6 +53,7 @@ struct AuthorsView: View {
             }
         }
         .onAppear {
+            viewModel.downloadManager = downloadManager
             viewModel.subscribe()
         }
         .onDisappear {
@@ -63,6 +65,13 @@ struct AuthorsView: View {
 
     private var authorGrid: some View {
         ScrollView {
+            if viewModel.isOffline {
+                OfflineBanner()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+            }
+
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(viewModel.authors) { author in
                     NavigationLink(value: AppDestination.author(id: author._id)) {

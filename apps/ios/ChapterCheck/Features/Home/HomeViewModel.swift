@@ -12,6 +12,9 @@ import os
 /// and automatically torn down / recreated on auth state transitions.
 /// A full-screen error only appears when ALL sections fail — partial successes
 /// show whatever data loaded.
+///
+/// When offline, skips Convex subscriptions and loads downloaded books from the
+/// `DownloadManager` to populate the Continue Listening section.
 @Observable
 @MainActor
 final class HomeViewModel {
@@ -29,6 +32,8 @@ final class HomeViewModel {
 
     // MARK: - Dependencies
 
+    var downloadManager: DownloadManager?
+    private let networkMonitor = NetworkMonitor.shared
     private let logger = Logger(subsystem: "com.chaptercheck", category: "HomeViewModel")
     private let bookRepository = BookRepository()
     private let progressRepository = ProgressRepository()
@@ -41,12 +46,21 @@ final class HomeViewModel {
     private var loadedSections: Set<String> = []
     private var failedSections: Set<String> = []
     private var retryTimer: Task<Void, Never>?
+    private var offlineLoadTask: Task<Void, Never>?
 
     private static let allSections: Set<String> = ["recentlyListening", "recentBooks", "topRatedBooks", "myShelves"]
+
+    var isOffline: Bool { !networkMonitor.isConnected }
 
     // MARK: - Subscriptions
 
     func subscribe() {
+        if isOffline {
+            logger.info("Offline — loading downloaded books")
+            loadOfflineData()
+            return
+        }
+
         authObserver.start(
             onAuthenticated: { [weak self] in
                 guard let self, cancellables.isEmpty else { return }
@@ -67,6 +81,8 @@ final class HomeViewModel {
 
     func unsubscribe() {
         authObserver.cancel()
+        offlineLoadTask?.cancel()
+        offlineLoadTask = nil
         tearDownSubscriptions()
     }
 
@@ -199,6 +215,86 @@ final class HomeViewModel {
             try? await Task.sleep(for: .seconds(4))
             guard !Task.isCancelled else { return }
             self?.showRetry = true
+        }
+    }
+
+    // MARK: - Offline Data
+
+    private func loadOfflineData() {
+        guard let downloadManager else {
+            isLoading = false
+            return
+        }
+
+        let completedBooks = downloadManager.downloadedBooks.filter(\.isComplete)
+
+        offlineLoadTask?.cancel()
+        offlineLoadTask = Task {
+            var items: [RecentListeningProgress] = []
+            for info in completedBooks {
+                let cached = await downloadManager.cachedProgress(for: info.bookId)
+
+                let authors = info.authorNames.map { name in
+                    BookAuthorSummary(_id: "offline-\(name.hashValue)", name: name)
+                }
+
+                // Find the current audio file from cached progress or use the first one
+                let sortedMeta = info.audioFileMetadata.sorted { ($0.partNumber ?? 0) < ($1.partNumber ?? 0) }
+                let currentMeta: AudioFileMetadataEntry?
+                if let cached {
+                    currentMeta = sortedMeta.first(where: { $0.audioFileId == cached.audioFileId }) ?? sortedMeta.first
+                } else {
+                    currentMeta = sortedMeta.first
+                }
+
+                guard let meta = currentMeta else { continue }
+
+                let totalDuration = sortedMeta.reduce(0.0) { $0 + $1.duration }
+                let position = cached?.positionSeconds ?? 0
+                let progressFraction: Double
+                if totalDuration > 0 {
+                    // Sum duration of completed parts + current position
+                    let completedPartsDuration = sortedMeta
+                        .filter { ($0.partNumber ?? 0) < (meta.partNumber ?? 0) }
+                        .reduce(0.0) { $0 + $1.duration }
+                    progressFraction = min((completedPartsDuration + position) / totalDuration, 1)
+                } else {
+                    progressFraction = 0
+                }
+
+                let item = RecentListeningProgress(
+                    _id: info.bookId,
+                    bookId: info.bookId,
+                    book: RecentListeningBook(
+                        title: info.bookTitle,
+                        coverImageR2Key: info.coverImageR2Key,
+                        seriesOrder: nil,
+                        authors: authors,
+                        series: nil
+                    ),
+                    audioFile: RecentListeningAudioFile(
+                        _id: meta.audioFileId,
+                        partNumber: meta.partNumber,
+                        duration: meta.duration,
+                        displayName: meta.displayName ?? meta.fileName
+                    ),
+                    positionSeconds: position,
+                    playbackRate: cached?.playbackRate ?? 1.0,
+                    progressFraction: progressFraction,
+                    totalParts: Double(sortedMeta.count),
+                    lastListenedAt: cached?.timestamp ?? 0
+                )
+                items.append(item)
+            }
+
+            // Sort by most recently listened (items with progress first, then by timestamp)
+            items.sort { ($0.lastListenedAt) > ($1.lastListenedAt) }
+
+            recentlyListening = items
+            recentBooks = []
+            topRatedBooks = []
+            myShelves = []
+            isLoading = false
         }
     }
 }

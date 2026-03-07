@@ -56,6 +56,10 @@ final class AuthorsViewModel {
 
     // MARK: - Dependencies
 
+    var downloadManager: DownloadManager?
+    private let networkMonitor = NetworkMonitor.shared
+    var isOffline: Bool { !networkMonitor.isConnected }
+
     private let logger = Logger(subsystem: "com.chaptercheck", category: "AuthorsViewModel")
     private let authorRepository = AuthorRepository()
     private let authObserver = ConvexAuthObserver()
@@ -74,6 +78,11 @@ final class AuthorsViewModel {
     // MARK: - Lifecycle
 
     func subscribe() {
+        if isOffline {
+            loadOfflineAuthors()
+            return
+        }
+
         authObserver.start(
             onAuthenticated: { [weak self] in
                 guard let self, cancellables.isEmpty else { return }
@@ -226,5 +235,48 @@ final class AuthorsViewModel {
                 }
             )
             .store(in: &cancellables)
+    }
+
+    // MARK: - Offline
+
+    private func loadOfflineAuthors() {
+        guard let dm = downloadManager else {
+            isLoading = false
+            return
+        }
+
+        // Extract unique authors from downloaded books
+        let completedBooks = dm.downloadedBooks.filter(\.isComplete)
+        var authorMap: [String: (name: String, bookCount: Int)] = [:]
+        for info in completedBooks {
+            for name in info.authorNames {
+                let key = name.lowercased()
+                if var existing = authorMap[key] {
+                    existing.bookCount += 1
+                    authorMap[key] = existing
+                } else {
+                    authorMap[key] = (name: name, bookCount: 1)
+                }
+            }
+        }
+
+        let now = Date().timeIntervalSince1970 * 1000
+        authors = authorMap.map { key, value in
+            AuthorWithCounts(
+                _id: "offline-author-\(key)",
+                _creationTime: now,
+                name: value.name,
+                bio: nil,
+                imageR2Key: nil,
+                createdAt: now,
+                updatedAt: now,
+                bookCount: Double(value.bookCount),
+                seriesCount: 0
+            )
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+        hasMore = false
+        isLoading = false
     }
 }
