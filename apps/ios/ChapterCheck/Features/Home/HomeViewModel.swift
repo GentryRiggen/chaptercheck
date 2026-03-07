@@ -52,15 +52,21 @@ final class HomeViewModel {
 
     var isOffline: Bool { !networkMonitor.isConnected }
 
+    /// Whether the ViewModel loaded from offline data (no Convex subscriptions).
+    /// Used by the View to know when to trigger online recovery.
+    private(set) var isShowingOfflineData = false
+
     // MARK: - Subscriptions
 
     func subscribe() {
         if isOffline {
             logger.info("Offline — loading downloaded books")
+            isShowingOfflineData = true
             loadOfflineData()
             return
         }
 
+        isShowingOfflineData = false
         authObserver.start(
             onAuthenticated: { [weak self] in
                 guard let self, cancellables.isEmpty else { return }
@@ -94,6 +100,38 @@ final class HomeViewModel {
         tearDownSubscriptions()
         authObserver.cancel()
         subscribe()
+    }
+
+    /// Transition from offline data to live Convex subscriptions.
+    /// Uses `needsResubscription()` so the auth observer waits for a fresh
+    /// `.authenticated` emission rather than firing on the stale cached state.
+    func recoverFromOffline() {
+        guard isShowingOfflineData else { return }
+        logger.info("Network restored — switching from offline to live data")
+        isShowingOfflineData = false
+        offlineLoadTask?.cancel()
+        offlineLoadTask = nil
+
+        // Start the auth observer but force it to wait for a fresh auth cycle.
+        // The Convex SDK will reconnect the WebSocket and re-authenticate,
+        // emitting .loading → .authenticated which triggers onAuthenticated.
+        authObserver.start(
+            onAuthenticated: { [weak self] in
+                guard let self, cancellables.isEmpty else { return }
+                logger.info("Auth ready after offline recovery — subscribing")
+                subscribeToRecentlyListening()
+                subscribeToRecentBooks()
+                subscribeToTopRatedBooks()
+                subscribeToMyShelves()
+                startRetryTimer()
+            },
+            onUnauthenticated: { [weak self] in
+                guard let self else { return }
+                logger.info("Auth lost — tearing down subscriptions")
+                tearDownSubscriptions()
+            }
+        )
+        authObserver.needsResubscription()
     }
 
     private func tearDownSubscriptions() {

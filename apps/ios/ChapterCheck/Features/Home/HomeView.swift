@@ -8,7 +8,6 @@ import SwiftUI
 /// and quick links to browse the full library and authors.
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
-    @State private var offlineDebounceTask: Task<Void, Never>?
     @Environment(\.showSettings) private var showSettings
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(ThemeManager.self) private var themeManager
@@ -67,26 +66,15 @@ struct HomeView: View {
             viewModel.unsubscribe()
         }
         .onChange(of: networkMonitor.isConnected) { _, isConnected in
-            // Cancel any pending transition to avoid overlapping offline/online switches
-            offlineDebounceTask?.cancel()
-
             if isConnected {
-                // Back online — brief debounce to let the websocket stabilize
-                offlineDebounceTask = Task {
-                    try? await Task.sleep(for: .milliseconds(500))
-                    guard !Task.isCancelled else { return }
-                    viewModel.retry()
-                }
-            } else {
-                // Going offline — longer debounce to avoid reacting to brief blips
-                offlineDebounceTask = Task {
-                    try? await Task.sleep(for: .seconds(2))
-                    guard !Task.isCancelled else { return }
-                    viewModel.unsubscribe()
-                    viewModel.downloadManager = downloadManager
-                    viewModel.subscribe()
-                }
+                // Back online — if we were showing offline data (launched offline),
+                // transition to live subscriptions. Otherwise, existing Convex
+                // subscriptions auto-reconnect on their own.
+                viewModel.recoverFromOffline()
             }
+            // Going offline mid-session: do nothing — stale Convex data stays
+            // visible, offline banner appears via viewModel.isOffline, and
+            // Convex subscriptions will auto-reconnect when network restores.
         }
     }
 
@@ -120,8 +108,8 @@ struct HomeView: View {
                     welcomeSection
                 }
 
-                // My Shelves (hide when offline — data unavailable)
-                if !viewModel.isOffline {
+                // My Shelves (hide when no data — e.g., launched offline)
+                if !viewModel.myShelves.isEmpty || !viewModel.isOffline {
                     ShelfRowSection(shelves: viewModel.myShelves)
                 }
 
