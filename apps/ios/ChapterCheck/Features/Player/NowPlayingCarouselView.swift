@@ -8,6 +8,8 @@ struct NowPlayingCarouselView: View {
     let book: BookWithDetails?
     let isPlaying: Bool
     let artworkSize: CGFloat
+    let totalDurationSeconds: Double?
+    let totalPartCount: Int
     let viewModel: NowPlayingDetailsViewModel
     @Binding var selectedPage: Int
     let onNavigate: (AppDestination) -> Void
@@ -23,9 +25,16 @@ struct NowPlayingCarouselView: View {
             if let book {
                 NowPlayingDetailsCard(
                     book: book,
+                    totalDurationSeconds: totalDurationSeconds,
+                    totalPartCount: totalPartCount,
                     viewModel: viewModel,
                     onNavigate: onNavigate,
-                    onOpenReview: onOpenReview
+                    onOpenReview: onOpenReview,
+                    onShowCover: {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            selectedPage = 0
+                        }
+                    }
                 )
                 .padding(.horizontal, 20)
                 .tag(1)

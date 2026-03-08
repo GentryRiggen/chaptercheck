@@ -38,8 +38,49 @@ struct NowPlayingView: View {
         min(UIScreen.main.bounds.width - 48, 400)
     }
 
-    /// Fixed carousel height.
-    private var carouselHeight: CGFloat { artworkSize }
+    private var isDetailsPageActive: Bool {
+        selectedCarouselPage == 1 && audioPlayer.currentBook != nil
+    }
+
+    private var carouselHeight: CGFloat {
+        artworkSize + (isDetailsPageActive ? 132 : 0)
+    }
+
+    private var topToCarouselSpacing: CGFloat {
+        isDetailsPageActive ? 10 : 28
+    }
+
+    private var carouselToSeekSpacing: CGFloat {
+        isDetailsPageActive ? 10 : 26
+    }
+
+    private var seekToTransportSpacing: CGFloat {
+        isDetailsPageActive ? 14 : 34
+    }
+
+    private var transportToToolbarSpacing: CGFloat {
+        isDetailsPageActive ? 12 : 30
+    }
+
+    private var indicatorTopPadding: CGFloat {
+        isDetailsPageActive ? 8 : 12
+    }
+
+    private var totalBookDurationSeconds: Double? {
+        let summedDuration = audioPlayer.audioFiles.reduce(0.0) { partialResult, file in
+            partialResult + file.duration
+        }
+        if summedDuration > 0 {
+            return summedDuration
+        }
+        if let bookDuration = audioPlayer.currentBook?.duration, bookDuration > 0 {
+            return bookDuration
+        }
+        if audioPlayer.duration > 0 {
+            return audioPlayer.duration
+        }
+        return nil
+    }
 
     private let transportSkipSize: CGFloat = 42
     private let transportPlaySize: CGFloat = 56
@@ -90,13 +131,16 @@ struct NowPlayingView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
 
-            Spacer(minLength: 0)
+            Color.clear
+                .frame(height: topToCarouselSpacing)
 
             // Swipeable carousel: cover art ↔ book details
             NowPlayingCarouselView(
                 book: audioPlayer.currentBook,
                 isPlaying: isPlayingAnimated,
                 artworkSize: artworkSize,
+                totalDurationSeconds: totalBookDurationSeconds,
+                totalPartCount: audioPlayer.audioFiles.count,
                 viewModel: detailsViewModel,
                 selectedPage: $selectedCarouselPage,
                 onNavigate: { destination in
@@ -117,12 +161,13 @@ struct NowPlayingView: View {
                             .frame(width: 6, height: 6)
                     }
                 }
-                .padding(.top, 12)
+                .padding(.top, indicatorTopPadding)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Page \(selectedCarouselPage + 1) of 2")
             }
 
-            Spacer(minLength: 0)
+            Color.clear
+                .frame(height: carouselToSeekSpacing)
 
             // Seek bar + add note action
             HStack(alignment: .center, spacing: 12) {
@@ -148,9 +193,13 @@ struct NowPlayingView: View {
             sliderSeekUndoSection
 
             // Transport controls — vertically centered between seek bar and bottom toolbar
-            Spacer()
+            Color.clear
+                .frame(height: seekToTransportSpacing)
+
             transportControls
-            Spacer()
+
+            Color.clear
+                .frame(height: transportToToolbarSpacing)
 
             // Bottom toolbar
             bottomToolbar
@@ -174,6 +223,7 @@ struct NowPlayingView: View {
             .padding(.bottom, -6)
         }
         .background(.background)
+        .animation(.spring(duration: 0.35, bounce: 0.16), value: selectedCarouselPage)
         .onAppear {
             isPlayingAnimated = audioPlayer.isPlaying
             // Handle streaming event that fired before this sheet was presented
