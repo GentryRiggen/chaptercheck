@@ -104,6 +104,23 @@ final class ConvexService: ObservableObject {
         _ = await client.loginFromCache()
     }
 
+    /// Force an immediate token refresh and restart the refresh timer.
+    ///
+    /// Call this when the app returns to the foreground after suspension.
+    /// The Clerk JWT may have expired while suspended, causing all Convex
+    /// queries to fail with "Not authenticated". This fetches a fresh token
+    /// immediately rather than waiting for the next scheduled refresh.
+    func refreshTokenNow() async {
+        guard case .authenticated = authState else {
+            logger.debug("Skipping token refresh — not authenticated")
+            return
+        }
+        logger.info("Forcing immediate token refresh (app foregrounded)")
+        // loginFromCache() emits .authenticated via Combine, which triggers
+        // handleAuthStateChange → startTokenRefresh() automatically.
+        _ = await client.loginFromCache()
+    }
+
     /// Initiate a fresh login flow (called after the user completes Clerk sign-in).
     func login() async {
         _ = await client.login()
