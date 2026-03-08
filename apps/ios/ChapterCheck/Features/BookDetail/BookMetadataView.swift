@@ -44,27 +44,40 @@ struct BookMetadataView: View {
     // MARK: - Authors
 
     private var authorRow: some View {
-        HStack(spacing: 4) {
-            ForEach(Array(book.authors.enumerated()), id: \.offset) { index, author in
-                if index > 0 {
-                    Text(",")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
+        VStack(spacing: 8) {
+            ForEach(book.authors) { author in
                 NavigationLink(value: AppDestination.author(id: author._id)) {
-                    HStack(spacing: 2) {
-                        Text(author.name)
-                            .font(.subheadline)
-                            .foregroundStyle(.tint)
+                    HStack(spacing: 12) {
+                        Image(systemName: "person.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 28, height: 28)
+                            .background(Color.white.opacity(0.06), in: Circle())
 
-                        if let role = author.role, role.lowercased() != "author" {
-                            Text("(\(role))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(author.name)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+
+                            if let role = author.role, !role.isEmpty {
+                                Text(role.capitalized)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -85,9 +98,18 @@ struct BookMetadataView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
-            .foregroundStyle(.tint)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Helpers
