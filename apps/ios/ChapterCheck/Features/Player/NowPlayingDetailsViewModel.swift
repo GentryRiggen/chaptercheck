@@ -16,12 +16,14 @@ final class NowPlayingDetailsViewModel {
     var allGenres: [Genre] = []
     var myGenreVoteIds: [String] = []
     var noteCategories: [NoteCategory] = []
+    var currentUser: UserWithPermissions?
     var error: String?
 
     // MARK: - Dependencies
 
     private let bookUserDataRepository = BookUserDataRepository()
-    private let genreRepository = GenreRepository()
+    let genreRepository = GenreRepository()
+    private let userRepository = UserRepository()
     private let bookNotesRepository = BookNotesRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
@@ -65,6 +67,7 @@ final class NowPlayingDetailsViewModel {
         allGenres = []
         myGenreVoteIds = []
         noteCategories = []
+        currentUser = nil
     }
 
     private func setupSubscriptions(bookId: String) {
@@ -114,6 +117,16 @@ final class NowPlayingDetailsViewModel {
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] categories in
                     self?.noteCategories = categories
+                }
+            )
+            .store(in: &cancellables)
+
+        userRepository.subscribeToCurrentUser()?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] user in
+                    self?.currentUser = user
                 }
             )
             .store(in: &cancellables)

@@ -41,13 +41,17 @@ final class GenreRepository {
 
     // MARK: - Mutations
 
+    /// Create a new genre. Returns the new genre's ID.
+    ///
+    /// The backend generates a slug and rejects duplicates (case-insensitive).
+    func createGenre(name: String) async throws -> String {
+        try await convex.mutation(
+            "genres/mutations:createGenre",
+            with: ["name": name]
+        )
+    }
+
     /// Replace the current user's genre votes for a book.
-    ///
-    /// This is a full replacement — passing an empty array removes all votes.
-    ///
-    /// - Parameters:
-    ///   - bookId: The `_id` of the book.
-    ///   - genreIds: The complete set of genre IDs the user is voting for.
     func setGenreVotes(bookId: String, genreIds: [String]) async throws {
         let encodableGenreIds: [ConvexEncodable?] = genreIds.map { $0 as ConvexEncodable? }
         try await convex.mutation(

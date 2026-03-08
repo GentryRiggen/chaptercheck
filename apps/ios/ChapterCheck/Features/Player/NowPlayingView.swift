@@ -270,6 +270,8 @@ struct NowPlayingView: View {
                     existingUserData: detailsViewModel.userData,
                     allGenres: detailsViewModel.allGenres,
                     existingGenreVoteIds: detailsViewModel.myGenreVoteIds,
+                    canCreateGenres: detailsViewModel.currentUser?.permissions.canCreateContent == true,
+                    genreRepository: detailsViewModel.genreRepository,
                     onSave: { formData in
                         isReviewSheetPresented = false
                         Task {

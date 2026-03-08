@@ -12,6 +12,8 @@ struct BookReviewSheet: View {
     let existingUserData: BookUserData?
     let allGenres: [Genre]
     let existingGenreVoteIds: [String]
+    let canCreateGenres: Bool
+    let genreRepository: GenreRepository
     let onSave: (ReviewFormData) -> Void
     let onCancel: () -> Void
 
@@ -24,6 +26,11 @@ struct BookReviewSheet: View {
     @State private var selectedGenreIds: Set<String> = []
 
     @State private var isSaving = false
+
+    // Genre search & creation
+    @State private var genreSearchText: String = ""
+    @State private var isCreatingGenre = false
+    @State private var genreError: String?
 
     private static let maxReviewLength = 2000
 
@@ -43,9 +50,7 @@ struct BookReviewSheet: View {
                 ratingSection
                 reviewTextSection
                 privacySection
-                if !allGenres.isEmpty {
-                    genreSection
-                }
+                genreSection
             }
             .navigationTitle("Your Review")
             .navigationBarTitleDisplayMode(.inline)
@@ -74,6 +79,9 @@ struct BookReviewSheet: View {
             if newValue {
                 isReviewPrivate = true
             }
+        }
+        .onChange(of: genreSearchText) { _, _ in
+            genreError = nil
         }
     }
 
@@ -131,9 +139,80 @@ struct BookReviewSheet: View {
         }
     }
 
+    // MARK: - Genre Helpers
+
+    private var trimmedSearchText: String {
+        genreSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Genres filtered by search text (case-insensitive).
+    private var filteredGenres: [Genre] {
+        guard !trimmedSearchText.isEmpty else { return allGenres }
+        return allGenres.filter { $0.name.localizedCaseInsensitiveContains(trimmedSearchText) }
+    }
+
+    /// Whether an existing genre already matches the search text exactly (case-insensitive).
+    private var existingGenreMatchesSearch: Bool {
+        guard !trimmedSearchText.isEmpty else { return true }
+        return allGenres.contains { $0.name.localizedCaseInsensitiveCompare(trimmedSearchText) == .orderedSame }
+    }
+
+    /// Trimmed search text suitable for creating a new genre (2-50 chars, no exact match).
+    private var validNewGenreName: String? {
+        guard canCreateGenres else { return nil }
+        let name = trimmedSearchText
+        guard name.count >= 2, name.count <= 50, !existingGenreMatchesSearch else { return nil }
+        return name
+    }
+
     private var genreSection: some View {
         Section {
-            ForEach(allGenres) { genre in
+            // Search field
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search or add genre\u{2026}", text: $genreSearchText)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                if !genreSearchText.isEmpty {
+                    Button {
+                        genreSearchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // Error message
+            if let genreError {
+                Text(genreError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            // "Add new genre" row (editor-only)
+            if let newName = validNewGenreName {
+                Button {
+                    Task { await createAndSelectGenre(name: newName) }
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundStyle(.tint)
+                        Text("Add \"\(newName)\"")
+                            .foregroundStyle(.tint)
+                        Spacer()
+                        if isCreatingGenre {
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(isCreatingGenre)
+            }
+
+            // Genre list
+            ForEach(filteredGenres) { genre in
                 Button {
                     toggleGenre(genre._id)
                 } label: {
@@ -157,6 +236,27 @@ struct BookReviewSheet: View {
     }
 
     // MARK: - Actions
+
+    private func createAndSelectGenre(name: String) async {
+        genreError = nil
+        isCreatingGenre = true
+        defer { isCreatingGenre = false }
+
+        do {
+            let newId: String = try await genreRepository.createGenre(name: name)
+            selectedGenreIds.insert(newId)
+            genreSearchText = ""
+            Haptics.success()
+        } catch {
+            let message = error.localizedDescription
+            if message.contains("similar name already exists") {
+                genreError = message
+            } else {
+                genreError = "Failed to create genre. Please try again."
+            }
+            Haptics.error()
+        }
+    }
 
     private func toggleGenre(_ genreId: String) {
         Haptics.light()

@@ -85,7 +85,7 @@ final class BookDetailViewModel {
     private let audioRepository = AudioRepository()
     private let progressRepository = ProgressRepository()
     private let bookUserDataRepository = BookUserDataRepository()
-    private let genreRepository = GenreRepository()
+    let genreRepository = GenreRepository()
     private let bookNotesRepository = BookNotesRepository()
     private let userRepository = UserRepository()
     private let authObserver = ConvexAuthObserver()

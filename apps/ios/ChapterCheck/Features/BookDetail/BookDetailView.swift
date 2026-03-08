@@ -81,6 +81,8 @@ struct BookDetailView: View {
                 existingUserData: viewModel.userData,
                 allGenres: viewModel.allGenres,
                 existingGenreVoteIds: viewModel.myGenreVoteIds,
+                canCreateGenres: viewModel.currentUser?.permissions.canCreateContent == true,
+                genreRepository: viewModel.genreRepository,
                 onSave: { formData in
                     isReviewSheetPresented = false
                     Task { await viewModel.saveReview(formData) }
