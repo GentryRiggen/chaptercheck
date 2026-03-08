@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Full book detail screen.
 ///
@@ -14,6 +15,10 @@ struct BookDetailView: View {
     @State private var noteToEdit: BookNote?
     @State private var noteToDelete: BookNote?
     @State private var noteToPreview: BookNote?
+    @State private var isAudioImporterPresented = false
+    @State private var isAudioUploadQueuePresented = false
+    @State private var audioUploadQueueItems: [AudioUploadQueueItem] = []
+    @State private var audioUploadError: String?
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.showNowPlaying) private var showNowPlaying
@@ -108,6 +113,24 @@ struct BookDetailView: View {
         .sheet(item: $noteToPreview) { note in
             BookNotePreviewSheet(note: note)
         }
+        .sheet(isPresented: $isAudioUploadQueuePresented, onDismiss: releaseImportedAudioFiles) {
+            if let book = viewModel.book {
+                AudioUploadQueueSheet(
+                    bookId: book._id,
+                    initialItems: audioUploadQueueItems,
+                    onFinished: {
+                        isAudioUploadQueuePresented = false
+                    }
+                )
+            }
+        }
+        .fileImporter(
+            isPresented: $isAudioImporterPresented,
+            allowedContentTypes: [.audio],
+            allowsMultipleSelection: true
+        ) { result in
+            handleImportedAudioFiles(result)
+        }
         .confirmationDialog(
             "Delete Download?",
             isPresented: $showDeleteDownloadConfirmation,
@@ -139,6 +162,16 @@ struct BookDetailView: View {
             Button("Cancel", role: .cancel) {
                 noteToDelete = nil
             }
+        }
+        .alert("Upload Error", isPresented: Binding(
+            get: { audioUploadError != nil },
+            set: { if !$0 { audioUploadError = nil } }
+        )) {
+            Button("OK", role: .cancel) {
+                audioUploadError = nil
+            }
+        } message: {
+            Text(audioUploadError ?? "")
         }
     }
 
@@ -211,11 +244,16 @@ struct BookDetailView: View {
                     .padding(.horizontal)
 
                 // Audio Files
-                if viewModel.hasAudioFiles {
+                if viewModel.hasAudioFiles || !viewModel.isOffline {
                     AudioFileListView(
                         audioFiles: viewModel.audioFiles,
                         progress: viewModel.progress,
-                        book: book
+                        book: book,
+                        canUploadAudio: viewModel.canUploadAudio,
+                        canShowUploadControls: !viewModel.isOffline,
+                        onUploadRequested: {
+                            isAudioImporterPresented = true
+                        }
                     )
                 }
 
@@ -389,5 +427,101 @@ struct BookDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
+    }
+
+    private func handleImportedAudioFiles(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            Task {
+                await prepareUploadQueue(from: urls)
+            }
+        case .failure(let error):
+            audioUploadError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func prepareUploadQueue(from urls: [URL]) async {
+        guard !urls.isEmpty else { return }
+
+        let repository = AudioUploadRepository()
+        let nextPartNumber = max(viewModel.audioFiles.map(\.partNumberInt).max() ?? 0, viewModel.audioFiles.count) + 1
+
+        var importedItems: [AudioUploadQueueItem] = []
+        var errors: [String] = []
+
+        for (index, url) in urls.enumerated() {
+            let hasSecurityScopedAccess = url.startAccessingSecurityScopedResource()
+
+            do {
+                let values = try url.resourceValues(forKeys: [.fileSizeKey, .totalFileAllocatedSizeKey, .contentTypeKey, .nameKey])
+                let fileSize = Int64(values.fileSize ?? values.totalFileAllocatedSize ?? 0)
+
+                guard fileSize > 0 else {
+                    if hasSecurityScopedAccess {
+                        url.stopAccessingSecurityScopedResource()
+                    }
+                    errors.append("\(url.lastPathComponent): file size is unavailable.")
+                    continue
+                }
+
+                guard fileSize <= 1_073_741_824 else {
+                    if hasSecurityScopedAccess {
+                        url.stopAccessingSecurityScopedResource()
+                    }
+                    errors.append("\(url.lastPathComponent): exceeds the 1 GB limit.")
+                    continue
+                }
+
+                let contentType = mimeType(for: values.contentType, url: url)
+                let duration = await repository.extractDuration(from: url)
+
+                importedItems.append(
+                    AudioUploadQueueItem(
+                        fileURL: url,
+                        fileName: values.name ?? url.lastPathComponent,
+                        fileSize: fileSize,
+                        contentType: contentType,
+                        hasSecurityScopedAccess: hasSecurityScopedAccess,
+                        partNumber: nextPartNumber + index,
+                        duration: duration
+                    )
+                )
+            } catch {
+                if hasSecurityScopedAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+                errors.append("\(url.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+
+        if !importedItems.isEmpty {
+            audioUploadQueueItems = importedItems
+            isAudioUploadQueuePresented = true
+        }
+
+        if !errors.isEmpty {
+            audioUploadError = errors.joined(separator: "\n")
+        }
+    }
+
+    private func releaseImportedAudioFiles() {
+        for item in audioUploadQueueItems where item.hasSecurityScopedAccess {
+            item.fileURL.stopAccessingSecurityScopedResource()
+        }
+        audioUploadQueueItems = []
+    }
+
+    private func mimeType(for type: UTType?, url: URL) -> String {
+        if let mimeType = type?.preferredMIMEType {
+            return mimeType
+        }
+
+        if let inferredType = UTType(filenameExtension: url.pathExtension),
+           let mimeType = inferredType.preferredMIMEType {
+            return mimeType
+        }
+
+        return "application/octet-stream"
     }
 }

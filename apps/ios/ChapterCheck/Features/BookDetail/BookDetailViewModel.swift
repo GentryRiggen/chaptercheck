@@ -67,6 +67,7 @@ final class BookDetailViewModel {
     var selectedNoteCategoryId: String?
     var notesFilterOption: BookNotesFilterOption = .all
     var reviewSortOption: ReviewSortOption = .recent
+    var currentUser: UserWithPermissions?
 
     var isLoading = true
     var error: String?
@@ -86,6 +87,7 @@ final class BookDetailViewModel {
     private let bookUserDataRepository = BookUserDataRepository()
     private let genreRepository = GenreRepository()
     private let bookNotesRepository = BookNotesRepository()
+    private let userRepository = UserRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
     private var currentBookId: String?
@@ -97,6 +99,10 @@ final class BookDetailViewModel {
     /// Whether the book has audio files available for playback.
     var hasAudioFiles: Bool {
         !audioFiles.isEmpty
+    }
+
+    var canUploadAudio: Bool {
+        currentUser?.permissions.canUploadAudio == true
     }
 
     /// The audio file to resume from, based on saved progress.
@@ -202,6 +208,7 @@ final class BookDetailViewModel {
                 subscribeToMyGenreVotes(bookId: bookId)
                 subscribeToNotes(bookId: bookId)
                 subscribeToNoteCategories()
+                subscribeToCurrentUser()
             },
             onUnauthenticated: { [weak self] in
                 self?.cancellables.removeAll()
@@ -234,6 +241,7 @@ final class BookDetailViewModel {
                 subscribeToMyGenreVotes(bookId: bookId)
                 subscribeToNotes(bookId: bookId)
                 subscribeToNoteCategories()
+                subscribeToCurrentUser()
             },
             onUnauthenticated: { [weak self] in
                 self?.cancellables.removeAll()
@@ -491,6 +499,18 @@ final class BookDetailViewModel {
                        !categories.contains(where: { $0._id == selectedId }) {
                         self?.selectedNoteCategoryId = nil
                     }
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToCurrentUser() {
+        userRepository.subscribeToCurrentUser()?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] user in
+                    self?.currentUser = user
                 }
             )
             .store(in: &cancellables)
