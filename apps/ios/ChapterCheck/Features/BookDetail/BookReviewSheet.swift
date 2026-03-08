@@ -145,10 +145,19 @@ struct BookReviewSheet: View {
         genreSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Genres filtered by search text (case-insensitive).
-    private var filteredGenres: [Genre] {
-        guard !trimmedSearchText.isEmpty else { return allGenres }
-        return allGenres.filter { $0.name.localizedCaseInsensitiveContains(trimmedSearchText) }
+    /// Selected genre objects, preserving alphabetical order.
+    private var selectedGenres: [Genre] {
+        allGenres.filter { selectedGenreIds.contains($0._id) }
+    }
+
+    /// Search results: only non-selected genres matching the query, capped at 10.
+    private var genreSearchResults: [Genre] {
+        guard !trimmedSearchText.isEmpty else { return [] }
+        return allGenres
+            .filter { !selectedGenreIds.contains($0._id) }
+            .filter { $0.name.localizedCaseInsensitiveContains(trimmedSearchText) }
+            .prefix(10)
+            .map { $0 }
     }
 
     /// Whether an existing genre already matches the search text exactly (case-insensitive).
@@ -167,11 +176,36 @@ struct BookReviewSheet: View {
 
     private var genreSection: some View {
         Section {
+            // Selected genres as removable chips
+            if !selectedGenres.isEmpty {
+                FlowLayout(spacing: 8) {
+                    ForEach(selectedGenres) { genre in
+                        Button {
+                            toggleGenre(genre._id)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(genre.name)
+                                Image(systemName: "xmark")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                            }
+                            .font(.subheadline)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.tint.opacity(0.15), in: Capsule())
+                            .foregroundStyle(.tint)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
             // Search field
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search or add genre\u{2026}", text: $genreSearchText)
+                TextField("Search genres\u{2026}", text: $genreSearchText)
                     .textInputAutocapitalization(.words)
                     .autocorrectionDisabled()
                 if !genreSearchText.isEmpty {
@@ -211,8 +245,8 @@ struct BookReviewSheet: View {
                 .disabled(isCreatingGenre)
             }
 
-            // Genre list
-            ForEach(filteredGenres) { genre in
+            // Search results (only shown while searching)
+            ForEach(genreSearchResults) { genre in
                 Button {
                     toggleGenre(genre._id)
                 } label: {
@@ -220,18 +254,17 @@ struct BookReviewSheet: View {
                         Text(genre.name)
                             .foregroundStyle(.primary)
                         Spacer()
-                        if selectedGenreIds.contains(genre._id) {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.tint)
-                                .fontWeight(.semibold)
-                        }
                     }
                 }
             }
         } header: {
             Text("Genres")
         } footer: {
-            Text("Vote for genres that best describe this book.")
+            if selectedGenreIds.isEmpty {
+                Text("Search to find and vote for genres that describe this book.")
+            } else {
+                Text("Tap a genre to remove it.")
+            }
         }
     }
 
