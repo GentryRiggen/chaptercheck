@@ -482,3 +482,282 @@ export const getPreservedIds = mutation({
     return { preservedUserIds, preservedStorageAccountIds };
   },
 });
+
+// =============================================================================
+// ENRICHMENT MUTATIONS (for enrich-books and import-books scripts)
+// =============================================================================
+
+/**
+ * Enrich an existing book with missing metadata.
+ * Only fills in fields that are currently missing (doesn't overwrite existing data).
+ */
+export const enrichBook = mutation({
+  args: {
+    bookId: v.string(),
+    description: v.optional(v.string()),
+    subtitle: v.optional(v.string()),
+    isbn: v.optional(v.string()),
+    publishedYear: v.optional(v.number()),
+    language: v.optional(v.string()),
+    coverImageR2Key: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const bookId = args.bookId as Id<"books">;
+    const book = await ctx.db.get(bookId);
+    if (!book) throw new Error(`Book not found: ${bookId}`);
+
+    const patch: Record<string, string | number> = {};
+
+    if (args.description && !book.description) patch.description = args.description;
+    if (args.subtitle && !book.subtitle) patch.subtitle = args.subtitle;
+    if (args.isbn && !book.isbn) patch.isbn = args.isbn;
+    if (args.publishedYear && !book.publishedYear) patch.publishedYear = args.publishedYear;
+    if (args.language && !book.language) patch.language = args.language;
+    if (args.coverImageR2Key && !book.coverImageR2Key) patch.coverImageR2Key = args.coverImageR2Key;
+
+    if (Object.keys(patch).length === 0) return { updated: false };
+
+    patch.updatedAt = Date.now();
+    await ctx.db.patch(bookId, patch);
+
+    return { updated: true, fields: Object.keys(patch).filter((k) => k !== "updatedAt") };
+  },
+});
+
+/**
+ * Enrich an existing author with missing metadata.
+ * Only fills in fields that are currently missing.
+ */
+export const enrichAuthor = mutation({
+  args: {
+    authorId: v.string(),
+    bio: v.optional(v.string()),
+    imageR2Key: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const authorId = args.authorId as Id<"authors">;
+    const author = await ctx.db.get(authorId);
+    if (!author) throw new Error(`Author not found: ${authorId}`);
+
+    const patch: Record<string, string | number> = {};
+
+    if (args.bio && !author.bio) patch.bio = args.bio;
+    if (args.imageR2Key && !author.imageR2Key) patch.imageR2Key = args.imageR2Key;
+
+    if (Object.keys(patch).length === 0) return { updated: false };
+
+    patch.updatedAt = Date.now();
+    await ctx.db.patch(authorId, patch);
+
+    return { updated: true, fields: Object.keys(patch).filter((k) => k !== "updatedAt") };
+  },
+});
+
+/**
+ * Upsert an author by name.
+ * If exists: fill missing fields and return ID.
+ * If not: insert and return ID.
+ */
+export const upsertAuthorByName = mutation({
+  args: {
+    name: v.string(),
+    bio: v.optional(v.string()),
+    imageR2Key: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("authors")
+      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+
+    if (existing) {
+      // Fill missing fields
+      const patch: Record<string, string | number> = {};
+      if (args.bio && !existing.bio) patch.bio = args.bio;
+      if (args.imageR2Key && !existing.imageR2Key) patch.imageR2Key = args.imageR2Key;
+
+      if (Object.keys(patch).length > 0) {
+        patch.updatedAt = Date.now();
+        await ctx.db.patch(existing._id, patch);
+      }
+
+      return { authorId: existing._id, created: false };
+    }
+
+    const now = Date.now();
+    const authorId = await ctx.db.insert("authors", {
+      name: args.name,
+      bio: args.bio,
+      imageR2Key: args.imageR2Key,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { authorId, created: true };
+  },
+});
+
+/**
+ * Upsert a series by name.
+ * If exists: return ID.
+ * If not: insert and return ID.
+ */
+export const upsertSeriesByName = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("series")
+      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+
+    if (existing) return { seriesId: existing._id, created: false };
+
+    const now = Date.now();
+    const seriesId = await ctx.db.insert("series", {
+      name: args.name,
+      description: args.description,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { seriesId, created: true };
+  },
+});
+
+/**
+ * Import a book with author relationships.
+ * Does NOT check for duplicates — caller is responsible for dedup.
+ */
+export const importBookWithAuthors = mutation({
+  args: {
+    title: v.string(),
+    subtitle: v.optional(v.string()),
+    description: v.optional(v.string()),
+    isbn: v.optional(v.string()),
+    publishedYear: v.optional(v.number()),
+    language: v.optional(v.string()),
+    coverImageR2Key: v.optional(v.string()),
+    authorIds: v.array(v.string()), // String IDs to be cast
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    const bookId = await ctx.db.insert("books", {
+      title: args.title,
+      subtitle: args.subtitle,
+      description: args.description,
+      isbn: args.isbn,
+      publishedYear: args.publishedYear,
+      language: args.language,
+      coverImageR2Key: args.coverImageR2Key,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    for (const id of args.authorIds) {
+      await ctx.db.insert("bookAuthors", {
+        bookId,
+        authorId: id as Id<"authors">,
+        role: "author",
+      });
+    }
+
+    return { bookId };
+  },
+});
+
+// =============================================================================
+// GENRE MUTATIONS (for enrichment scripts)
+// =============================================================================
+
+/**
+ * Generate a slug from a genre name (mirrors genres/mutations.ts logic).
+ */
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+/**
+ * Upsert a genre by slug.
+ * If exists: return ID. If not: create and return ID.
+ */
+export const upsertGenreByName = mutation({
+  args: {
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const name = args.name.trim();
+    if (name.length < 2 || name.length > 50) {
+      return { genreId: null, created: false };
+    }
+
+    const slug = generateSlug(name);
+    if (!slug) return { genreId: null, created: false };
+
+    const existing = await ctx.db
+      .query("genres")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+
+    if (existing) return { genreId: existing._id, created: false };
+
+    const now = Date.now();
+    const genreId = await ctx.db.insert("genres", {
+      name,
+      slug,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { genreId, created: true };
+  },
+});
+
+/**
+ * Set genre votes for a book from the enrichment script.
+ * Creates votes attributed to a given userId. Skips duplicates.
+ */
+export const setBookGenreVotes = mutation({
+  args: {
+    bookId: v.string(),
+    genreIds: v.array(v.string()),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const bookId = args.bookId as Id<"books">;
+    const userId = args.userId as Id<"users">;
+
+    let created = 0;
+    for (const gId of args.genreIds) {
+      const genreId = gId as Id<"genres">;
+
+      // Check if vote already exists
+      const existing = await ctx.db
+        .query("bookGenreVotes")
+        .withIndex("by_book_genre_user", (q) =>
+          q.eq("bookId", bookId).eq("genreId", genreId).eq("userId", userId)
+        )
+        .first();
+
+      if (!existing) {
+        await ctx.db.insert("bookGenreVotes", {
+          bookId,
+          genreId,
+          userId,
+          createdAt: Date.now(),
+        });
+        created++;
+      }
+    }
+
+    return { created };
+  },
+});
