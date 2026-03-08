@@ -11,6 +11,9 @@ struct BookDetailView: View {
     @State private var isReviewSheetPresented = false
     @State private var isAddToShelfPresented = false
     @State private var showDeleteDownloadConfirmation = false
+    @State private var noteToEdit: BookNote?
+    @State private var noteToDelete: BookNote?
+    @State private var noteToPreview: BookNote?
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.showNowPlaying) private var showNowPlaying
@@ -82,6 +85,29 @@ struct BookDetailView: View {
                 }
             )
         }
+        .sheet(item: $noteToEdit) { note in
+            BookNoteComposerSheet(
+                context: noteComposerContext(for: note),
+                categories: viewModel.noteCategories,
+                onSave: { payload in
+                    try await viewModel.updateNote(
+                        noteId: note._id,
+                        audioFileId: payload.audioFileId,
+                        categoryId: payload.categoryId,
+                        startSeconds: payload.startSeconds,
+                        endSeconds: payload.endSeconds,
+                        noteText: payload.noteText
+                    )
+                    Haptics.success()
+                },
+                onCreateCategory: { name, colorToken in
+                    try await viewModel.createCategory(name: name, colorToken: colorToken)
+                }
+            )
+        }
+        .sheet(item: $noteToPreview) { note in
+            BookNotePreviewSheet(note: note)
+        }
         .confirmationDialog(
             "Delete Download?",
             isPresented: $showDeleteDownloadConfirmation,
@@ -93,6 +119,26 @@ struct BookDetailView: View {
             Button("No, Thank You") {}
         } message: {
             Text("You've finished this book. Delete the downloaded files to free up storage?")
+        }
+        .confirmationDialog(
+            "Delete note?",
+            isPresented: Binding(
+                get: { noteToDelete != nil },
+                set: { if !$0 { noteToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Note", role: .destructive) {
+                guard let noteToDelete else { return }
+                Task {
+                    try? await viewModel.deleteNote(noteId: noteToDelete._id)
+                    Haptics.success()
+                    self.noteToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                noteToDelete = nil
+            }
         }
     }
 
@@ -173,6 +219,29 @@ struct BookDetailView: View {
                     )
                 }
 
+                Divider()
+                    .padding(.horizontal)
+
+                BookNotesListView(
+                    notes: viewModel.filteredNotes,
+                    categories: viewModel.noteCategories,
+                    selectedCategoryId: Binding(
+                        get: { viewModel.selectedNoteCategoryId },
+                        set: { viewModel.selectedNoteCategoryId = $0 }
+                    ),
+                    filterOption: Binding(
+                        get: { viewModel.notesFilterOption },
+                        set: { viewModel.notesFilterOption = $0 }
+                    ),
+                    onPlayNote: playNote,
+                    onEditNote: { note in
+                        noteToEdit = note
+                    },
+                    onDeleteNote: { note in
+                        noteToDelete = note
+                    }
+                )
+
                 // Reviews (hidden when offline)
                 if !viewModel.isOffline, !viewModel.sortedReviews.isEmpty || viewModel.userData?.isRead == true {
                     Divider()
@@ -228,6 +297,23 @@ struct BookDetailView: View {
 
     private var hasExistingProgress: Bool {
         viewModel.progress != nil && viewModel.resumePosition(smartRewindEnabled: audioPlayer.isSmartRewindEnabled) > 0
+    }
+
+    private func playNote(_ note: BookNote) {
+        Haptics.medium()
+        noteToPreview = note
+    }
+
+    private func noteComposerContext(for note: BookNote) -> BookNoteComposerContext {
+        BookNoteComposerContext(
+            bookId: bookId,
+            audioFiles: viewModel.audioFiles,
+            anchorSeconds: (note.startSeconds + note.endSeconds) / 2,
+            initialAudioFileId: note.audioFileId,
+            initialStartSeconds: note.startSeconds,
+            initialEndSeconds: note.endSeconds,
+            existingNote: note
+        )
     }
 
     private var readStatusView: some View {

@@ -1,0 +1,537 @@
+import SwiftUI
+
+struct BookNoteComposerContext {
+    let bookId: String
+    let audioFiles: [AudioFile]
+    let anchorSeconds: Double
+    let initialAudioFileId: String
+    let initialStartSeconds: Double
+    let initialEndSeconds: Double
+    let existingNote: BookNote?
+}
+
+struct BookNoteComposerSheet: View {
+    let context: BookNoteComposerContext
+    let categories: [NoteCategory]
+    let onSave: (_ payload: BookNoteSavePayload) async throws -> Void
+    let onCreateCategory: (_ name: String, _ colorToken: String) async throws -> String
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(DownloadManager.self) private var downloadManager
+
+    @State private var selectedAudioFileId: String
+    @State private var noteText: String
+    @State private var selectedCategoryId: String?
+    @State private var startSeconds: Double
+    @State private var endSeconds: Double
+    @State private var activeHandle: RangeHandle = .end
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    @State private var newCategoryName = ""
+    @State private var newCategoryColorToken = AccentColorToken.coral.id
+    @State private var isCreatingCategory = false
+    @State private var clipPreviewPlayer = ClipPreviewPlayer()
+
+    private static let windowRadiusSeconds: Double = 15 * 60
+    private static let maxNoteLengthSeconds: Double = 30 * 60
+
+    init(
+        context: BookNoteComposerContext,
+        categories: [NoteCategory],
+        onSave: @escaping (_ payload: BookNoteSavePayload) async throws -> Void,
+        onCreateCategory: @escaping (_ name: String, _ colorToken: String) async throws -> String
+    ) {
+        self.context = context
+        self.categories = categories
+        self.onSave = onSave
+        self.onCreateCategory = onCreateCategory
+
+        _selectedAudioFileId = State(initialValue: context.initialAudioFileId)
+        _noteText = State(initialValue: context.existingNote?.noteText ?? "")
+        _selectedCategoryId = State(initialValue: context.existingNote?.category?._id)
+        _startSeconds = State(initialValue: context.initialStartSeconds)
+        _endSeconds = State(initialValue: context.initialEndSeconds)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    filePickerSection
+                    rangeSection
+                    previewSection
+                    noteTextSection
+                    categorySection
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle(context.existingNote == nil ? "Add Note" : "Edit Note")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(context.existingNote == nil ? "Save" : "Update") {
+                        Task { await save() }
+                    }
+                    .disabled(isSaving || !canSave)
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .onDisappear {
+            clipPreviewPlayer.stop()
+        }
+        .onChange(of: selectedAudioFileId) { _, _ in
+            clipPreviewPlayer.stop()
+        }
+        .onChange(of: startSeconds) { _, _ in
+            clipPreviewPlayer.stop()
+        }
+        .onChange(of: endSeconds) { _, _ in
+            clipPreviewPlayer.stop()
+        }
+    }
+
+    private var selectedAudioFile: AudioFile? {
+        context.audioFiles.first(where: { $0._id == selectedAudioFileId })
+    }
+
+    private var maxDuration: Double {
+        guard let duration = selectedAudioFile?.duration, duration > 0 else {
+            return max(endSeconds, startSeconds + 1, 60)
+        }
+        return duration
+    }
+
+    private var windowStart: Double {
+        max(0, context.anchorSeconds - Self.windowRadiusSeconds)
+    }
+
+    private var windowEnd: Double {
+        min(maxDuration, context.anchorSeconds + Self.windowRadiusSeconds)
+    }
+
+    private var windowLength: Double {
+        max(windowEnd - windowStart, 1)
+    }
+
+    private var canSave: Bool {
+        startSeconds < endSeconds &&
+        selectedAudioFile != nil
+    }
+
+    private var filePickerSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Moment")
+                .font(.headline)
+
+            if context.audioFiles.count > 1 {
+                Picker("Audio File", selection: $selectedAudioFileId) {
+                    ForEach(context.audioFiles) { file in
+                        Text(file.displayName ?? file.fileName).tag(file._id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: selectedAudioFileId) { _, _ in
+                    clampRange()
+                }
+            } else if let selectedAudioFile {
+                Text(selectedAudioFile.displayName ?? selectedAudioFile.fileName)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var rangeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Range")
+                    .font(.headline)
+                Spacer()
+                Text("\(TimeFormatting.formatTime(startSeconds)) - \(TimeFormatting.formatTime(endSeconds))")
+                    .font(.subheadline)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+
+            Text("Length \(TimeFormatting.formatDuration(endSeconds - startSeconds))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            DualHandleRangeSlider(
+                startSeconds: $startSeconds,
+                endSeconds: $endSeconds,
+                windowStart: windowStart,
+                windowEnd: windowEnd,
+                maxLength: Self.maxNoteLengthSeconds,
+                activeHandle: $activeHandle
+            )
+            .frame(height: 44)
+
+            HStack(spacing: 12) {
+                quickAdjustButton(title: "-15", delta: -15)
+                quickAdjustButton(title: "-5", delta: -5)
+                Text(activeHandle == .start ? "Adjusting start" : "Adjusting end")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                quickAdjustButton(title: "+5", delta: 5)
+                quickAdjustButton(title: "+15", delta: 15)
+            }
+        }
+    }
+
+    private var previewSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Preview")
+                    .font(.headline)
+
+                Spacer()
+
+                if clipPreviewPlayer.isPlaying {
+                    Text("\(TimeFormatting.formatTime(clipPreviewPlayer.currentTime)) / \(TimeFormatting.formatTime(endSeconds - startSeconds))")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            HStack(spacing: 12) {
+                Button {
+                    Task { await togglePreview() }
+                } label: {
+                    HStack(spacing: 8) {
+                        if clipPreviewPlayer.isLoading {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: clipPreviewPlayer.isPlaying ? "pause.fill" : "play.fill")
+                        }
+                        Text(clipPreviewPlayer.isPlaying ? "Pause Preview" : "Preview Clip")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(selectedAudioFile == nil || clipPreviewPlayer.isLoading)
+
+                if clipPreviewPlayer.isPlaying || clipPreviewPlayer.currentTime > 0 {
+                    Button("Stop") {
+                        clipPreviewPlayer.stop()
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            Text("Preview uses a separate player and does not change your current listening position.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if let previewError = clipPreviewPlayer.errorMessage {
+                Text(previewError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private var noteTextSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Note")
+                .font(.headline)
+
+            TextField("What stood out here?", text: $noteText, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(3...6)
+        }
+    }
+
+    private var categorySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Category")
+                .font(.headline)
+
+            if categories.isEmpty {
+                Text("Create your first category below.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Button {
+                    selectedCategoryId = nil
+                } label: {
+                    Text("No category")
+                        .font(.subheadline)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 999)
+                                .fill(selectedCategoryId == nil ? Color(.secondarySystemFill) : .clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 999)
+                                .stroke(selectedCategoryId == nil ? Color.secondary.opacity(0.4) : .clear, lineWidth: 1.5)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                FlexibleChipLayout(items: categories, selectedId: selectedCategoryId) { category in
+                    Button {
+                        selectedCategoryId = category._id
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(AccentColorToken.color(for: category.colorToken))
+                                .frame(width: 10, height: 10)
+                            Text(category.name)
+                                .lineLimit(1)
+                        }
+                        .font(.subheadline)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 999)
+                                .fill(selectedCategoryId == category._id ? AccentColorToken.color(for: category.colorToken).opacity(0.18) : Color(.secondarySystemFill))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 999)
+                                .stroke(selectedCategoryId == category._id ? AccentColorToken.color(for: category.colorToken) : .clear, lineWidth: 1.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("New category")
+                    .font(.subheadline.weight(.medium))
+
+                TextField("Category name", text: $newCategoryName)
+                    .textFieldStyle(.roundedBorder)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(Self.categoryColorOptions) { token in
+                            Button {
+                                newCategoryColorToken = token.id
+                            } label: {
+                                Circle()
+                                    .fill(token.color)
+                                    .frame(width: 28, height: 28)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.primary.opacity(newCategoryColorToken == token.id ? 0.6 : 0), lineWidth: 3)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+
+                Button {
+                    Task { await createCategory() }
+                } label: {
+                    Label("Create Category", systemImage: "plus")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(isCreatingCategory || newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding()
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private func quickAdjustButton(title: String, delta: Double) -> some View {
+        Button(title) {
+            adjustActiveHandle(by: delta)
+        }
+        .buttonStyle(.bordered)
+    }
+
+    private func adjustActiveHandle(by delta: Double) {
+        switch activeHandle {
+        case .start:
+            startSeconds = min(max(windowStart, startSeconds + delta), endSeconds - 1)
+            if endSeconds - startSeconds > Self.maxNoteLengthSeconds {
+                endSeconds = min(windowEnd, startSeconds + Self.maxNoteLengthSeconds)
+            }
+        case .end:
+            endSeconds = max(min(windowEnd, endSeconds + delta), startSeconds + 1)
+            if endSeconds - startSeconds > Self.maxNoteLengthSeconds {
+                startSeconds = max(windowStart, endSeconds - Self.maxNoteLengthSeconds)
+            }
+        }
+    }
+
+    private func clampRange() {
+        startSeconds = min(max(windowStart, startSeconds), max(windowEnd - 1, windowStart))
+        endSeconds = min(max(startSeconds + 1, endSeconds), windowEnd)
+        if endSeconds - startSeconds > Self.maxNoteLengthSeconds {
+            endSeconds = min(windowEnd, startSeconds + Self.maxNoteLengthSeconds)
+        }
+    }
+
+    private func createCategory() async {
+        isCreatingCategory = true
+        defer { isCreatingCategory = false }
+
+        do {
+            let newId = try await onCreateCategory(
+                newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines),
+                newCategoryColorToken
+            )
+            selectedCategoryId = newId
+            newCategoryName = ""
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func save() async {
+        errorMessage = nil
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            try await onSave(
+                BookNoteSavePayload(
+                    noteId: context.existingNote?._id,
+                    audioFileId: selectedAudioFileId,
+                    categoryId: selectedCategoryId,
+                    startSeconds: startSeconds,
+                    endSeconds: endSeconds,
+                    noteText: {
+                        let trimmed = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        return trimmed.isEmpty ? nil : trimmed
+                    }()
+                )
+            )
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func togglePreview() async {
+        guard let selectedAudioFile else { return }
+
+        if clipPreviewPlayer.isPlaying {
+            clipPreviewPlayer.pause()
+            return
+        }
+
+        let localFileURL = await downloadManager.localFileURL(for: selectedAudioFile._id)
+        await clipPreviewPlayer.playClip(
+            audioFileId: selectedAudioFile._id,
+            localFileURL: localFileURL,
+            startSeconds: startSeconds,
+            endSeconds: endSeconds
+        )
+    }
+
+    private static let categoryColorOptions = Array(AccentColorToken.all.prefix(16))
+}
+
+struct BookNoteSavePayload {
+    let noteId: String?
+    let audioFileId: String
+    let categoryId: String?
+    let startSeconds: Double
+    let endSeconds: Double
+    let noteText: String?
+}
+
+private enum RangeHandle {
+    case start
+    case end
+}
+
+private struct DualHandleRangeSlider: View {
+    @Binding var startSeconds: Double
+    @Binding var endSeconds: Double
+    let windowStart: Double
+    let windowEnd: Double
+    let maxLength: Double
+    @Binding var activeHandle: RangeHandle
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = max(geometry.size.width, 1)
+            let windowLength = max(windowEnd - windowStart, 1)
+            let startX = CGFloat((startSeconds - windowStart) / windowLength) * width
+            let endX = CGFloat((endSeconds - windowStart) / windowLength) * width
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(.fill.tertiary)
+                    .frame(height: 6)
+
+                Capsule()
+                    .fill(.tint)
+                    .frame(width: max(endX - startX, 8), height: 8)
+                    .offset(x: startX)
+
+                handle(at: startX, selected: activeHandle == .start)
+                    .gesture(dragGesture(for: .start, width: width))
+
+                handle(at: endX, selected: activeHandle == .end)
+                    .gesture(dragGesture(for: .end, width: width))
+            }
+            .frame(height: 44)
+        }
+    }
+
+    private func handle(at x: CGFloat, selected: Bool) -> some View {
+        Circle()
+            .fill(.background)
+            .frame(width: selected ? 24 : 20, height: selected ? 24 : 20)
+            .overlay(Circle().stroke(.tint, lineWidth: 3))
+            .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+            .offset(x: x - (selected ? 12 : 10))
+    }
+
+    private func dragGesture(for handle: RangeHandle, width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                activeHandle = handle
+                let windowLength = max(windowEnd - windowStart, 1)
+                let rawValue = windowStart + max(0, min(Double(value.location.x / width) * windowLength, windowLength))
+                switch handle {
+                case .start:
+                    startSeconds = min(rawValue, endSeconds - 1)
+                    if endSeconds - startSeconds > maxLength {
+                        endSeconds = min(windowEnd, startSeconds + maxLength)
+                    }
+                case .end:
+                    endSeconds = max(rawValue, startSeconds + 1)
+                    if endSeconds - startSeconds > maxLength {
+                        startSeconds = max(windowStart, endSeconds - maxLength)
+                    }
+                }
+            }
+    }
+}
+
+private struct FlexibleChipLayout<Item: Identifiable, Content: View>: View {
+    let items: [Item]
+    let selectedId: String?
+    @ViewBuilder let content: (Item) -> Content
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], alignment: .leading, spacing: 8) {
+            ForEach(items) { item in
+                content(item)
+            }
+        }
+    }
+}

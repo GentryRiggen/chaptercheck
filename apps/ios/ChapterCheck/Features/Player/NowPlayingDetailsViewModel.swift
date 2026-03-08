@@ -15,12 +15,14 @@ final class NowPlayingDetailsViewModel {
     var ratingStats: RatingStats?
     var allGenres: [Genre] = []
     var myGenreVoteIds: [String] = []
+    var noteCategories: [NoteCategory] = []
     var error: String?
 
     // MARK: - Dependencies
 
     private let bookUserDataRepository = BookUserDataRepository()
     private let genreRepository = GenreRepository()
+    private let bookNotesRepository = BookNotesRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
     private var currentBookId: String?
@@ -62,6 +64,7 @@ final class NowPlayingDetailsViewModel {
         ratingStats = nil
         allGenres = []
         myGenreVoteIds = []
+        noteCategories = []
     }
 
     private func setupSubscriptions(bookId: String) {
@@ -101,6 +104,16 @@ final class NowPlayingDetailsViewModel {
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] voteIds in
                     self?.myGenreVoteIds = voteIds
+                }
+            )
+            .store(in: &cancellables)
+
+        bookNotesRepository.subscribeToMyCategories()?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] categories in
+                    self?.noteCategories = categories
                 }
             )
             .store(in: &cancellables)
@@ -148,5 +161,27 @@ final class NowPlayingDetailsViewModel {
         } else {
             self.error = "Failed to save \(errors.joined(separator: " and "))"
         }
+    }
+
+    func createCategory(name: String, colorToken: String) async throws -> String {
+        try await bookNotesRepository.createCategory(name: name, colorToken: colorToken)
+    }
+
+    func createNote(
+        bookId: String,
+        audioFileId: String,
+        categoryId: String?,
+        startSeconds: Double,
+        endSeconds: Double,
+        noteText: String?
+    ) async throws {
+        try await bookNotesRepository.createNote(
+            bookId: bookId,
+            audioFileId: audioFileId,
+            categoryId: categoryId,
+            startSeconds: startSeconds,
+            endSeconds: endSeconds,
+            noteText: noteText
+        )
     }
 }

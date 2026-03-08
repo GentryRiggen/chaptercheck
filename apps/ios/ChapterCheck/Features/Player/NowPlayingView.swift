@@ -14,6 +14,7 @@ struct NowPlayingView: View {
     @State private var isPartSelectorPresented = false
     @State private var isAudioSettingsPresented = false
     @State private var isSleepTimerPresented = false
+    @State private var isNoteComposerPresented = false
     @State private var showSavedIndicator = false
     @State private var isPlayingAnimated = false
 
@@ -123,9 +124,25 @@ struct NowPlayingView: View {
 
             Spacer(minLength: 0)
 
-            // Seek bar
-            SeekBarView()
-                .padding(.horizontal, 24)
+            // Seek bar + add note action
+            HStack(alignment: .center, spacing: 12) {
+                SeekBarView()
+
+                Button {
+                    Haptics.light()
+                    isNoteComposerPresented = true
+                } label: {
+                    Image(systemName: "text.badge.plus")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .contentShape(Circle())
+                .accessibilityLabel("Add note")
+            }
+            .padding(.horizontal, 24)
 
             // Slider seek undo banner
             sliderSeekUndoSection
@@ -227,6 +244,28 @@ struct NowPlayingView: View {
         .sheet(isPresented: $isSleepTimerPresented) {
             SleepTimerSheet()
                 .environment(audioPlayer)
+        }
+        .sheet(isPresented: $isNoteComposerPresented) {
+            if let context = noteComposerContext {
+                BookNoteComposerSheet(
+                    context: context,
+                    categories: detailsViewModel.noteCategories,
+                    onSave: { payload in
+                        try await detailsViewModel.createNote(
+                            bookId: context.bookId,
+                            audioFileId: payload.audioFileId,
+                            categoryId: payload.categoryId,
+                            startSeconds: payload.startSeconds,
+                            endSeconds: payload.endSeconds,
+                            noteText: payload.noteText
+                        )
+                        Haptics.success()
+                    },
+                    onCreateCategory: { name, colorToken in
+                        try await detailsViewModel.createCategory(name: name, colorToken: colorToken)
+                    }
+                )
+            }
         }
     }
 
@@ -477,6 +516,24 @@ struct NowPlayingView: View {
                 Spacer()
             }
         }
+    }
+
+    private var noteComposerContext: BookNoteComposerContext? {
+        guard let book = audioPlayer.currentBook,
+              let currentAudioFile = audioPlayer.currentAudioFile else { return nil }
+
+        let start = min(audioPlayer.currentPosition, max(audioPlayer.duration - 1, 0))
+        let end = min(start + 60, max(audioPlayer.duration, start + 1))
+
+        return BookNoteComposerContext(
+            bookId: book._id,
+            audioFiles: audioPlayer.audioFiles,
+            anchorSeconds: audioPlayer.currentPosition,
+            initialAudioFileId: currentAudioFile._id,
+            initialStartSeconds: start,
+            initialEndSeconds: end,
+            existingNote: nil
+        )
     }
 
 }

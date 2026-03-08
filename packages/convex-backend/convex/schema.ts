@@ -225,6 +225,33 @@ export default defineSchema({
     .index("by_user_and_book", ["userId", "bookId"])
     .index("by_user_and_lastListened", ["userId", "lastListenedAt"]),
 
+  // Reusable note categories for private timestamped book notes
+  noteCategories: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    colorToken: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_name", ["userId", "name"]),
+
+  // Private per-user timestamped notes tied to a book audio file range
+  bookNotes: defineTable({
+    userId: v.id("users"),
+    bookId: v.id("books"),
+    audioFileId: v.id("audioFiles"),
+    categoryId: v.optional(v.id("noteCategories")),
+    startSeconds: v.number(),
+    endSeconds: v.number(),
+    noteText: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_and_book", ["userId", "bookId"])
+    .index("by_user_and_book_and_audioFile", ["userId", "bookId", "audioFileId"])
+    .index("by_user_and_updatedAt", ["userId", "updatedAt"]),
+
   // Book User Data (read status, ratings, reviews)
   bookUserData: defineTable({
     userId: v.id("users"),

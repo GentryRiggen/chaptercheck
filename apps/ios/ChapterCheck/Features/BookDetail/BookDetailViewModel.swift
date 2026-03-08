@@ -27,6 +27,20 @@ enum ReviewSortOption: String, CaseIterable, Identifiable {
     }
 }
 
+enum BookNotesFilterOption: String, CaseIterable, Identifiable {
+    case all = "all"
+    case recent = "recent"
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .all: return "Timeline"
+        case .recent: return "Recently Updated"
+        }
+    }
+}
+
 // MARK: - ViewModel
 
 /// View model for the book detail screen.
@@ -48,6 +62,10 @@ final class BookDetailViewModel {
     var reviews: [PublicReview] = []
     var allGenres: [Genre] = []
     var myGenreVoteIds: [String] = []
+    var notes: [BookNote] = []
+    var noteCategories: [NoteCategory] = []
+    var selectedNoteCategoryId: String?
+    var notesFilterOption: BookNotesFilterOption = .all
     var reviewSortOption: ReviewSortOption = .recent
 
     var isLoading = true
@@ -67,6 +85,7 @@ final class BookDetailViewModel {
     private let progressRepository = ProgressRepository()
     private let bookUserDataRepository = BookUserDataRepository()
     private let genreRepository = GenreRepository()
+    private let bookNotesRepository = BookNotesRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
     private var currentBookId: String?
@@ -137,6 +156,27 @@ final class BookDetailViewModel {
         return sorted
     }
 
+    var filteredNotes: [BookNote] {
+        let byCategory = notes.filter { note in
+            guard let selectedNoteCategoryId else { return true }
+            return note.category?._id == selectedNoteCategoryId
+        }
+
+        switch notesFilterOption {
+        case .all:
+            return byCategory.sorted { lhs, rhs in
+                let lhsPart = lhs.audioFile.partNumber ?? 0
+                let rhsPart = rhs.audioFile.partNumber ?? 0
+                if lhsPart != rhsPart {
+                    return lhsPart < rhsPart
+                }
+                return lhs.startSeconds < rhs.startSeconds
+            }
+        case .recent:
+            return byCategory.sorted { $0.updatedAt > $1.updatedAt }
+        }
+    }
+
     // MARK: - Lifecycle
 
     func subscribe(bookId: String) {
@@ -160,6 +200,8 @@ final class BookDetailViewModel {
                 subscribeToReviews(bookId: bookId)
                 subscribeToAllGenres()
                 subscribeToMyGenreVotes(bookId: bookId)
+                subscribeToNotes(bookId: bookId)
+                subscribeToNoteCategories()
             },
             onUnauthenticated: { [weak self] in
                 self?.cancellables.removeAll()
@@ -175,7 +217,7 @@ final class BookDetailViewModel {
 
     /// Transition from offline manifest data to live Convex subscriptions.
     func recoverFromOffline() {
-        guard isShowingOfflineData, let bookId = currentBookId else { return }
+        guard isShowingOfflineData, currentBookId != nil else { return }
         isShowingOfflineData = false
         error = nil
 
@@ -190,6 +232,8 @@ final class BookDetailViewModel {
                 subscribeToReviews(bookId: bookId)
                 subscribeToAllGenres()
                 subscribeToMyGenreVotes(bookId: bookId)
+                subscribeToNotes(bookId: bookId)
+                subscribeToNoteCategories()
             },
             onUnauthenticated: { [weak self] in
                 self?.cancellables.removeAll()
@@ -249,6 +293,50 @@ final class BookDetailViewModel {
         } else {
             self.error = "Failed to save \(errors.joined(separator: " and "))"
         }
+    }
+
+    func createCategory(name: String, colorToken: String) async throws -> String {
+        try await bookNotesRepository.createCategory(name: name, colorToken: colorToken)
+    }
+
+    func createNote(
+        audioFileId: String,
+        categoryId: String?,
+        startSeconds: Double,
+        endSeconds: Double,
+        noteText: String?
+    ) async throws {
+        guard let book else { return }
+        try await bookNotesRepository.createNote(
+            bookId: book._id,
+            audioFileId: audioFileId,
+            categoryId: categoryId,
+            startSeconds: startSeconds,
+            endSeconds: endSeconds,
+            noteText: noteText
+        )
+    }
+
+    func updateNote(
+        noteId: String,
+        audioFileId: String,
+        categoryId: String?,
+        startSeconds: Double,
+        endSeconds: Double,
+        noteText: String?
+    ) async throws {
+        try await bookNotesRepository.updateNote(
+            noteId: noteId,
+            audioFileId: audioFileId,
+            categoryId: categoryId,
+            startSeconds: startSeconds,
+            endSeconds: endSeconds,
+            noteText: noteText
+        )
+    }
+
+    func deleteNote(noteId: String) async throws {
+        try await bookNotesRepository.deleteNote(noteId: noteId)
     }
 
     // MARK: - Private Subscriptions
@@ -375,6 +463,34 @@ final class BookDetailViewModel {
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] voteIds in
                     self?.myGenreVoteIds = voteIds
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToNotes(bookId: String) {
+        bookNotesRepository.subscribeToMyNotes(bookId: bookId)?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] notes in
+                    self?.notes = notes
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToNoteCategories() {
+        bookNotesRepository.subscribeToMyCategories()?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] categories in
+                    self?.noteCategories = categories
+                    if let selectedId = self?.selectedNoteCategoryId,
+                       !categories.contains(where: { $0._id == selectedId }) {
+                        self?.selectedNoteCategoryId = nil
+                    }
                 }
             )
             .store(in: &cancellables)
