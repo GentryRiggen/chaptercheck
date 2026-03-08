@@ -32,6 +32,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_bookRatings from "../lib/bookRatings.js";
 import type * as lib_r2Client from "../lib/r2Client.js";
 import type * as lib_r2Keys from "../lib/r2Keys.js";
+import type * as lib_wantToReadShelf from "../lib/wantToReadShelf.js";
 import type * as listeningProgress_mutations from "../listeningProgress/mutations.js";
 import type * as listeningProgress_queries from "../listeningProgress/queries.js";
 import type * as migration_mutations from "../migration/mutations.js";
@@ -84,6 +85,7 @@ declare const fullApi: ApiFromModules<{
   "lib/bookRatings": typeof lib_bookRatings;
   "lib/r2Client": typeof lib_r2Client;
   "lib/r2Keys": typeof lib_r2Keys;
+  "lib/wantToReadShelf": typeof lib_wantToReadShelf;
   "listeningProgress/mutations": typeof listeningProgress_mutations;
   "listeningProgress/queries": typeof listeningProgress_queries;
   "migration/mutations": typeof migration_mutations;

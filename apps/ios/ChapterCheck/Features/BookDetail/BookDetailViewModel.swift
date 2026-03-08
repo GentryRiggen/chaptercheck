@@ -68,6 +68,7 @@ final class BookDetailViewModel {
     var notesFilterOption: BookNotesFilterOption = .all
     var reviewSortOption: ReviewSortOption = .recent
     var currentUser: UserWithPermissions?
+    var wantToReadStatus = WantToReadStatus(isOnWantToRead: false, shelfId: nil)
 
     var isLoading = true
     var error: String?
@@ -85,6 +86,7 @@ final class BookDetailViewModel {
     private let audioRepository = AudioRepository()
     private let progressRepository = ProgressRepository()
     private let bookUserDataRepository = BookUserDataRepository()
+    private let shelfRepository = ShelfRepository()
     let genreRepository = GenreRepository()
     private let bookNotesRepository = BookNotesRepository()
     private let userRepository = UserRepository()
@@ -202,6 +204,7 @@ final class BookDetailViewModel {
                 subscribeToAudioFiles(bookId: bookId)
                 subscribeToProgress(bookId: bookId)
                 subscribeToUserData(bookId: bookId)
+                subscribeToWantToReadStatus(bookId: bookId)
                 subscribeToRatingStats(bookId: bookId)
                 subscribeToReviews(bookId: bookId)
                 subscribeToAllGenres()
@@ -235,6 +238,7 @@ final class BookDetailViewModel {
                 subscribeToAudioFiles(bookId: bookId)
                 subscribeToProgress(bookId: bookId)
                 subscribeToUserData(bookId: bookId)
+                subscribeToWantToReadStatus(bookId: bookId)
                 subscribeToRatingStats(bookId: bookId)
                 subscribeToReviews(bookId: bookId)
                 subscribeToAllGenres()
@@ -347,6 +351,20 @@ final class BookDetailViewModel {
         try await bookNotesRepository.deleteNote(noteId: noteId)
     }
 
+    func toggleWantToRead() async {
+        guard let book else { return }
+        do {
+            let result = try await shelfRepository.toggleWantToRead(bookId: book._id)
+            wantToReadStatus = WantToReadStatus(
+                isOnWantToRead: result.isOnWantToRead,
+                shelfId: result.shelfId
+            )
+            Haptics.success()
+        } catch {
+            self.error = "Failed to update Want to Read"
+        }
+    }
+
     // MARK: - Private Subscriptions
 
     private func subscribeToBook(bookId: String) {
@@ -423,6 +441,18 @@ final class BookDetailViewModel {
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] data in
                     self?.userData = data
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToWantToReadStatus(bookId: String) {
+        shelfRepository.subscribeToWantToReadStatus(bookId: bookId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] status in
+                    self?.wantToReadStatus = status
                 }
             )
             .store(in: &cancellables)

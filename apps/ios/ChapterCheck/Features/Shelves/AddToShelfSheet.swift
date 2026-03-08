@@ -8,13 +8,18 @@ import SwiftUI
 /// A "Create New Shelf" button at the bottom opens `ShelfFormSheet`.
 struct AddToShelfSheet: View {
     let bookId: String
+    private let wantToReadShelfName = "Want to Read"
 
     @State private var shelves: [ShelfForBook] = []
+    @State private var wantToReadStatus: WantToReadStatus?
     @State private var isLoading = true
     @State private var error: String?
     @State private var pendingBookIds = Set<String>()
+    @State private var isWantToReadPending = false
     @State private var isCreateShelfPresented = false
     @State private var cancellables = Set<AnyCancellable>()
+    @State private var didLoadShelves = false
+    @State private var didLoadWantToRead = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -25,11 +30,11 @@ struct AddToShelfSheet: View {
             Group {
                 if isLoading {
                     LoadingView(message: "Loading shelves...")
-                } else if let error, shelves.isEmpty {
+                } else if let error, !hasAnyOptions {
                     ErrorView(message: error) {
                         subscribeToShelves()
                     }
-                } else if shelves.isEmpty {
+                } else if !hasAnyOptions {
                     EmptyStateView(
                         icon: "books.vertical",
                         title: "No Shelves",
@@ -54,7 +59,7 @@ struct AddToShelfSheet: View {
         }
         .presentationDetents([.medium, .large])
         .alert("Error", isPresented: .init(
-            get: { error != nil && !shelves.isEmpty },
+            get: { error != nil && hasAnyOptions },
             set: { if !$0 { error = nil } }
         )) {
             Button("OK", role: .cancel) { error = nil }
@@ -75,38 +80,81 @@ struct AddToShelfSheet: View {
     // MARK: - Shelf List
 
     private var shelfList: some View {
-        List(shelves) { shelf in
-            Button {
-                toggleShelf(shelf)
-            } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(shelf.name)
-                            .foregroundStyle(.primary)
+        List {
+            Section {
+                wantToReadRow
+            }
 
-                        HStack(spacing: 4) {
-                            if shelf.isOrdered {
-                                Image(systemName: "list.number")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+            if !displayShelves.isEmpty {
+                Section("Shelves") {
+                    ForEach(displayShelves) { shelf in
+                        Button {
+                            toggleShelf(shelf)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(shelf.name)
+                                        .foregroundStyle(.primary)
+
+                                    HStack(spacing: 4) {
+                                        if shelf.isOrdered {
+                                            Image(systemName: "list.number")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+
+                                Spacer()
+
+                                if pendingBookIds.contains(shelf._id) {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else if shelf.containsBook {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                        .fontWeight(.semibold)
+                                }
                             }
                         }
-                    }
-
-                    Spacer()
-
-                    if pendingBookIds.contains(shelf._id) {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else if shelf.containsBook {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(.tint)
-                            .fontWeight(.semibold)
+                        .disabled(pendingBookIds.contains(shelf._id))
                     }
                 }
             }
-            .disabled(pendingBookIds.contains(shelf._id))
         }
+        .scrollContentBackground(.hidden)
+    }
+
+    private var wantToReadRow: some View {
+        Button {
+            toggleWantToRead()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: wantToReadStatus?.isOnWantToRead == true ? "bookmark.fill" : "bookmark")
+                    .foregroundStyle(.tint)
+                    .frame(width: 18)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Want to Read")
+                        .foregroundStyle(.primary)
+                    Text("Save this book for later")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if isWantToReadPending {
+                    ProgressView()
+                        .controlSize(.small)
+                } else if wantToReadStatus?.isOnWantToRead == true {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(.tint)
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .disabled(isWantToReadPending)
     }
 
     // MARK: - Create Shelf Button
@@ -131,6 +179,8 @@ struct AddToShelfSheet: View {
         cancellables.removeAll()
         isLoading = true
         error = nil
+        didLoadShelves = false
+        didLoadWantToRead = false
 
         repository.subscribeToMyShelvesForBook(bookId: bookId)
             .receive(on: DispatchQueue.main)
@@ -138,12 +188,32 @@ struct AddToShelfSheet: View {
                 receiveCompletion: { completion in
                     if case .failure(let err) = completion {
                         error = err.localizedDescription
-                        isLoading = false
+                        didLoadShelves = true
+                        updateLoadingState()
                     }
                 },
                 receiveValue: { loadedShelves in
                     shelves = loadedShelves
-                    isLoading = false
+                    didLoadShelves = true
+                    updateLoadingState()
+                }
+            )
+            .store(in: &cancellables)
+
+        repository.subscribeToWantToReadStatus(bookId: bookId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let err) = completion {
+                        error = err.localizedDescription
+                        didLoadWantToRead = true
+                        updateLoadingState()
+                    }
+                },
+                receiveValue: { status in
+                    wantToReadStatus = status
+                    didLoadWantToRead = true
+                    updateLoadingState()
                 }
             )
             .store(in: &cancellables)
@@ -169,5 +239,38 @@ struct AddToShelfSheet: View {
             }
             pendingBookIds.remove(shelf._id)
         }
+    }
+
+    private func toggleWantToRead() {
+        Haptics.selection()
+        isWantToReadPending = true
+
+        Task {
+            do {
+                let result = try await repository.toggleWantToRead(bookId: bookId)
+                wantToReadStatus = WantToReadStatus(
+                    isOnWantToRead: result.isOnWantToRead,
+                    shelfId: result.shelfId
+                )
+            } catch {
+                self.error = "Failed to update Want to Read"
+            }
+            isWantToReadPending = false
+        }
+    }
+
+    private var displayShelves: [ShelfForBook] {
+        shelves.filter {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                .localizedCaseInsensitiveCompare(wantToReadShelfName) != .orderedSame
+        }
+    }
+
+    private var hasAnyOptions: Bool {
+        wantToReadStatus != nil || !displayShelves.isEmpty
+    }
+
+    private func updateLoadingState() {
+        isLoading = !(didLoadShelves && didLoadWantToRead)
     }
 }

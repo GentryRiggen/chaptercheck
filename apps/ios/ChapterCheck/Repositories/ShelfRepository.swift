@@ -36,6 +36,11 @@ final class ShelfRepository {
         convex.subscribe(to: "shelves/queries:getMyShelvesForBook", with: ["bookId": bookId])
     }
 
+    /// Subscribe to whether the current book is on the reserved Want to Read shelf.
+    func subscribeToWantToReadStatus(bookId: String) -> AnyPublisher<WantToReadStatus, ClientError> {
+        convex.subscribe(to: "shelves/queries:getWantToReadStatus", with: ["bookId": bookId])
+    }
+
     // MARK: - Mutations
 
     /// Create a new shelf and return its ID.
@@ -101,6 +106,13 @@ final class ShelfRepository {
         try await convex.mutation("shelves/mutations:reorderShelfBooks", with: [
             "shelfId": shelfId,
             "bookIds": encodableBookIds,
+        ])
+    }
+
+    /// Toggle a book on the reserved Want to Read shelf.
+    func toggleWantToRead(bookId: String) async throws -> ToggleWantToReadResult {
+        try await convex.mutation("shelves/mutations:toggleWantToRead", with: [
+            "bookId": bookId,
         ])
     }
 }
