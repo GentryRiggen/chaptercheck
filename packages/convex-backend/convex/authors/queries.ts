@@ -196,26 +196,45 @@ export const getAuthorSeries = query({
       .withIndex("by_author", (q) => q.eq("authorId", args.authorId))
       .collect();
 
-    // Fetch all books and collect unique series IDs with counts
-    const seriesCounts = new Map<string, number>();
+    // Fetch all books and collect unique series IDs with counts + preview covers
+    const seriesData = new Map<
+      string,
+      {
+        count: number;
+        previewBooks: { _id: string; title: string; coverImageR2Key?: string }[];
+      }
+    >();
 
     for (const ba of bookAuthors) {
       const book = await ctx.db.get(ba.bookId);
       if (!book || !book.seriesId) continue;
 
-      seriesCounts.set(book.seriesId, (seriesCounts.get(book.seriesId) || 0) + 1);
+      const existing = seriesData.get(book.seriesId) || {
+        count: 0,
+        previewBooks: [],
+      };
+      existing.count++;
+      if (existing.previewBooks.length < 3) {
+        existing.previewBooks.push({
+          _id: book._id,
+          title: book.title,
+          coverImageR2Key: book.coverImageR2Key,
+        });
+      }
+      seriesData.set(book.seriesId, existing);
     }
 
     // Fetch series details
     const seriesWithCounts = await Promise.all(
-      Array.from(seriesCounts.entries()).map(async ([seriesId, count]) => {
+      Array.from(seriesData.entries()).map(async ([seriesId, data]) => {
         const series = await ctx.db.get(seriesId as Id<"series">);
         if (!series) return null;
         return {
           _id: series._id,
           name: series.name,
           description: series.description,
-          bookCountByAuthor: count,
+          bookCountByAuthor: data.count,
+          previewBooks: data.previewBooks,
         };
       })
     );

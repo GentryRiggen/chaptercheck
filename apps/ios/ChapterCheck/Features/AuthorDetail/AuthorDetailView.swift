@@ -186,15 +186,8 @@ struct AuthorDetailView: View {
 
     private func seriesRow(_ series: AuthorSeries) -> some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.fill.tertiary)
-                    .frame(width: 44, height: 44)
-
-                Image(systemName: "books.vertical")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-            }
+            StackedCoversView(previewBooks: series.previewBooks, size: 36)
+                .frame(width: 52)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(series.name)

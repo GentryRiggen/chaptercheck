@@ -63,7 +63,16 @@ struct AuthorSeries: Decodable, Identifiable, Hashable, Sendable {
     let name: String
     let description: String?
     let bookCountByAuthor: Double
+    let previewBooks: [ShelfPreviewBook]
 
     var id: String { _id }
     var bookCountByAuthorInt: Int { Int(bookCountByAuthor) }
+
+    static func == (lhs: AuthorSeries, rhs: AuthorSeries) -> Bool {
+        lhs._id == rhs._id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(_id)
+    }
 }
