@@ -224,7 +224,7 @@ struct BookDetailView: View {
                         playButton(book)
                             .padding(.horizontal)
                         if !viewModel.isOffline {
-                            readStatusView
+                            statusActions
                                 .padding(.horizontal)
                         }
                     } else {
@@ -236,9 +236,16 @@ struct BookDetailView: View {
                             }
                         }
                         .padding(.horizontal)
+                        if !viewModel.isOffline {
+                            wantToReadButton
+                                .padding(.horizontal)
+                        }
                     }
                 } else if !viewModel.isOffline {
-                    readStatusView
+                    VStack(spacing: 12) {
+                        readStatusView
+                        wantToReadButton
+                    }
                         .padding(.horizontal)
                 }
 
@@ -367,6 +374,37 @@ struct BookDetailView: View {
                 isReviewSheetPresented = true
             }
         )
+    }
+
+    private var wantToReadButton: some View {
+        Group {
+            if viewModel.wantToReadStatus.isOnWantToRead {
+                Button {
+                    Task { await viewModel.toggleWantToRead() }
+                } label: {
+                    Label("Want to Read", systemImage: "bookmark.fill")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                Button {
+                    Task { await viewModel.toggleWantToRead() }
+                } label: {
+                    Label("Add to Want to Read", systemImage: "bookmark")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+    }
+
+    private var statusActions: some View {
+        VStack(spacing: 12) {
+            readStatusView
+            wantToReadButton
+        }
     }
 
     // MARK: - Description

@@ -19,6 +19,7 @@ import { BookGenres } from "@/components/books/BookGenres";
 import { BookRatingStats } from "@/components/books/BookRatingStats";
 import { BookReadStatus } from "@/components/books/BookReadStatus";
 import { ReviewsList } from "@/components/books/ReviewsList";
+import { WantToReadButton } from "@/components/books/WantToReadButton";
 import { PremiumGate, RoleGate } from "@/components/permissions";
 import { AddToShelfPopover } from "@/components/shelves/AddToShelfPopover";
 import { Button } from "@/components/ui/button";
@@ -199,7 +200,8 @@ export default function BookDetailPage() {
         {/* Hero section - always side by side */}
         <div className="relative mb-6 flex gap-4 sm:gap-6">
           {/* Mark as Read + Shelves - top right */}
-          <div className="absolute -top-1 right-0 z-10 flex items-center gap-2">
+          <div className="absolute -top-1 right-0 z-10 flex flex-wrap justify-end gap-2">
+            <WantToReadButton bookId={bookId} />
             <AddToShelfPopover bookId={bookId} />
             <BookReadStatus bookId={bookId} />
           </div>
@@ -215,7 +217,7 @@ export default function BookDetailPage() {
           </div>
 
           {/* Book info */}
-          <div className="min-w-0 flex-1 pr-32 sm:pr-36">
+          <div className="min-w-0 flex-1 pr-40 sm:pr-56 md:pr-72">
             {book.series && (
               <p className="mb-1 text-sm italic text-muted-foreground">
                 <Link

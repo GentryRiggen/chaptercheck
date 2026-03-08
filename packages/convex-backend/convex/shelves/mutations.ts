@@ -2,6 +2,12 @@ import { v } from "convex/values";
 
 import { mutation } from "../_generated/server";
 import { requireAuthMutation } from "../lib/auth";
+import {
+  ensureWantToReadShelf,
+  findWantToReadShelf,
+  getWantToReadShelfBook,
+  WANT_TO_READ_SHELF_NAME,
+} from "../lib/wantToReadShelf";
 
 // Create a new shelf
 export const createShelf = mutation({
@@ -13,6 +19,14 @@ export const createShelf = mutation({
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
+    const existingWantToReadShelf =
+      args.name.trim().toLocaleLowerCase() === WANT_TO_READ_SHELF_NAME.toLocaleLowerCase()
+        ? await findWantToReadShelf(ctx, user._id)
+        : null;
+    if (existingWantToReadShelf) {
+      return existingWantToReadShelf._id;
+    }
+
     const now = Date.now();
 
     const shelfId = await ctx.db.insert("shelves", {
@@ -26,6 +40,45 @@ export const createShelf = mutation({
     });
 
     return shelfId;
+  },
+});
+
+export const toggleWantToRead = mutation({
+  args: {
+    bookId: v.id("books"),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireAuthMutation(ctx);
+
+    const book = await ctx.db.get(args.bookId);
+    if (!book) {
+      throw new Error("Book not found");
+    }
+
+    const existing = await getWantToReadShelfBook(ctx, user._id, args.bookId);
+
+    if (existing?.shelfBook) {
+      await ctx.db.delete(existing.shelfBook._id);
+      await ctx.db.patch(existing.shelf._id, { updatedAt: Date.now() });
+
+      return {
+        isOnWantToRead: false,
+        shelfId: existing.shelf._id,
+      };
+    }
+
+    const shelf = existing?.shelf ?? (await ensureWantToReadShelf(ctx, user._id));
+    await ctx.db.insert("shelfBooks", {
+      shelfId: shelf._id,
+      bookId: args.bookId,
+      addedAt: Date.now(),
+    });
+    await ctx.db.patch(shelf._id, { updatedAt: Date.now() });
+
+    return {
+      isOnWantToRead: true,
+      shelfId: shelf._id,
+    };
   },
 });
 

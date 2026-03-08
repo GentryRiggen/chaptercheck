@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { query } from "../_generated/server";
 import { getCurrentUser, requireAuth } from "../lib/auth";
+import { getWantToReadShelfBook } from "../lib/wantToReadShelf";
 
 // Get a single shelf with enriched books
 export const getShelf = query({
@@ -190,5 +191,19 @@ export const getMyShelvesForBook = query({
     );
 
     return shelvesWithMembership;
+  },
+});
+
+export const getWantToReadStatus = query({
+  args: { bookId: v.id("books") },
+  handler: async (ctx, args) => {
+    const { user } = await requireAuth(ctx);
+
+    const result = await getWantToReadShelfBook(ctx, user._id, args.bookId);
+
+    return {
+      isOnWantToRead: result?.shelfBook !== null && result?.shelfBook !== undefined,
+      shelfId: result?.shelf._id ?? null,
+    };
   },
 });

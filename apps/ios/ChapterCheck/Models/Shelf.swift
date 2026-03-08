@@ -91,3 +91,15 @@ struct ShelfForBook: Decodable, Identifiable, Sendable {
 
     var id: String { _id }
 }
+
+/// Current user's membership state for the reserved Want to Read shelf.
+struct WantToReadStatus: Decodable, Sendable {
+    let isOnWantToRead: Bool
+    let shelfId: String?
+}
+
+/// Result returned when toggling a book on the reserved Want to Read shelf.
+struct ToggleWantToReadResult: Decodable, Sendable {
+    let isOnWantToRead: Bool
+    let shelfId: String
+}

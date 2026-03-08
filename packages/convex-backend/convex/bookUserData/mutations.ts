@@ -4,6 +4,7 @@ import { type Id } from "../_generated/dataModel";
 import { mutation, type MutationCtx } from "../_generated/server";
 import { requireAdminMutation, requireAuthMutation } from "../lib/auth";
 import { recalculateBookRating } from "../lib/bookRatings";
+import { getWantToReadShelfBook } from "../lib/wantToReadShelf";
 
 /**
  * Helper to get or create bookUserData for a user/book combination
@@ -63,6 +64,12 @@ export const markAsRead = mutation({
         readAt: now,
         updatedAt: now,
       });
+
+      const wantToRead = await getWantToReadShelfBook(ctx, user._id, args.bookId);
+      if (wantToRead?.shelf && wantToRead.shelfBook) {
+        await ctx.db.delete(wantToRead.shelfBook._id);
+        await ctx.db.patch(wantToRead.shelf._id, { updatedAt: now });
+      }
     } else {
       // Unmarking as read - also clear rating and review
       const hadRating = bookUserData.rating !== undefined;
