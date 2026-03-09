@@ -1,5 +1,15 @@
 import SwiftUI
 
+extension VerticalAlignment {
+    private enum SeekBarTrackCenter: AlignmentID {
+        static func defaultValue(in dimensions: ViewDimensions) -> CGFloat {
+            dimensions[VerticalAlignment.center]
+        }
+    }
+
+    static let seekBarTrackCenter = VerticalAlignment(SeekBarTrackCenter.self)
+}
+
 /// Custom seek bar for the now playing screen.
 ///
 /// Displays current time and remaining time labels with a draggable slider.
@@ -78,6 +88,9 @@ struct SeekBarView: View {
                 )
             }
             .frame(height: 20)
+            .alignmentGuide(.seekBarTrackCenter) { dimensions in
+                dimensions[VerticalAlignment.center]
+            }
 
             // Time labels
             HStack {
@@ -93,6 +106,9 @@ struct SeekBarView: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
+        }
+        .alignmentGuide(.seekBarTrackCenter) { dimensions in
+            dimensions[.top] + 10
         }
         .animation(.easeInOut(duration: 0.15), value: isDragging)
     }

@@ -21,14 +21,16 @@ struct DownloadPromptBanner: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Download for offline?")
                     .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
 
                 Text(bookTitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.9)
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
 
             Button {
                 Haptics.light()
@@ -37,11 +39,10 @@ struct DownloadPromptBanner: View {
                 Text("Download")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
                     .background(.tint, in: Capsule())
             }
-            .buttonStyle(.plain)
 
             Button {
                 onDismiss()
@@ -55,7 +56,11 @@ struct DownloadPromptBanner: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(.white.opacity(0.08), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
         .offset(y: dragOffset)
         .gesture(
@@ -104,7 +109,11 @@ struct AutoDownloadNoticeBanner: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(.white.opacity(0.08), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
     }
 }

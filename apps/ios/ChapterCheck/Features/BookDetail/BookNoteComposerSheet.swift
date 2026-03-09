@@ -16,6 +16,7 @@ struct BookNoteComposerSheet: View {
     let onSave: (_ payload: BookNoteSavePayload) async throws -> Void
     let onCreateCategory: (_ name: String, _ colorToken: String) async throws -> String
 
+    @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(\.dismiss) private var dismiss
     @Environment(DownloadManager.self) private var downloadManager
 
@@ -31,6 +32,8 @@ struct BookNoteComposerSheet: View {
     @State private var newCategoryColorToken = AccentColorToken.coral.id
     @State private var isCreatingCategory = false
     @State private var clipPreviewPlayer = ClipPreviewPlayer()
+    @State private var isScrubbingPreview = false
+    @State private var previewScrubTime: Double = 0
 
     private static let windowRadiusSeconds: Double = 15 * 60
     private static let maxNoteLengthSeconds: Double = 30 * 60
@@ -86,6 +89,11 @@ struct BookNoteComposerSheet: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .onAppear {
+            if context.existingNote == nil, audioPlayer.isPlaying {
+                audioPlayer.pause()
+            }
+        }
         .onDisappear {
             clipPreviewPlayer.stop()
         }
@@ -126,6 +134,14 @@ struct BookNoteComposerSheet: View {
     private var canSave: Bool {
         startSeconds < endSeconds &&
         selectedAudioFile != nil
+    }
+
+    private var previewDuration: Double {
+        max(endSeconds - startSeconds, 0)
+    }
+
+    private var previewDisplayedTime: Double {
+        isScrubbingPreview ? previewScrubTime : clipPreviewPlayer.currentTime
     }
 
     private var filePickerSection: some View {
@@ -191,45 +207,91 @@ struct BookNoteComposerSheet: View {
     }
 
     private var previewSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("Preview")
                     .font(.headline)
 
                 Spacer()
 
-                if clipPreviewPlayer.isPlaying {
-                    Text("\(TimeFormatting.formatTime(clipPreviewPlayer.currentTime)) / \(TimeFormatting.formatTime(endSeconds - startSeconds))")
+                Text("\(TimeFormatting.formatTime(previewDisplayedTime)) / \(TimeFormatting.formatTime(previewDuration))")
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(spacing: 6) {
+                Slider(
+                    value: Binding(
+                        get: { previewDisplayedTime },
+                        set: { previewScrubTime = $0 }
+                    ),
+                    in: 0...max(previewDuration, 1),
+                    onEditingChanged: handlePreviewScrub
+                )
+                .disabled(selectedAudioFile == nil || clipPreviewPlayer.isLoading || previewDuration <= 0)
+                .tint(.accentColor)
+
+                HStack {
+                    Text(TimeFormatting.formatTime(previewDisplayedTime))
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Text("-\(TimeFormatting.formatTime(max(previewDuration - previewDisplayedTime, 0)))")
                         .font(.caption)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
+                Spacer()
+
+                previewTransportButton(systemName: "gobackward.15") {
+                    clipPreviewPlayer.skip(by: -15)
+                }
+
                 Button {
                     Task { await togglePreview() }
                 } label: {
-                    HStack(spacing: 8) {
+                    Group {
                         if clipPreviewPlayer.isLoading {
                             ProgressView()
                                 .controlSize(.small)
+                                .frame(width: 42, height: 42)
                         } else {
                             Image(systemName: clipPreviewPlayer.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.title3.weight(.semibold))
+                                .frame(width: 42, height: 42)
                         }
-                        Text(clipPreviewPlayer.isPlaying ? "Pause Preview" : "Preview Clip")
                     }
-                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.circle)
                 .disabled(selectedAudioFile == nil || clipPreviewPlayer.isLoading)
 
+                previewTransportButton(systemName: "goforward.15") {
+                    clipPreviewPlayer.skip(by: 15)
+                }
+
                 if clipPreviewPlayer.isPlaying || clipPreviewPlayer.currentTime > 0 {
-                    Button("Stop") {
+                    Button {
                         clipPreviewPlayer.stop()
+                    } label: {
+                        Text("Reset")
+                            .font(.subheadline.weight(.medium))
+                            .frame(height: 44)
+                            .padding(.horizontal, 16)
                     }
                     .buttonStyle(.bordered)
+                    .buttonBorderShape(.roundedRectangle(radius: 16))
+                    .foregroundStyle(.secondary)
                 }
+
+                Spacer()
             }
 
             Text("Preview uses a separate player and does not change your current listening position.")
@@ -356,6 +418,28 @@ struct BookNoteComposerSheet: View {
             adjustActiveHandle(by: delta)
         }
         .buttonStyle(.bordered)
+    }
+
+    private func previewTransportButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.title3.weight(.medium))
+                .frame(width: 42, height: 42)
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .disabled(selectedAudioFile == nil || clipPreviewPlayer.isLoading)
+    }
+
+    private func handlePreviewScrub(isEditing: Bool) {
+        if isEditing {
+            isScrubbingPreview = true
+            previewScrubTime = clipPreviewPlayer.currentTime
+            return
+        }
+
+        isScrubbingPreview = false
+        clipPreviewPlayer.seek(toRelativeSeconds: previewScrubTime)
     }
 
     private func adjustActiveHandle(by delta: Double) {

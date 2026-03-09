@@ -10,6 +10,7 @@ struct NowPlayingView: View {
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.navigateToDestination) private var navigateToDestination
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var isPartSelectorPresented = false
     @State private var isAudioSettingsPresented = false
@@ -88,6 +89,16 @@ struct NowPlayingView: View {
     private let transportPlayFrame: CGFloat = 80
     private let transportSpacing: CGFloat = 24
 
+    private var auxiliaryButtonForeground: Color {
+        colorScheme == .dark ? Color.white.opacity(0.92) : Color.black.opacity(0.88)
+    }
+
+    private var auxiliaryButtonUIColor: UIColor {
+        colorScheme == .dark
+            ? UIColor.white.withAlphaComponent(0.92)
+            : UIColor.black.withAlphaComponent(0.88)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Drag handle — tapping dismisses the sheet
@@ -102,29 +113,6 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss player")
-
-            // Download banners
-            if isAutoDownloadNoticeVisible {
-                AutoDownloadNoticeBanner(bookTitle: autoDownloadNoticeTitle)
-                    .padding(.horizontal, 16)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-
-            if showDownloadPrompt, let book = downloadPromptBook {
-                DownloadPromptBanner(
-                    bookTitle: book.title,
-                    onDownload: {
-                        downloadManager.downloadBook(
-                            book: book,
-                            audioFiles: downloadPromptAudioFiles
-                        )
-                        dismissDownloadPrompt()
-                    },
-                    onDismiss: { dismissDownloadPrompt() }
-                )
-                .padding(.horizontal, 16)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
 
             // Top: category label + title + part info
             topSection
@@ -169,25 +157,7 @@ struct NowPlayingView: View {
             Color.clear
                 .frame(height: carouselToSeekSpacing)
 
-            // Seek bar + add note action
-            HStack(alignment: .center, spacing: 12) {
-                SeekBarView()
-
-                Button {
-                    Haptics.light()
-                    isNoteComposerPresented = true
-                } label: {
-                    Image(systemName: "text.badge.plus")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44)
-                        .background(.ultraThinMaterial, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .contentShape(Circle())
-                .accessibilityLabel("Add note")
-            }
-            .padding(.horizontal, 24)
+            seekBarSection
 
             // Slider seek undo banner
             sliderSeekUndoSection
@@ -205,6 +175,9 @@ struct NowPlayingView: View {
             bottomToolbar
                 .padding(.horizontal, 24)
                 .padding(.bottom, 12)
+        }
+        .overlay(alignment: .top) {
+            downloadBannerOverlay
         }
         .overlay(alignment: .bottom) {
             HStack(spacing: 4) {
@@ -383,6 +356,59 @@ struct NowPlayingView: View {
     // MARK: - Slider Seek Undo
 
     @ViewBuilder
+    private var downloadBannerOverlay: some View {
+        if isAutoDownloadNoticeVisible {
+            AutoDownloadNoticeBanner(bookTitle: autoDownloadNoticeTitle)
+                .padding(.horizontal, 16)
+                .padding(.top, 36)
+                .transition(.move(edge: .top).combined(with: .opacity))
+        } else if showDownloadPrompt, let book = downloadPromptBook {
+            DownloadPromptBanner(
+                bookTitle: book.title,
+                onDownload: {
+                    downloadManager.downloadBook(
+                        book: book,
+                        audioFiles: downloadPromptAudioFiles
+                    )
+                    dismissDownloadPrompt()
+                },
+                onDismiss: { dismissDownloadPrompt() }
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 36)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    private var seekBarSection: some View {
+        HStack(alignment: .seekBarTrackCenter, spacing: 12) {
+            SeekBarView()
+
+            addNoteButton
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private var addNoteButton: some View {
+        Button {
+            Haptics.light()
+            isNoteComposerPresented = true
+        } label: {
+            Image(systemName: "text.badge.plus")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(auxiliaryButtonForeground)
+                .frame(width: 44, height: 44)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .contentShape(Circle())
+        .alignmentGuide(.seekBarTrackCenter) { dimensions in
+            dimensions[VerticalAlignment.center]
+        }
+        .accessibilityLabel("Add note")
+    }
+
+    @ViewBuilder
     private var sliderSeekUndoSection: some View {
         if audioPlayer.sliderSeekUndoPosition != nil {
             SliderSeekUndoBanner()
@@ -477,7 +503,7 @@ struct NowPlayingView: View {
                 }
             }
         } else {
-            // Download prompt (5s auto-dismiss)
+            // Download prompt (8s auto-dismiss)
             downloadPromptBook = book
             downloadPromptAudioFiles = files
             downloadPromptDismissTask?.cancel()
@@ -485,7 +511,7 @@ struct NowPlayingView: View {
                 showDownloadPrompt = true
             }
             downloadPromptDismissTask = Task {
-                try? await Task.sleep(for: .seconds(5))
+                try? await Task.sleep(for: .seconds(8))
                 guard !Task.isCancelled else { return }
                 await MainActor.run { dismissDownloadPrompt() }
             }
@@ -513,7 +539,7 @@ struct NowPlayingView: View {
                 } label: {
                     Image(systemName: "waveform")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(auxiliaryButtonForeground)
                         .frame(width: 44, height: 44)
                         .background(.ultraThinMaterial, in: Circle())
                 }
@@ -522,7 +548,7 @@ struct NowPlayingView: View {
                 .accessibilityLabel("Audio settings")
 
                 // AirPlay route picker
-                AirPlayRoutePicker()
+                AirPlayRoutePicker(tintColor: auxiliaryButtonUIColor)
                     .frame(width: 44, height: 44)
                     .background(.ultraThinMaterial, in: Circle())
                     .accessibilityLabel("Audio output")
@@ -535,7 +561,7 @@ struct NowPlayingView: View {
                     VStack(spacing: 2) {
                         Image(systemName: audioPlayer.isSleepTimerActive ? "moon.zzz.fill" : "moon.zzz")
                             .font(.body.weight(.semibold))
-                            .foregroundStyle(audioPlayer.isSleepTimerActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                            .foregroundStyle(audioPlayer.isSleepTimerActive ? AnyShapeStyle(.tint) : AnyShapeStyle(auxiliaryButtonForeground))
                         if audioPlayer.isSleepTimerActive {
                             Text(audioPlayer.formattedSleepTimer)
                                 .font(.system(size: 9, weight: .medium))
@@ -558,7 +584,7 @@ struct NowPlayingView: View {
                 } label: {
                     Image(systemName: "chevron.down")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(auxiliaryButtonForeground)
                         .frame(width: 44, height: 44)
                         .background(.ultraThinMaterial, in: Circle())
                 }
@@ -593,9 +619,11 @@ struct NowPlayingView: View {
 // MARK: - AirPlay Route Picker
 
 private struct AirPlayRoutePicker: UIViewRepresentable {
+    let tintColor: UIColor
+
     func makeUIView(context: Context) -> AVRoutePickerView {
         let picker = AVRoutePickerView()
-        picker.tintColor = .secondaryLabel
+        picker.tintColor = tintColor
         picker.activeTintColor = .tintColor
         picker.prioritizesVideoDevices = false
         return picker
