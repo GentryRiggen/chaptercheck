@@ -47,7 +47,6 @@ final class ConvexService: ObservableObject {
     /// Clerk JWTs expire after ~60s; refresh every 50s to stay ahead.
     private static let tokenRefreshInterval: UInt64 = 50
     private static let resetCooldownSeconds: TimeInterval = 5
-    private static let longBackgroundResetThresholdSeconds: TimeInterval = 90
 
     // MARK: - Init
 
@@ -143,14 +142,14 @@ final class ConvexService: ObservableObject {
 
         guard networkMonitor.isConnected else { return }
 
-        if backgroundDuration >= Self.longBackgroundResetThresholdSeconds {
-            await resetApplicationSession(
-                reason: "foreground_after_\(Int(backgroundDuration))s_background"
-            )
-            return
-        }
+        logger.info("App became active after \(Int(backgroundDuration))s in background")
 
-        await refreshTokenNow()
+        if case .authenticated = authState {
+            await refreshTokenNow()
+        } else if Clerk.shared.session != nil {
+            logger.info("Restoring Convex session after foreground resume")
+            _ = await client.loginFromCache()
+        }
     }
 
     func handleNetworkRestored() async {
