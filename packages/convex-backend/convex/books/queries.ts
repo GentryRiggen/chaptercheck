@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { type Doc } from "../_generated/dataModel";
 import { query, type QueryCtx } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
+import { isBookFinished } from "../lib/bookUserData";
 
 export type EnrichedBook = Doc<"books"> & {
   authors: Array<Doc<"authors"> & { role?: string }>;
@@ -275,7 +276,7 @@ export const getHomeStats = query({
       .query("bookUserData")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
-    const booksRead = userData.filter((d) => d.isRead).length;
+    const booksRead = userData.filter((d) => isBookFinished(d)).length;
 
     return { totalBooks, totalAuthors, totalListeningSeconds, booksRead };
   },

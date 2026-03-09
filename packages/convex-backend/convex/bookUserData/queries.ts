@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { type Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 import { getCurrentUser, requireAuth } from "../lib/auth";
+import { getFinishedAt, isBookFinished } from "../lib/bookUserData";
 
 /**
  * Get current user's data for a specific book
@@ -379,14 +380,14 @@ export const getUserReadBooksPaginated = query({
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
 
-    let readData = allUserData.filter((d) => d.isRead);
+    let readData = allUserData.filter((d) => isBookFinished(d));
     if (!isOwnProfile) {
       readData = readData.filter((d) => !d.isReadPrivate);
     }
 
     readData.sort((a, b) => {
-      const aTime = a.readAt ?? a.createdAt;
-      const bTime = b.readAt ?? b.createdAt;
+      const aTime = getFinishedAt(a);
+      const bTime = getFinishedAt(b);
       return bTime - aTime;
     });
 
@@ -433,7 +434,7 @@ export const getUserReadBooksPaginated = query({
           ratingCount: book.ratingCount,
           authors,
           series,
-          readAt: data.readAt,
+          readAt: data.finishedAt ?? data.readAt,
           userRating: data.rating,
           userReviewText: data.reviewText,
           isReviewPrivate: data.isReviewPrivate,
@@ -475,15 +476,15 @@ export const getUserReadBooks = query({
       .collect();
 
     // Filter to read books, respecting privacy for non-own profiles
-    let readData = allUserData.filter((d) => d.isRead);
+    let readData = allUserData.filter((d) => isBookFinished(d));
     if (!isOwnProfile) {
       readData = readData.filter((d) => !d.isReadPrivate);
     }
 
     // Sort by readAt descending (most recently read first)
     readData.sort((a, b) => {
-      const aTime = a.readAt ?? a.createdAt;
-      const bTime = b.readAt ?? b.createdAt;
+      const aTime = getFinishedAt(a);
+      const bTime = getFinishedAt(b);
       return bTime - aTime;
     });
 
@@ -526,7 +527,7 @@ export const getUserReadBooks = query({
           ratingCount: book.ratingCount,
           authors,
           series,
-          readAt: data.readAt,
+          readAt: data.finishedAt ?? data.readAt,
           userRating: data.rating,
           userReviewText: data.reviewText,
           isReviewPrivate: data.isReviewPrivate,

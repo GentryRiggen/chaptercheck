@@ -3,18 +3,17 @@ import { v } from "convex/values";
 import { type Doc, type Id } from "../_generated/dataModel";
 import { mutation, type MutationCtx } from "../_generated/server";
 import { requireAuthMutation } from "../lib/auth";
+import { getOrCreateMemoryTag } from "../lib/memoryTags";
 
 const NOTE_TEXT_MAX_LENGTH = 4000;
 const MAX_NOTE_RANGE_SECONDS = 30 * 60;
 
-function normalizeNoteText(noteText?: string) {
-  if (noteText === undefined) return undefined;
-  const trimmed = noteText.trim();
-  if (!trimmed) {
-    return undefined;
-  }
+function normalizeOptionalText(value?: string) {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
   if (trimmed.length > NOTE_TEXT_MAX_LENGTH) {
-    throw new Error(`Note text must be ${NOTE_TEXT_MAX_LENGTH} characters or fewer`);
+    throw new Error(`Text must be ${NOTE_TEXT_MAX_LENGTH} characters or fewer`);
   }
   return trimmed;
 }
@@ -32,13 +31,46 @@ async function validateCategoryOwnership(
   return category;
 }
 
-async function validateNoteRange(
+async function validateOwnedTagIds(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  tagIds: Id<"memoryTags">[]
+) {
+  const uniqueIds = [...new Set(tagIds.map(String))] as string[];
+  const tags = await Promise.all(uniqueIds.map((tagId) => ctx.db.get(tagId as Id<"memoryTags">)));
+  const ownedTags = tags.filter(
+    (tag): tag is Doc<"memoryTags"> => tag !== null && tag.userId === userId
+  );
+
+  if (ownedTags.length !== uniqueIds.length) {
+    throw new Error("One or more tags were not found");
+  }
+
+  return ownedTags;
+}
+
+async function validateOptionalAudioContext(
   ctx: MutationCtx,
   bookId: Id<"books">,
-  audioFileId: Id<"audioFiles">,
-  startSeconds: number,
-  endSeconds: number
+  audioFileId: Id<"audioFiles"> | undefined,
+  startSeconds: number | undefined,
+  endSeconds: number | undefined
 ) {
+  const hasAnyAudioContext =
+    audioFileId !== undefined || startSeconds !== undefined || endSeconds !== undefined;
+
+  if (!hasAnyAudioContext) {
+    return {
+      audioFileId: undefined,
+      startSeconds: undefined,
+      endSeconds: undefined,
+    };
+  }
+
+  if (audioFileId === undefined || startSeconds === undefined || endSeconds === undefined) {
+    throw new Error("Audio note context requires audio file, start time, and end time");
+  }
+
   const audioFile = await ctx.db.get(audioFileId);
   if (!audioFile || audioFile.bookId !== bookId) {
     throw new Error("Audio file does not belong to the specified book");
@@ -60,7 +92,7 @@ async function validateNoteRange(
   }
 
   return {
-    audioFile,
+    audioFileId: audioFile._id,
     startSeconds: clampedStart,
     endSeconds: clampedEnd,
   };
@@ -76,6 +108,49 @@ async function getOwnedNoteOrThrow(
     throw new Error("Note not found");
   }
   return note;
+}
+
+async function upsertNoteTags(
+  ctx: MutationCtx,
+  noteId: Id<"bookNotes">,
+  userId: Id<"users">,
+  tagIds: Id<"memoryTags">[]
+) {
+  const existing = await ctx.db
+    .query("bookNoteTags")
+    .withIndex("by_note", (q) => q.eq("noteId", noteId))
+    .collect();
+
+  const nextIds = new Set(tagIds.map(String));
+  const now = Date.now();
+
+  await Promise.all(
+    existing.filter((row) => !nextIds.has(String(row.tagId))).map((row) => ctx.db.delete(row._id))
+  );
+
+  const existingIds = new Set(existing.map((row) => String(row.tagId)));
+  await Promise.all(
+    tagIds
+      .filter((tagId) => !existingIds.has(String(tagId)))
+      .map((tagId) =>
+        ctx.db.insert("bookNoteTags", {
+          noteId,
+          tagId,
+          userId,
+          createdAt: now,
+        })
+      )
+  );
+}
+
+async function getLegacyCategoryTagId(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  categoryId?: Id<"noteCategories">
+) {
+  const category = await validateCategoryOwnership(ctx, userId, categoryId);
+  if (!category) return null;
+  return await getOrCreateMemoryTag(ctx, userId, category.name);
 }
 
 export const createCategory = mutation({
@@ -97,39 +172,63 @@ export const createCategory = mutation({
       .withIndex("by_user_and_name", (q) => q.eq("userId", user._id).eq("name", name))
       .unique();
 
+    let categoryId: Id<"noteCategories">;
     if (existing) {
       await ctx.db.patch(existing._id, {
         colorToken: args.colorToken,
         updatedAt: now,
       });
-      return existing._id;
+      categoryId = existing._id;
+    } else {
+      categoryId = await ctx.db.insert("noteCategories", {
+        userId: user._id,
+        name,
+        colorToken: args.colorToken,
+        createdAt: now,
+        updatedAt: now,
+      });
     }
 
-    return await ctx.db.insert("noteCategories", {
-      userId: user._id,
-      name,
-      colorToken: args.colorToken,
-      createdAt: now,
-      updatedAt: now,
-    });
+    // Mirror legacy categories into the new tag system during compatibility mode.
+    await getOrCreateMemoryTag(ctx, user._id, name);
+    return categoryId;
+  },
+});
+
+export const createTag = mutation({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const { user } = await requireAuthMutation(ctx);
+    return await getOrCreateMemoryTag(ctx, user._id, args.name);
   },
 });
 
 export const createNote = mutation({
   args: {
     bookId: v.id("books"),
-    audioFileId: v.id("audioFiles"),
+    entryType: v.optional(
+      v.union(
+        v.literal("note"),
+        v.literal("quote"),
+        v.literal("takeaway"),
+        v.literal("theme"),
+        v.literal("character"),
+        v.literal("discussion_prompt")
+      )
+    ),
+    audioFileId: v.optional(v.id("audioFiles")),
     categoryId: v.optional(v.id("noteCategories")),
-    startSeconds: v.number(),
-    endSeconds: v.number(),
+    startSeconds: v.optional(v.number()),
+    endSeconds: v.optional(v.number()),
     noteText: v.optional(v.string()),
+    sourceText: v.optional(v.string()),
+    tagIds: v.optional(v.array(v.id("memoryTags"))),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
     const now = Date.now();
 
-    const category = await validateCategoryOwnership(ctx, user._id, args.categoryId);
-    const range = await validateNoteRange(
+    const audioContext = await validateOptionalAudioContext(
       ctx,
       args.bookId,
       args.audioFileId,
@@ -137,20 +236,29 @@ export const createNote = mutation({
       args.endSeconds
     );
 
+    const ownedTags = await validateOwnedTagIds(ctx, user._id, args.tagIds ?? []);
+    const legacyCategoryTagId = await getLegacyCategoryTagId(ctx, user._id, args.categoryId);
+    const allTagIds = [
+      ...ownedTags.map((tag) => tag._id),
+      ...(legacyCategoryTagId ? [legacyCategoryTagId] : []),
+    ];
+
     const noteId = await ctx.db.insert("bookNotes", {
       userId: user._id,
       bookId: args.bookId,
-      audioFileId: range.audioFile._id,
+      entryType: args.entryType ?? "note",
+      audioFileId: audioContext.audioFileId,
       categoryId: args.categoryId,
-      startSeconds: range.startSeconds,
-      endSeconds: range.endSeconds,
-      noteText: normalizeNoteText(args.noteText),
+      startSeconds: audioContext.startSeconds,
+      endSeconds: audioContext.endSeconds,
+      noteText: normalizeOptionalText(args.noteText),
+      sourceText: normalizeOptionalText(args.sourceText),
       createdAt: now,
       updatedAt: now,
     });
 
-    if (category) {
-      await ctx.db.patch(category._id, { updatedAt: now });
+    if (allTagIds.length > 0) {
+      await upsertNoteTags(ctx, noteId, user._id, allTagIds);
     }
 
     return noteId;
@@ -160,19 +268,30 @@ export const createNote = mutation({
 export const updateNote = mutation({
   args: {
     noteId: v.id("bookNotes"),
-    audioFileId: v.id("audioFiles"),
+    entryType: v.optional(
+      v.union(
+        v.literal("note"),
+        v.literal("quote"),
+        v.literal("takeaway"),
+        v.literal("theme"),
+        v.literal("character"),
+        v.literal("discussion_prompt")
+      )
+    ),
+    audioFileId: v.optional(v.id("audioFiles")),
     categoryId: v.optional(v.id("noteCategories")),
-    startSeconds: v.number(),
-    endSeconds: v.number(),
+    startSeconds: v.optional(v.number()),
+    endSeconds: v.optional(v.number()),
     noteText: v.optional(v.string()),
+    sourceText: v.optional(v.string()),
+    tagIds: v.optional(v.array(v.id("memoryTags"))),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
     const note = await getOwnedNoteOrThrow(ctx, args.noteId, user._id);
     const now = Date.now();
 
-    const category = await validateCategoryOwnership(ctx, user._id, args.categoryId);
-    const range = await validateNoteRange(
+    const audioContext = await validateOptionalAudioContext(
       ctx,
       note.bookId,
       args.audioFileId,
@@ -180,19 +299,25 @@ export const updateNote = mutation({
       args.endSeconds
     );
 
+    const ownedTags = await validateOwnedTagIds(ctx, user._id, args.tagIds ?? []);
+    const legacyCategoryTagId = await getLegacyCategoryTagId(ctx, user._id, args.categoryId);
+    const allTagIds = [
+      ...ownedTags.map((tag) => tag._id),
+      ...(legacyCategoryTagId ? [legacyCategoryTagId] : []),
+    ];
+
     await ctx.db.patch(note._id, {
-      audioFileId: range.audioFile._id,
+      entryType: args.entryType ?? note.entryType ?? "note",
+      audioFileId: audioContext.audioFileId,
       categoryId: args.categoryId,
-      startSeconds: range.startSeconds,
-      endSeconds: range.endSeconds,
-      noteText: normalizeNoteText(args.noteText),
+      startSeconds: audioContext.startSeconds,
+      endSeconds: audioContext.endSeconds,
+      noteText: normalizeOptionalText(args.noteText),
+      sourceText: normalizeOptionalText(args.sourceText),
       updatedAt: now,
     });
 
-    if (category) {
-      await ctx.db.patch(category._id, { updatedAt: now });
-    }
-
+    await upsertNoteTags(ctx, note._id, user._id, allTagIds);
     return note._id;
   },
 });
@@ -204,6 +329,13 @@ export const deleteNote = mutation({
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
     const note = await getOwnedNoteOrThrow(ctx, args.noteId, user._id);
+
+    const existingTags = await ctx.db
+      .query("bookNoteTags")
+      .withIndex("by_note", (q) => q.eq("noteId", note._id))
+      .collect();
+    await Promise.all(existingTags.map((row) => ctx.db.delete(row._id)));
+
     await ctx.db.delete(note._id);
     return { success: true };
   },

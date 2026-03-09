@@ -4,6 +4,12 @@ import { type Id } from "../_generated/dataModel";
 import { mutation, type MutationCtx } from "../_generated/server";
 import { requireAdminMutation, requireAuthMutation } from "../lib/auth";
 import { recalculateBookRating } from "../lib/bookRatings";
+import {
+  BOOK_STATUS_VALUES,
+  getLegacyIsRead,
+  type BookStatus,
+  isFinishedStatus,
+} from "../lib/bookUserData";
 import { getWantToReadShelfBook } from "../lib/wantToReadShelf";
 
 /**
@@ -23,6 +29,7 @@ async function getOrCreateBookUserData(ctx: MutationCtx, userId: Id<"users">, bo
   const newId = await ctx.db.insert("bookUserData", {
     userId,
     bookId,
+    status: "want_to_read",
     isRead: false,
     isReadPrivate: false,
     isReviewPrivate: false,
@@ -31,6 +38,66 @@ async function getOrCreateBookUserData(ctx: MutationCtx, userId: Id<"users">, bo
   });
 
   return await ctx.db.get(newId);
+}
+
+type BookFormat = "physical" | "ebook" | "audiobook" | "mixed";
+
+function buildStatusPatch(
+  current: {
+    status?: string;
+    startedAt?: number;
+    finishedAt?: number;
+    rereadCount?: number;
+    currentFormat?: BookFormat;
+    favorite?: boolean;
+    personalSummary?: string;
+  },
+  args: {
+    status: BookStatus;
+    startedAt?: number;
+    finishedAt?: number;
+    currentFormat?: BookFormat;
+    favorite?: boolean;
+    personalSummary?: string;
+  },
+  now: number
+) {
+  const startedAt =
+    args.startedAt !== undefined
+      ? args.startedAt
+      : args.status === "want_to_read"
+        ? undefined
+        : args.status === "reading" && current.startedAt === undefined
+          ? now
+          : args.status === "finished" && current.startedAt === undefined
+            ? (args.finishedAt ?? now)
+            : current.startedAt;
+
+  const finishedAt =
+    args.finishedAt !== undefined
+      ? args.finishedAt
+      : isFinishedStatus(args.status)
+        ? (current.finishedAt ?? now)
+        : undefined;
+
+  const rereadCount =
+    current.status === "finished" && args.status === "reading"
+      ? (current.rereadCount ?? 0) + 1
+      : current.rereadCount;
+
+  return {
+    status: args.status,
+    startedAt,
+    finishedAt,
+    lastStatusChangedAt: now,
+    rereadCount,
+    currentFormat: args.currentFormat ?? current.currentFormat,
+    favorite: args.favorite ?? current.favorite,
+    personalSummary: args.personalSummary ?? current.personalSummary,
+    isRead: getLegacyIsRead(args.status),
+    readAt: finishedAt,
+    updatedAt: now,
+  };
 }
 
 /**
@@ -55,14 +122,13 @@ export const markAsRead = mutation({
     }
 
     const now = Date.now();
-    const newIsRead = !bookUserData.isRead;
+    const currentStatus = (bookUserData.status as BookStatus | undefined) ?? "want_to_read";
+    const newStatus: BookStatus = currentStatus === "finished" ? "want_to_read" : "finished";
 
-    if (newIsRead) {
+    if (newStatus === "finished") {
       // Marking as read
       await ctx.db.patch(bookUserData._id, {
-        isRead: true,
-        readAt: now,
-        updatedAt: now,
+        ...buildStatusPatch(bookUserData, { status: "finished", finishedAt: now }, now),
       });
 
       const wantToRead = await getWantToReadShelfBook(ctx, user._id, args.bookId);
@@ -75,12 +141,13 @@ export const markAsRead = mutation({
       const hadRating = bookUserData.rating !== undefined;
 
       await ctx.db.patch(bookUserData._id, {
+        ...buildStatusPatch(bookUserData, { status: "want_to_read" }, now),
         isRead: false,
         readAt: undefined,
+        finishedAt: undefined,
         rating: undefined,
         reviewText: undefined,
         reviewedAt: undefined,
-        updatedAt: now,
       });
 
       // Recalculate book rating if this user had a rating
@@ -89,7 +156,98 @@ export const markAsRead = mutation({
       }
     }
 
-    return { isRead: newIsRead };
+    return { isRead: newStatus === "finished" };
+  },
+});
+
+export const setReadingStatus = mutation({
+  args: {
+    bookId: v.id("books"),
+    status: v.union(...BOOK_STATUS_VALUES.map((status) => v.literal(status))),
+    startedAt: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+    currentFormat: v.optional(
+      v.union(v.literal("physical"), v.literal("ebook"), v.literal("audiobook"), v.literal("mixed"))
+    ),
+    favorite: v.optional(v.boolean()),
+    personalSummary: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireAuthMutation(ctx);
+    const book = await ctx.db.get(args.bookId);
+    if (!book) {
+      throw new Error("Book not found");
+    }
+
+    const bookUserData = await getOrCreateBookUserData(ctx, user._id, args.bookId);
+    if (!bookUserData) {
+      throw new Error("Failed to get or create book user data");
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(
+      bookUserData._id,
+      buildStatusPatch(
+        bookUserData,
+        {
+          status: args.status,
+          startedAt: args.startedAt,
+          finishedAt: args.finishedAt,
+          currentFormat: args.currentFormat,
+          favorite: args.favorite,
+          personalSummary: args.personalSummary,
+        },
+        now
+      )
+    );
+
+    if (args.status !== "want_to_read") {
+      const wantToRead = await getWantToReadShelfBook(ctx, user._id, args.bookId);
+      if (wantToRead?.shelf && wantToRead.shelfBook) {
+        await ctx.db.delete(wantToRead.shelfBook._id);
+        await ctx.db.patch(wantToRead.shelf._id, { updatedAt: now });
+      }
+    }
+
+    return { success: true };
+  },
+});
+
+export const updateBookMemory = mutation({
+  args: {
+    bookId: v.id("books"),
+    personalSummary: v.optional(v.string()),
+    currentFormat: v.optional(
+      v.union(v.literal("physical"), v.literal("ebook"), v.literal("audiobook"), v.literal("mixed"))
+    ),
+    favorite: v.optional(v.boolean()),
+    startedAt: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireAuthMutation(ctx);
+    const book = await ctx.db.get(args.bookId);
+    if (!book) {
+      throw new Error("Book not found");
+    }
+
+    const bookUserData = await getOrCreateBookUserData(ctx, user._id, args.bookId);
+    if (!bookUserData) {
+      throw new Error("Failed to get or create book user data");
+    }
+
+    const patch: Record<string, unknown> = { updatedAt: Date.now() };
+    if (args.personalSummary !== undefined) patch.personalSummary = args.personalSummary;
+    if (args.currentFormat !== undefined) patch.currentFormat = args.currentFormat;
+    if (args.favorite !== undefined) patch.favorite = args.favorite;
+    if (args.startedAt !== undefined) patch.startedAt = args.startedAt;
+    if (args.finishedAt !== undefined) {
+      patch.finishedAt = args.finishedAt;
+      patch.readAt = args.finishedAt;
+    }
+
+    await ctx.db.patch(bookUserData._id, patch);
+    return { success: true };
   },
 });
 
@@ -132,16 +290,26 @@ export const saveReview = mutation({
     const hasReviewContent = args.rating !== undefined || args.reviewText;
     const ratingChanged = bookUserData.rating !== args.rating;
 
-    // Always mark as read when saving a review, set readAt if not already set
+    const nextStatus: BookStatus =
+      (bookUserData.status as BookStatus | undefined) === "finished" ? "finished" : "finished";
+
+    // Saving a review implies the user finished the book unless already explicitly tracked.
     await ctx.db.patch(bookUserData._id, {
+      ...buildStatusPatch(
+        bookUserData,
+        {
+          status: nextStatus,
+          finishedAt: bookUserData.finishedAt ?? bookUserData.readAt ?? now,
+        },
+        now
+      ),
       isRead: true,
-      readAt: bookUserData.readAt ?? now,
+      readAt: bookUserData.readAt ?? bookUserData.finishedAt ?? now,
       rating: args.rating,
       reviewText: args.reviewText,
       reviewedAt: hasReviewContent ? now : undefined,
       isReadPrivate: args.isReadPrivate,
       isReviewPrivate,
-      updatedAt: now,
     });
 
     // Recalculate book rating if the rating changed
