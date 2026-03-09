@@ -8,6 +8,7 @@ struct DownloadsView: View {
     @Environment(DownloadManager.self) private var downloadManager
 
     @State private var showDeleteAllConfirmation = false
+    @State private var booksToDelete: [BookDownloadInfo] = []
 
     private var formattedStorageUsed: String {
         ByteCountFormatter.string(fromByteCount: downloadManager.totalStorageUsed, countStyle: .file)
@@ -32,10 +33,7 @@ struct DownloadsView: View {
                         bookRow(book)
                     }
                     .onDelete { indexSet in
-                        for index in indexSet {
-                            let book = downloadManager.downloadedBooks[index]
-                            downloadManager.deleteBookDownload(bookId: book.bookId)
-                        }
+                        booksToDelete = indexSet.map { downloadManager.downloadedBooks[$0] }
                     }
                 } header: {
                     Text("Downloaded Books")
@@ -72,6 +70,30 @@ struct DownloadsView: View {
             }
         } message: {
             Text("This will remove all downloaded audiobooks and free up \(formattedStorageUsed) of storage.")
+        }
+        .confirmationDialog(
+            "Delete download?",
+            isPresented: Binding(
+                get: { !booksToDelete.isEmpty },
+                set: { if !$0 { booksToDelete = [] } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Download", role: .destructive) {
+                for bookToDelete in booksToDelete {
+                    downloadManager.deleteBookDownload(bookId: bookToDelete.bookId)
+                }
+                booksToDelete = []
+            }
+            Button("Cancel", role: .cancel) {
+                booksToDelete = []
+            }
+        } message: {
+            if booksToDelete.count == 1 {
+                Text("This will remove the downloaded files for \(booksToDelete[0].bookTitle) from this device.")
+            } else {
+                Text("This will remove the downloaded files for \(booksToDelete.count) books from this device.")
+            }
         }
     }
 

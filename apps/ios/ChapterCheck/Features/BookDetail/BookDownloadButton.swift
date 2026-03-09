@@ -12,6 +12,7 @@ struct BookDownloadButton: View {
     let audioFiles: [AudioFile]
 
     @Environment(DownloadManager.self) private var downloadManager
+    @State private var showDeleteDownloadConfirmation = false
 
     private var state: BookDownloadState {
         downloadManager.bookDownloadState(book._id)
@@ -40,6 +41,18 @@ struct BookDownloadButton: View {
             }
         }
         .padding(.horizontal)
+        .confirmationDialog(
+            "Delete download?",
+            isPresented: $showDeleteDownloadConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Download", role: .destructive) {
+                downloadManager.deleteBookDownload(bookId: book._id)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove all downloaded audio files for \(book.title) from this device.")
+        }
     }
 
     // MARK: - States
@@ -121,7 +134,7 @@ struct BookDownloadButton: View {
 
             Button {
                 Haptics.light()
-                downloadManager.deleteBookDownload(bookId: book._id)
+                showDeleteDownloadConfirmation = true
             } label: {
                 Image(systemName: "trash")
                     .foregroundStyle(.red)

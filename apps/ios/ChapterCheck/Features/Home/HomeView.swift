@@ -4,8 +4,8 @@ import SwiftUI
 /// The main home screen — a listening-first feed with discovery sections.
 ///
 /// Displays a hero card for the most recently listened audiobook, followed by
-/// additional continue listening items, discovery sections (top rated, recently added),
-/// and quick links to browse the full library and authors.
+/// additional continue listening items, discovery sections, and quick links to
+/// browse the full library and authors.
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @Environment(\.showSettings) private var showSettings
@@ -118,14 +118,6 @@ struct HomeView: View {
                         title: "Top Rated",
                         books: viewModel.topRatedBooks,
                         seeAllDestination: .browseLibrary(initialSort: .topRated)
-                    )
-                }
-
-                if !viewModel.recentBooks.isEmpty {
-                    BookRowSection(
-                        title: "Recently Added",
-                        books: viewModel.recentBooks,
-                        seeAllDestination: .browseLibrary(initialSort: .recent)
                     )
                 }
 

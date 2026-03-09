@@ -14,6 +14,7 @@ struct AudioFileRow: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.showNowPlaying) private var showNowPlaying
+    @State private var showDeleteDownloadConfirmation = false
 
     /// Whether the audio player is currently playing this specific file.
     private var isNowPlaying: Bool {
@@ -29,75 +30,115 @@ struct AudioFileRow: View {
     }
 
     var body: some View {
-        Button {
-            handlePlay()
-        } label: {
-            HStack(spacing: 12) {
-                // Part number badge
-                ZStack {
-                    Circle()
-                        .fill(isNowPlaying ? AnyShapeStyle(.tint) : AnyShapeStyle(Color(.systemFill)))
-                        .frame(width: 36, height: 36)
+        HStack(spacing: 12) {
+            Button {
+                handlePlay()
+            } label: {
+                HStack(spacing: 12) {
+                    // Part number badge
+                    ZStack {
+                        Circle()
+                            .fill(isNowPlaying ? AnyShapeStyle(.tint) : AnyShapeStyle(Color(.systemFill)))
+                            .frame(width: 36, height: 36)
 
-                    if isNowPlaying && audioPlayer.isPlaying {
-                        Image(systemName: "waveform")
-                            .font(.caption)
-                            .foregroundStyle(isNowPlaying ? .white : .primary)
-                            .symbolEffect(.variableColor.iterative)
-                    } else {
-                        Text("\(audioFile.partNumberInt)")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(isNowPlaying ? .white : .primary)
-                    }
-                }
-
-                // File info
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(displayName)
-                        .font(.subheadline)
-                        .fontWeight(isCurrentPart ? .semibold : .regular)
-                        .lineLimit(1)
-
-                    HStack(spacing: 4) {
-                        Text(audioFile.formattedDuration)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Text("·")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Text(audioFile.formattedFileSize)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        if let savedPosition, savedPosition > 0 {
-                            Text("· Resume from \(TimeFormatting.formatTime(savedPosition))")
+                        if isNowPlaying && audioPlayer.isPlaying {
+                            Image(systemName: "waveform")
                                 .font(.caption)
-                                .foregroundStyle(.tint)
+                                .foregroundStyle(isNowPlaying ? .white : .primary)
+                                .symbolEffect(.variableColor.iterative)
+                        } else {
+                            Text("\(audioFile.partNumberInt)")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(isNowPlaying ? .white : .primary)
                         }
                     }
+
+                    // File info
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(displayName)
+                            .font(.subheadline)
+                            .fontWeight(isCurrentPart ? .semibold : .regular)
+                            .lineLimit(1)
+
+                        HStack(spacing: 4) {
+                            Text(audioFile.formattedDuration)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            Text("·")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            Text(audioFile.formattedFileSize)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            if let savedPosition, savedPosition > 0 {
+                                Text("· Resume from \(TimeFormatting.formatTime(savedPosition))")
+                                    .font(.caption)
+                                    .foregroundStyle(.tint)
+                            }
+                        }
+                    }
+
+                    Spacer()
                 }
-
-                Spacer()
-
-                // Download status indicator
-                downloadIndicator
-
-                // Play icon
-                Image(systemName: isNowPlaying && audioPlayer.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.body)
-                    .foregroundStyle(.tint)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(isNowPlaying ? AnyShapeStyle(.tint.opacity(0.08)) : AnyShapeStyle(.clear))
+            .buttonStyle(.plain)
+
+            rowActions
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(isNowPlaying ? AnyShapeStyle(.tint.opacity(0.08)) : AnyShapeStyle(.clear))
+        .confirmationDialog(
+            "Delete downloaded file?",
+            isPresented: $showDeleteDownloadConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Download", role: .destructive) {
+                downloadManager.deleteAudioFile(audioFileId: audioFile._id, bookId: book._id)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove the downloaded file for \(displayName) from this device.")
+        }
     }
 
     // MARK: - Download Indicator
+
+    @ViewBuilder
+    private var rowActions: some View {
+        switch fileStatus {
+        case .completed:
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.body)
+                    .foregroundStyle(.green)
+
+                Button {
+                    Haptics.light()
+                    showDeleteDownloadConfirmation = true
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.body)
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Delete download")
+
+                playButton
+            }
+
+        default:
+            HStack(spacing: 10) {
+                downloadIndicator
+                playButton
+            }
+        }
+    }
 
     @ViewBuilder
     private var downloadIndicator: some View {
@@ -144,6 +185,19 @@ struct AudioFileRow: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    private var playButton: some View {
+        Button {
+            handlePlay()
+        } label: {
+            Image(systemName: isNowPlaying && audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                .font(.body)
+                .foregroundStyle(.tint)
+                .frame(width: 28, height: 28)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isNowPlaying && audioPlayer.isPlaying ? "Pause" : "Play")
     }
 
     // MARK: - Helpers

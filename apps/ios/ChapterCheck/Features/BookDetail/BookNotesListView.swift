@@ -153,8 +153,12 @@ private struct BookNoteRow: View {
             }
 
             Menu {
-                Button("Edit", action: onEdit)
-                Button("Delete", role: .destructive, action: onDelete)
+                Button(action: onEdit) {
+                    Label("Edit", systemImage: "pencil")
+                }
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.subheadline.weight(.semibold))

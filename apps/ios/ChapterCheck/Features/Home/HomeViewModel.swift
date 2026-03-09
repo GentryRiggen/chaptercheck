@@ -5,8 +5,8 @@ import os
 
 /// View model for the home screen.
 ///
-/// Manages four concurrent Convex subscriptions for real-time updates:
-/// continue listening, recently added books, top rated books, and user shelves.
+/// Manages concurrent Convex subscriptions for real-time updates:
+/// continue listening, top rated books, and user shelves.
 ///
 /// Observes Convex auth state — subscriptions are only created when authenticated
 /// and automatically torn down / recreated on auth state transitions.
@@ -22,7 +22,6 @@ final class HomeViewModel {
     // MARK: - State
 
     var recentlyListening: [RecentListeningProgress] = []
-    var recentBooks: [BookWithDetails] = []
     var topRatedBooks: [BookWithDetails] = []
     var myShelves: [Shelf] = []
 
@@ -48,7 +47,7 @@ final class HomeViewModel {
     private var retryTimer: Task<Void, Never>?
     private var offlineLoadTask: Task<Void, Never>?
 
-    private static let allSections: Set<String> = ["recentlyListening", "recentBooks", "topRatedBooks", "myShelves"]
+    private static let allSections: Set<String> = ["recentlyListening", "topRatedBooks", "myShelves"]
 
     var isOffline: Bool { !networkMonitor.isConnected }
 
@@ -72,7 +71,6 @@ final class HomeViewModel {
                 guard let self, cancellables.isEmpty else { return }
                 logger.info("Auth ready — subscribing to all home sections")
                 subscribeToRecentlyListening()
-                subscribeToRecentBooks()
                 subscribeToTopRatedBooks()
                 subscribeToMyShelves()
                 startRetryTimer()
@@ -120,7 +118,6 @@ final class HomeViewModel {
                 guard let self, cancellables.isEmpty else { return }
                 logger.info("Auth ready after offline recovery — subscribing")
                 subscribeToRecentlyListening()
-                subscribeToRecentBooks()
                 subscribeToTopRatedBooks()
                 subscribeToMyShelves()
                 startRetryTimer()
@@ -158,25 +155,6 @@ final class HomeViewModel {
                     self?.logger.info("recentlyListening: received \(items.count) items")
                     self?.recentlyListening = items
                     self?.markLoaded("recentlyListening")
-                }
-            )
-            .store(in: &cancellables)
-    }
-
-    private func subscribeToRecentBooks() {
-        bookRepository.subscribeToRecentBooks(limit: 10)?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { [weak self] completion in
-                    if case .failure(let error) = completion {
-                        self?.logger.error("recentBooks FAILED: \(error)")
-                        self?.handleSectionError("recentBooks", message: error.localizedDescription)
-                    }
-                },
-                receiveValue: { [weak self] books in
-                    self?.logger.info("recentBooks: received \(books.count) books")
-                    self?.recentBooks = books
-                    self?.markLoaded("recentBooks")
                 }
             )
             .store(in: &cancellables)

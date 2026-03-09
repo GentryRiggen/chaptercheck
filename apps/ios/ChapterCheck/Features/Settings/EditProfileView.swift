@@ -22,6 +22,7 @@ struct EditProfileView: View {
     @State private var previewImage: Image?
     @State private var isUploadingPhoto = false
     @State private var showPhotoOptions = false
+    @State private var showRemovePhotoConfirmation = false
     @State private var showCamera = false
     @State private var showPhotoPicker = false
     @State private var imageToCrop: UIImage?
@@ -155,9 +156,21 @@ struct EditProfileView: View {
 
             if Clerk.shared.user?.hasImage == true {
                 Button("Remove Photo", role: .destructive) {
-                    removePhoto()
+                    showRemovePhotoConfirmation = true
                 }
             }
+        }
+        .confirmationDialog(
+            "Remove profile photo?",
+            isPresented: $showRemovePhotoConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Remove Photo", role: .destructive) {
+                removePhoto()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove your current profile photo.")
         }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhoto, matching: .images)
         .fullScreenCover(isPresented: $showCamera) {

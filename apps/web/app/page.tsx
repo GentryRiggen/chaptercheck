@@ -136,20 +136,6 @@ function Dashboard() {
             </ScrollRow>
           )}
 
-          {/* Recently Added Row */}
-          {hasBooks && (
-            <ScrollRow title="Recently Added" viewAllHref="/books?sort=recent">
-              {recentBooks.map((book) => (
-                <div key={book._id} className="w-36 flex-shrink-0 snap-start sm:w-40">
-                  <BookCard
-                    book={book}
-                    className="bg-transparent p-0 shadow-none ring-0 hover:bg-transparent hover:shadow-none hover:ring-0"
-                  />
-                </div>
-              ))}
-            </ScrollRow>
-          )}
-
           {/* No books empty state */}
           {recentBooks && recentBooks.length === 0 && (
             <Card>

@@ -277,20 +277,6 @@ struct BookNoteComposerSheet: View {
                     clipPreviewPlayer.skip(by: 15)
                 }
 
-                if clipPreviewPlayer.isPlaying || clipPreviewPlayer.currentTime > 0 {
-                    Button {
-                        clipPreviewPlayer.stop()
-                    } label: {
-                        Text("Reset")
-                            .font(.subheadline.weight(.medium))
-                            .frame(height: 44)
-                            .padding(.horizontal, 16)
-                    }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 16))
-                    .foregroundStyle(.secondary)
-                }
-
                 Spacer()
             }
 
