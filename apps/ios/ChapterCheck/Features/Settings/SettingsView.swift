@@ -92,6 +92,22 @@ struct SettingsView: View {
 
                 // Sign out
                 Section {
+                    Button {
+                        Task {
+                            await convexService.resetApplicationSession(reason: "manual_settings_reset")
+                        }
+                    } label: {
+                        HStack {
+                            Label("Reload App Session", systemImage: "arrow.clockwise.circle")
+                            Spacer()
+                            if convexService.isResetting {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
+                    }
+                    .disabled(convexService.isResetting)
+
                     Button("Sign Out", role: .destructive) {
                         downloadManager.deleteAllDownloads()
                         UserDefaults.standard.removeObject(forKey: "hasAuthenticatedBefore")

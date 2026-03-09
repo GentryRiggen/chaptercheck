@@ -1,4 +1,5 @@
 import Combine
+import ClerkKit
 import ConvexMobile
 import Foundation
 import os
@@ -26,39 +27,33 @@ final class ConvexService: ObservableObject {
     // MARK: - Published State
 
     @Published private(set) var authState: AuthState<String> = .loading
+    @Published private(set) var resetID = UUID()
+    @Published private(set) var isResetting = false
 
     // MARK: - Client
 
-    let client: ConvexClientWithAuth<String>
+    private var client: ConvexClientWithAuth<String>
 
     // MARK: - Private
 
     private let logger = Logger(subsystem: "com.chaptercheck", category: "ConvexService")
-    private var cancellables = Set<AnyCancellable>()
+    private let networkMonitor = NetworkMonitor.shared
+    private var authStateCancellable: AnyCancellable?
     private var tokenRefreshTask: Task<Void, Never>?
+    private var lastBackgroundedAt: Date?
+    private var lastResetAt = Date.distantPast
 
     /// Interval between proactive token refreshes (in seconds).
     /// Clerk JWTs expire after ~60s; refresh every 50s to stay ahead.
     private static let tokenRefreshInterval: UInt64 = 50
+    private static let resetCooldownSeconds: TimeInterval = 5
+    private static let longBackgroundResetThresholdSeconds: TimeInterval = 90
 
     // MARK: - Init
 
     private init() {
-        let provider = ClerkConvexAuthProvider()
-        client = ConvexClientWithAuth(
-            deploymentUrl: AppEnvironment.convexUrl,
-            authProvider: provider
-        )
-
-        // Forward the client's auth state to our published property
-        // and manage token refresh lifecycle.
-        client.authState
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in
-                self?.authState = state
-                self?.handleAuthStateChange(state)
-            }
-            .store(in: &cancellables)
+        client = Self.makeClient()
+        bindClientState()
     }
 
     /// Start or stop the token refresh timer based on auth state.
@@ -75,6 +70,40 @@ final class ConvexService: ObservableObject {
             logger.info("Auth state: unauthenticated")
         case .loading:
             logger.info("Auth state: loading")
+        }
+    }
+
+    private static func makeClient() -> ConvexClientWithAuth<String> {
+        let provider = ClerkConvexAuthProvider()
+        return ConvexClientWithAuth(
+            deploymentUrl: AppEnvironment.convexUrl,
+            authProvider: provider
+        )
+    }
+
+    private func bindClientState() {
+        authStateCancellable?.cancel()
+        authStateCancellable = client.authState
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                self?.authState = state
+                self?.handleAuthStateChange(state)
+            }
+    }
+
+    private func isAuthError(_ error: Error) -> Bool {
+        let message = error.localizedDescription.lowercased()
+        return message.contains("not authenticated") || message.contains("unauthenticated")
+    }
+
+    private func handleClientError(_ error: Error, context: String) {
+        guard isAuthError(error) else { return }
+        logger.error("Auth error in \(context): \(error.localizedDescription)")
+
+        guard networkMonitor.isConnected, Clerk.shared.session != nil else { return }
+
+        Task { [weak self] in
+            await self?.resetApplicationSession(reason: "auth_error:\(context)")
         }
     }
 
@@ -104,6 +133,36 @@ final class ConvexService: ObservableObject {
         _ = await client.loginFromCache()
     }
 
+    func appDidEnterBackground() {
+        lastBackgroundedAt = Date()
+    }
+
+    func appDidBecomeActive() async {
+        let backgroundDuration = lastBackgroundedAt.map { Date().timeIntervalSince($0) } ?? 0
+        lastBackgroundedAt = nil
+
+        guard networkMonitor.isConnected else { return }
+
+        if backgroundDuration >= Self.longBackgroundResetThresholdSeconds {
+            await resetApplicationSession(
+                reason: "foreground_after_\(Int(backgroundDuration))s_background"
+            )
+            return
+        }
+
+        await refreshTokenNow()
+    }
+
+    func handleNetworkRestored() async {
+        guard Clerk.shared.session != nil else { return }
+
+        if case .authenticated = authState {
+            await refreshTokenNow()
+        } else {
+            await resetApplicationSession(reason: "network_restored_while_not_authenticated")
+        }
+    }
+
     /// Force an immediate token refresh and restart the refresh timer.
     ///
     /// Call this when the app returns to the foreground after suspension.
@@ -123,6 +182,50 @@ final class ConvexService: ObservableObject {
 
     /// Initiate a fresh login flow (called after the user completes Clerk sign-in).
     func login() async {
+        _ = await client.login()
+    }
+
+    /// Rebuild the authenticated Convex client and force the SwiftUI tree to remount.
+    ///
+    /// This is the closest in-app equivalent to force quitting and relaunching:
+    /// existing subscriptions are torn down, a fresh Convex client is created,
+    /// and the root view gets a new identity so `@State`-owned objects are rebuilt.
+    func resetApplicationSession(reason: String) async {
+        if isResetting { return }
+
+        let now = Date()
+        guard now.timeIntervalSince(lastResetAt) >= Self.resetCooldownSeconds else {
+            logger.debug("Skipping reset (\(reason, privacy: .public)) — cooldown active")
+            return
+        }
+
+        lastResetAt = now
+        isResetting = true
+        logger.notice("Resetting app session: \(reason, privacy: .public)")
+
+        tokenRefreshTask?.cancel()
+        tokenRefreshTask = nil
+        authStateCancellable?.cancel()
+        authStateCancellable = nil
+        authState = .loading
+
+        client = Self.makeClient()
+        bindClientState()
+        resetID = UUID()
+
+        defer { isResetting = false }
+
+        guard networkMonitor.isConnected, Clerk.shared.session != nil else {
+            if Clerk.shared.session == nil {
+                authState = .unauthenticated
+            }
+            return
+        }
+
+        _ = await client.loginFromCache()
+        if case .authenticated = authState { return }
+
+        logger.info("Cached Convex login did not recover session, performing fresh login")
         _ = await client.login()
     }
 
@@ -149,6 +252,11 @@ final class ConvexService: ObservableObject {
     ) -> AnyPublisher<T, ClientError> {
         logger.debug("Subscribe: \(name) args=\(String(describing: args)) -> \(String(describing: T.self))")
         return client.subscribe(to: name, with: args, yielding: T.self)
+            .handleEvents(receiveCompletion: { [weak self] completion in
+                guard case .failure(let error) = completion else { return }
+                self?.handleClientError(error, context: "subscribe:\(name)")
+            })
+            .eraseToAnyPublisher()
     }
 
     /// Execute a Convex mutation that returns a decoded value.
@@ -156,7 +264,12 @@ final class ConvexService: ObservableObject {
         _ name: String,
         with args: [String: ConvexEncodable?]? = nil
     ) async throws -> T {
-        try await client.mutation(name, with: args)
+        do {
+            return try await client.mutation(name, with: args)
+        } catch {
+            handleClientError(error, context: "mutation:\(name)")
+            throw error
+        }
     }
 
     /// Execute a Convex mutation whose return value is ignored.
@@ -167,7 +280,12 @@ final class ConvexService: ObservableObject {
         _ name: String,
         with args: [String: ConvexEncodable?]? = nil
     ) async throws {
-        let _: DiscardedResult = try await client.mutation(name, with: args)
+        do {
+            let _: DiscardedResult = try await client.mutation(name, with: args)
+        } catch {
+            handleClientError(error, context: "mutation:\(name)")
+            throw error
+        }
     }
 
     /// Execute a Convex action that returns a decoded value.
@@ -175,7 +293,12 @@ final class ConvexService: ObservableObject {
         _ name: String,
         with args: [String: ConvexEncodable?]? = nil
     ) async throws -> T {
-        try await client.action(name, with: args)
+        do {
+            return try await client.action(name, with: args)
+        } catch {
+            handleClientError(error, context: "action:\(name)")
+            throw error
+        }
     }
 
     /// Execute a Convex action whose return value is ignored.
@@ -183,6 +306,11 @@ final class ConvexService: ObservableObject {
         _ name: String,
         with args: [String: ConvexEncodable?]? = nil
     ) async throws {
-        let _: DiscardedResult = try await client.action(name, with: args)
+        do {
+            let _: DiscardedResult = try await client.action(name, with: args)
+        } catch {
+            handleClientError(error, context: "action:\(name)")
+            throw error
+        }
     }
 }

@@ -804,8 +804,13 @@ final class AudioPlayerManager {
             }
         }
 
-        // When offline, queue progress for later sync
-        if !NetworkMonitor.shared.isConnected {
+        let canWriteToConvex = NetworkMonitor.shared.isConnected && {
+            if case .authenticated = ConvexService.shared.authState { return true }
+            return false
+        }()
+
+        // When offline or not yet re-authenticated, queue progress for later sync
+        if !canWriteToConvex {
             let entry = QueuedProgress(
                 bookId: bookId,
                 audioFileId: audioFileId,
@@ -884,7 +889,12 @@ final class AudioPlayerManager {
             }
         }
 
-        if !NetworkMonitor.shared.isConnected {
+        let canWriteToConvex = NetworkMonitor.shared.isConnected && {
+            if case .authenticated = ConvexService.shared.authState { return true }
+            return false
+        }()
+
+        if !canWriteToConvex {
             let entry = QueuedProgress(
                 bookId: bookId,
                 audioFileId: audioFileId,

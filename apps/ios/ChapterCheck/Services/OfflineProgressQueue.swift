@@ -64,6 +64,15 @@ actor OfflineProgressQueue {
     /// Removes each entry on successful save.
     func flush() async {
         guard !entries.isEmpty else { return }
+        let isAuthenticated = await MainActor.run {
+            if case .authenticated = ConvexService.shared.authState { return true }
+            return false
+        }
+        guard isAuthenticated else {
+            logger.info("Skipping offline progress flush — Convex auth not ready")
+            return
+        }
+
         logger.info("Flushing \(self.entries.count) offline progress entries")
 
         let progressRepository = await MainActor.run { ProgressRepository() }
