@@ -16,6 +16,7 @@ import { BookCover } from "@/components/books/BookCover";
 import { BookDeleteDialog } from "@/components/books/BookDeleteDialog";
 import { BookEditDialog } from "@/components/books/BookEditDialog";
 import { BookGenres } from "@/components/books/BookGenres";
+import { BookNotesSection } from "@/components/books/BookNotesSection";
 import { BookRatingStats } from "@/components/books/BookRatingStats";
 import { BookReadStatus } from "@/components/books/BookReadStatus";
 import { ReviewsList } from "@/components/books/ReviewsList";
@@ -157,8 +158,7 @@ export default function BookDetailPage() {
     </div>
   );
 
-  // Audio Section Component
-  const AudioSection = (
+  const renderAudioSection = (includeNotes: boolean) => (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Audio</h2>
       {audioFiles === undefined || !bookInfo ? (
@@ -186,6 +186,8 @@ export default function BookDetailPage() {
           onUploadComplete={() => {}}
         />
       </PremiumGate>
+
+      {includeNotes ? <BookNotesSection bookId={bookId} /> : null}
     </div>
   );
 
@@ -314,15 +316,19 @@ export default function BookDetailPage() {
         {/* Mobile Layout - Tabbed Interface */}
         <div className="block md:hidden">
           <Tabs defaultValue="audio" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="audio">Audio</TabsTrigger>
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
+              <TabsTrigger value="notes">Notes</TabsTrigger>
             </TabsList>
             <TabsContent value="audio" className="mt-4">
-              {AudioSection}
+              {renderAudioSection(false)}
             </TabsContent>
             <TabsContent value="reviews" className="mt-4">
               {ReviewsSection}
+            </TabsContent>
+            <TabsContent value="notes" className="mt-4">
+              <BookNotesSection bookId={bookId} />
             </TabsContent>
           </Tabs>
         </div>
@@ -333,7 +339,7 @@ export default function BookDetailPage() {
           <div>{ReviewsSection}</div>
 
           {/* Right Column - Audio */}
-          <div>{AudioSection}</div>
+          <div>{renderAudioSection(true)}</div>
         </div>
       </main>
 
