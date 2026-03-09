@@ -345,30 +345,32 @@ struct BookNoteComposerSheet: View {
                 }
                 .buttonStyle(.plain)
 
-                FlexibleChipLayout(items: categories, selectedId: selectedCategoryId) { category in
-                    Button {
-                        selectedCategoryId = category._id
-                    } label: {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(AccentColorToken.color(for: category.colorToken))
-                                .frame(width: 10, height: 10)
-                            Text(category.name)
-                                .lineLimit(1)
+                FlowLayout(spacing: 8) {
+                    ForEach(categories) { category in
+                        Button {
+                            selectedCategoryId = category._id
+                        } label: {
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(AccentColorToken.color(for: category.colorToken))
+                                    .frame(width: 10, height: 10)
+                                Text(category.name)
+                                    .lineLimit(1)
+                            }
+                            .font(.subheadline)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 999)
+                                    .fill(selectedCategoryId == category._id ? AccentColorToken.color(for: category.colorToken).opacity(0.18) : Color(.secondarySystemFill))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 999)
+                                    .stroke(selectedCategoryId == category._id ? AccentColorToken.color(for: category.colorToken) : .clear, lineWidth: 1.5)
+                            )
                         }
-                        .font(.subheadline)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 999)
-                                .fill(selectedCategoryId == category._id ? AccentColorToken.color(for: category.colorToken).opacity(0.18) : Color(.secondarySystemFill))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 999)
-                                .stroke(selectedCategoryId == category._id ? AccentColorToken.color(for: category.colorToken) : .clear, lineWidth: 1.5)
-                        )
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
 
@@ -379,24 +381,45 @@ struct BookNoteComposerSheet: View {
                 TextField("Category name", text: $newCategoryName)
                     .textFieldStyle(.roundedBorder)
 
-                ScrollView(.horizontal, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 10) {
-                        ForEach(Self.categoryColorOptions) { token in
+                        Circle()
+                            .fill(AccentColorToken.color(for: newCategoryColorToken))
+                            .frame(width: 18, height: 18)
+                        Text(
+                            AccentColorToken.all.first(where: { $0.id == newCategoryColorToken })?.displayName
+                            ?? "Selected Color"
+                        )
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    }
+
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 40), spacing: 10)],
+                        spacing: 10
+                    ) {
+                        ForEach(AccentColorToken.all) { token in
                             Button {
+                                Haptics.selection()
                                 newCategoryColorToken = token.id
                             } label: {
                                 Circle()
                                     .fill(token.color)
-                                    .frame(width: 28, height: 28)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.primary.opacity(newCategoryColorToken == token.id ? 0.6 : 0), lineWidth: 3)
-                                    )
+                                    .frame(width: 34, height: 34)
+                                    .overlay {
+                                        if newCategoryColorToken == token.id {
+                                            Circle()
+                                                .stroke(Color.primary.opacity(0.18), lineWidth: 6)
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundStyle(token.id == AccentColorToken.yellow.id || token.id == AccentColorToken.lemon.id ? .black : .white)
+                                        }
+                                    }
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(token.displayName)
                         }
                     }
-                    .padding(.vertical, 2)
                 }
 
                 Button {
@@ -523,7 +546,6 @@ struct BookNoteComposerSheet: View {
         )
     }
 
-    private static let categoryColorOptions = Array(AccentColorToken.all.prefix(16))
 }
 
 struct BookNoteSavePayload {
@@ -603,19 +625,5 @@ private struct DualHandleRangeSlider: View {
                     }
                 }
             }
-    }
-}
-
-private struct FlexibleChipLayout<Item: Identifiable, Content: View>: View {
-    let items: [Item]
-    let selectedId: String?
-    @ViewBuilder let content: (Item) -> Content
-
-    var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], alignment: .leading, spacing: 8) {
-            ForEach(items) { item in
-                content(item)
-            }
-        }
     }
 }
