@@ -28,8 +28,14 @@ test.describe("Book CRUD", () => {
 
     // Select an author (required field)
     await dialog.getByText("Select authors...").click();
-    // Pick the first available author from the dropdown
-    await page.getByRole("option").first().click();
+    // Pick the first existing author, not the inline "create new author" action.
+    const existingAuthorOption = page
+      .getByRole("option")
+      .filter({ hasNotText: /Create new author/i })
+      .first();
+    await expect(existingAuthorOption).toBeVisible({ timeout: 15000 });
+    await existingAuthorOption.click();
+    await expect(dialog.getByText(/1 author selected/i)).toBeVisible();
 
     // Submit the form
     await dialog.getByRole("button", { name: "Create Book" }).click();

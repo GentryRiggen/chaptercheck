@@ -3,6 +3,7 @@ import { expect, test as setup } from "@playwright/test";
 import path from "path";
 
 const authFile = path.join(__dirname, ".clerk", "user.json");
+const dashboardGreetingPattern = /^Good (morning|afternoon|evening), .+/;
 
 setup("authenticate", async ({ page }) => {
   await clerkSetup({
@@ -21,7 +22,9 @@ setup("authenticate", async ({ page }) => {
 
   // Verify we're authenticated — dashboard should show
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Recently Added" })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { level: 1, name: dashboardGreetingPattern })
+  ).toBeVisible({
     timeout: 15000,
   });
 

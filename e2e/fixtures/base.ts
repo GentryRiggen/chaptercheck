@@ -15,6 +15,8 @@ type Fixtures = {
   dashboardPage: DashboardPage;
 };
 
+const dashboardGreetingPattern = /^Good (morning|afternoon|evening), .+/;
+
 export const test = base.extend<Fixtures>({
   page: async ({ page }, use) => {
     await setupClerkTestingToken({ page });
@@ -23,7 +25,9 @@ export const test = base.extend<Fixtures>({
     // This ensures the Clerk → Convex auth sync completes before
     // tests navigate to pages with auth-gated queries.
     await page.goto("/");
-    await page.getByRole("heading", { name: "Recently Added" }).waitFor({ timeout: 15000 });
+    await page
+      .getByRole("heading", { level: 1, name: dashboardGreetingPattern })
+      .waitFor({ timeout: 15000 });
 
     await use(page);
   },

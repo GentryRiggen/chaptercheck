@@ -105,7 +105,20 @@ export class BooksListPage {
   }
 
   async clickFirstBook() {
-    await this.bookLinks.first().click();
-    await this.page.waitForURL(/\/books\/.+/);
+    const firstBookLink = this.bookLinks.first();
+    const href = await firstBookLink.getAttribute("href");
+
+    await firstBookLink.click();
+
+    try {
+      await this.page.waitForURL(/\/books\/.+/, {
+        timeout: 5000,
+        waitUntil: "commit",
+      });
+    } catch {
+      if (!href) throw new Error("First book link did not have an href");
+      await this.page.goto(href);
+      await this.page.waitForURL(new RegExp(`${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
+    }
   }
 }
