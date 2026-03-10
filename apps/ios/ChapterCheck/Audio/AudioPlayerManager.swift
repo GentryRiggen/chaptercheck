@@ -105,8 +105,9 @@ final class AudioPlayerManager {
 
     /// Playback progress as a fraction (0.0 to 1.0).
     var progress: Double {
+        let duration = currentTimelineDuration(for: currentAudioFile)
         guard duration > 0 else { return 0 }
-        return min(currentPosition / duration, 1.0)
+        return min(currentTimelinePosition() / duration, 1.0)
     }
 
     /// Whether there is a next part available.
@@ -144,12 +145,13 @@ final class AudioPlayerManager {
 
     /// Formatted elapsed time as "H:MM:SS" or "M:SS".
     var formattedElapsedTime: String {
-        Self.formatTime(currentPosition)
+        Self.formatTime(currentTimelinePosition())
     }
 
     /// Formatted remaining time as "-H:MM:SS" or "-M:SS".
     var formattedRemainingTime: String {
-        let remaining = max(duration - currentPosition, 0)
+        let duration = currentTimelineDuration(for: currentAudioFile)
+        let remaining = max(duration - currentTimelinePosition(), 0)
         return "-\(Self.formatTime(remaining))"
     }
 
@@ -381,27 +383,31 @@ final class AudioPlayerManager {
     /// Skip forward. Uses momentum-adjusted amount when called without an explicit value.
     func skipForward(_ seconds: Double? = nil) {
         let amount = seconds ?? getSkipAmount(direction: .forward)
-        let target = min(currentPosition + amount, duration)
+        let target = min(
+            currentTimelinePosition() + amount,
+            currentTimelineDuration(for: currentAudioFile)
+        )
         seek(to: target)
     }
 
     /// Skip backward. Uses momentum-adjusted amount when called without an explicit value.
     func skipBackward(_ seconds: Double? = nil) {
         let amount = seconds ?? getSkipAmount(direction: .backward)
-        let target = max(currentPosition - amount, 0)
+        let target = max(currentTimelinePosition() - amount, 0)
         seek(to: target)
     }
 
     /// Seek to a specific position in seconds.
     func seek(to seconds: Double) {
-        let clamped = max(0, min(seconds, duration))
+        let effectiveDuration = currentTimelineDuration(for: currentAudioFile)
+        let clamped = max(0, min(seconds, effectiveDuration))
         let time = CMTime(seconds: clamped, preferredTimescale: 600)
 
         player?.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
             guard finished else { return }
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.currentPosition = clamped
+                self.syncTimelineFromPlayer()
                 self.updateNowPlayingState()
                 self.saveProgressNow()
             }
@@ -414,8 +420,8 @@ final class AudioPlayerManager {
     /// Seek from the slider, capturing the current position for undo.
     /// Clamps to 10s before the end to prevent accidental end-of-file triggers.
     func seekFromSlider(to seconds: Double) {
-        let previousPosition = currentPosition
-        let maxSeek = max(0, duration - 10)
+        let previousPosition = currentTimelinePosition()
+        let maxSeek = max(0, currentTimelineDuration(for: currentAudioFile) - 10)
         seek(to: min(seconds, maxSeek))
 
         sliderSeekUndoPosition = previousPosition
@@ -602,12 +608,7 @@ final class AudioPlayerManager {
 
                 switch item.status {
                 case .readyToPlay:
-                    let itemDuration = item.duration.seconds
-                    if itemDuration.isFinite && itemDuration > 0 {
-                        self.duration = itemDuration
-                    } else {
-                        self.duration = self.currentAudioFile?.duration ?? 0
-                    }
+                    self.syncTimelineFromPlayer()
 
                     if startPosition > 0 {
                         self.seek(to: startPosition)
@@ -644,6 +645,7 @@ final class AudioPlayerManager {
                 if seconds.isFinite {
                     self.currentPosition = seconds
                 }
+                self.syncTimelineFromPlayer()
             }
         }
     }
@@ -771,7 +773,7 @@ final class AudioPlayerManager {
 
     /// Save progress only if the position has changed meaningfully since the last save.
     private func saveProgressIfChanged() {
-        let delta = abs(currentPosition - lastSavedPosition)
+        let delta = abs(currentTimelinePosition() - lastSavedPosition)
         guard delta >= Self.minSaveThresholdSeconds else { return }
         saveProgressNow()
     }
@@ -781,7 +783,6 @@ final class AudioPlayerManager {
         guard
             let book = currentBook,
             let audioFile = currentAudioFile,
-            currentPosition > 0,
             playbackRate > 0
         else {
             return
@@ -789,10 +790,10 @@ final class AudioPlayerManager {
 
         let bookId = book._id
         let audioFileId = audioFile._id
-        let position = currentPosition
+        let position = currentTimelinePosition()
         let rate = playbackRate
-        let fileDuration = duration > 0 ? duration : audioFile.duration
-        guard fileDuration > 0, position <= fileDuration else { return }
+        let fileDuration = currentTimelineDuration(for: audioFile)
+        guard position > 0, fileDuration > 0, position <= fileDuration else { return }
         let timestamp = Date().timeIntervalSince1970 * 1000
         let localEntry = CachedListeningProgress(
             audioFileId: audioFileId,
@@ -838,7 +839,7 @@ final class AudioPlayerManager {
            let targetFile = audioFiles.first(where: { $0._id == overrideAudioFileId }) {
             fileDuration = targetFile.duration
         } else {
-            fileDuration = duration > 0 ? duration : audioFile.duration
+            fileDuration = currentTimelineDuration(for: audioFile)
         }
         guard fileDuration > 0 else { return }
         let timestamp = Date().timeIntervalSince1970 * 1000
@@ -1009,17 +1010,58 @@ final class AudioPlayerManager {
         nowPlayingManager.updateNowPlayingInfo(
             title: title,
             artist: artist.isEmpty ? "Unknown Author" : artist,
-            duration: duration,
-            elapsedTime: currentPosition,
+            duration: currentTimelineDuration(for: currentAudioFile),
+            elapsedTime: currentTimelinePosition(),
             playbackRate: isPlaying ? playbackRate : 0
         )
     }
 
     private func updateNowPlayingState() {
         nowPlayingManager.updatePlaybackPosition(
-            elapsedTime: currentPosition,
+            elapsedTime: currentTimelinePosition(),
             playbackRate: isPlaying ? playbackRate : 0
         )
+    }
+
+    private func syncTimelineFromPlayer() {
+        if let liveDuration = livePlayerDuration() {
+            if duration <= 0 || abs(duration - liveDuration) > 0.5 {
+                if duration > 0, abs(duration - liveDuration) > 1 {
+                    logger.warning(
+                        "Player duration corrected from \(self.duration, format: .fixed(precision: 2))s to \(liveDuration, format: .fixed(precision: 2))s"
+                    )
+                }
+                duration = liveDuration
+            }
+        } else if duration <= 0 {
+            duration = currentAudioFile?.duration ?? 0
+        }
+
+        if let livePosition = livePlayerPosition() {
+            currentPosition = livePosition
+        }
+    }
+
+    private func currentTimelinePosition() -> Double {
+        livePlayerPosition() ?? currentPosition
+    }
+
+    private func currentTimelineDuration(for audioFile: AudioFile?) -> Double {
+        livePlayerDuration() ?? (duration > 0 ? duration : (audioFile?.duration ?? 0))
+    }
+
+    private func livePlayerPosition() -> Double? {
+        guard let seconds = player?.currentTime().seconds, seconds.isFinite, seconds >= 0 else {
+            return nil
+        }
+        return seconds
+    }
+
+    private func livePlayerDuration() -> Double? {
+        guard let seconds = player?.currentItem?.duration.seconds, seconds.isFinite, seconds > 0 else {
+            return nil
+        }
+        return seconds
     }
 
     private func loadCoverArtwork() {
