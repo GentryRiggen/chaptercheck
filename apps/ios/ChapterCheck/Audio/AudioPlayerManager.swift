@@ -105,9 +105,8 @@ final class AudioPlayerManager {
 
     /// Playback progress as a fraction (0.0 to 1.0).
     var progress: Double {
-        let duration = currentTimelineDuration(for: currentAudioFile)
         guard duration > 0 else { return 0 }
-        return min(currentTimelinePosition() / duration, 1.0)
+        return min(currentPosition / duration, 1.0)
     }
 
     /// Whether there is a next part available.
@@ -145,13 +144,12 @@ final class AudioPlayerManager {
 
     /// Formatted elapsed time as "H:MM:SS" or "M:SS".
     var formattedElapsedTime: String {
-        Self.formatTime(currentTimelinePosition())
+        Self.formatTime(currentPosition)
     }
 
     /// Formatted remaining time as "-H:MM:SS" or "-M:SS".
     var formattedRemainingTime: String {
-        let duration = currentTimelineDuration(for: currentAudioFile)
-        let remaining = max(duration - currentTimelinePosition(), 0)
+        let remaining = max(duration - currentPosition, 0)
         return "-\(Self.formatTime(remaining))"
     }
 
