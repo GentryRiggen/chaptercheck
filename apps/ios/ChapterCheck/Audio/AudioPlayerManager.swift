@@ -207,8 +207,15 @@ final class AudioPlayerManager {
     /// Interval between periodic progress saves during playback.
     private static let progressSaveIntervalSeconds: Double = 10.0
 
+    /// Non-critical remote progress updates are coalesced and flushed on this cadence.
+    private static let remoteProgressSyncIntervalSeconds: Double = 20.0
+
     /// Tracks the last saved position to avoid redundant saves.
     private var lastSavedPosition: Double = 0
+    private var remoteProgressSyncTask: Task<Void, Never>?
+    private var pendingRemoteProgress: QueuedProgress?
+    private var remoteProgressSyncInFlight = false
+    private var needsImmediateRemoteFlush = false
 
     // MARK: - Skip Momentum
 
@@ -315,7 +322,7 @@ final class AudioPlayerManager {
 
         // Save progress for the outgoing track before switching
         if currentBook != nil {
-            saveProgressNow()
+            saveProgressNow(forceRemoteSync: true)
         }
 
         currentBook = book
@@ -348,7 +355,7 @@ final class AudioPlayerManager {
         player?.pause()
         isPlaying = false
         cancelSleepTimer()
-        saveProgressNow()
+        saveProgressNow(forceRemoteSync: true)
         updateNowPlayingState()
     }
 
@@ -480,7 +487,7 @@ final class AudioPlayerManager {
               let book = currentBook
         else { return }
 
-        saveProgressNow()
+        saveProgressNow(forceRemoteSync: true)
         play(book: book, audioFile: nextFile, allFiles: audioFiles, startPosition: 0, rate: playbackRate)
     }
 
@@ -514,7 +521,7 @@ final class AudioPlayerManager {
             return
         }
 
-        saveProgressNow()
+        saveProgressNow(forceRemoteSync: true)
         play(book: book, audioFile: prevFile, allFiles: audioFiles, startPosition: 0, rate: playbackRate)
     }
 
@@ -526,7 +533,7 @@ final class AudioPlayerManager {
 
     /// Stop playback and clear all state.
     func stop() {
-        saveProgressNow()
+        saveProgressNow(forceRemoteSync: true)
         teardownPlayer()
         cancelSleepTimer()
         resetMomentum()
@@ -653,7 +660,7 @@ final class AudioPlayerManager {
 
                 // Reset the finished file's progress to 0 so replaying
                 // starts from the beginning instead of resuming at the end.
-                self.saveProgressWithPosition(0)
+                self.saveProgressWithPosition(0, forceRemoteSync: true)
 
                 // Auto-advance to next part if available
                 if self.hasNext {
@@ -670,7 +677,7 @@ final class AudioPlayerManager {
                     // Reset progress to the first file at position 0 so
                     // "Play" starts the book from the beginning.
                     if let firstFileId = self.audioFiles.first?._id {
-                        self.saveProgressWithPosition(0, audioFileId: firstFileId)
+                        self.saveProgressWithPosition(0, audioFileId: firstFileId, forceRemoteSync: true)
                     }
 
                     self.currentPosition = 0
@@ -750,7 +757,7 @@ final class AudioPlayerManager {
                             Haptics.warning()
                             self.player?.pause()
                             self.isPlaying = false
-                            self.saveProgressNow()
+                            self.saveProgressNow(forceRemoteSync: true)
                             self.updateNowPlayingState()
                         }
                         return true
@@ -769,14 +776,12 @@ final class AudioPlayerManager {
         saveProgressNow()
     }
 
-    /// Immediately save the current progress to the backend, or queue for later if offline.
-    private func saveProgressNow() {
+    /// Immediately save local progress and coalesce remote syncs.
+    private func saveProgressNow(forceRemoteSync: Bool = false) {
         guard
             let book = currentBook,
             let audioFile = currentAudioFile,
             currentPosition > 0,
-            duration > 0,
-            currentPosition <= duration,
             playbackRate > 0
         else {
             return
@@ -786,80 +791,42 @@ final class AudioPlayerManager {
         let audioFileId = audioFile._id
         let position = currentPosition
         let rate = playbackRate
-        let fileDuration = duration
+        let fileDuration = duration > 0 ? duration : audioFile.duration
+        guard fileDuration > 0, position <= fileDuration else { return }
+        let timestamp = Date().timeIntervalSince1970 * 1000
+        let localEntry = CachedListeningProgress(
+            audioFileId: audioFileId,
+            positionSeconds: position,
+            playbackRate: rate,
+            timestamp: timestamp
+        )
 
         lastSavedPosition = position
         lastSavedAt = Date()
 
-        // Update local cache for offline resume of downloaded books
-        if let dm = downloadManager, dm.isBookDownloaded(bookId) {
-            Task {
-                await dm.updateCachedProgress(
-                    bookId: bookId,
-                    audioFileId: audioFileId,
-                    positionSeconds: position,
-                    playbackRate: rate,
-                    timestamp: Date().timeIntervalSince1970 * 1000
-                )
-            }
-        }
+        persistLocalProgress(bookId: bookId, entry: localEntry)
 
-        let canWriteToConvex = NetworkMonitor.shared.isConnected && {
-            if case .authenticated = ConvexService.shared.authState { return true }
-            return false
-        }()
-
-        // When offline or not yet re-authenticated, queue progress for later sync
-        if !canWriteToConvex {
-            let entry = QueuedProgress(
-                bookId: bookId,
-                audioFileId: audioFileId,
-                positionSeconds: position,
-                playbackRate: rate,
-                audioDuration: fileDuration,
-                timestamp: Date().timeIntervalSince1970 * 1000
-            )
-            Task {
-                await OfflineProgressQueue.shared.enqueue(entry)
-            }
-            return
-        }
-
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            do {
-                try await self.progressRepository.saveProgress(
-                    bookId: bookId,
-                    audioFileId: audioFileId,
-                    positionSeconds: position,
-                    playbackRate: rate,
-                    audioDuration: fileDuration
-                )
-            } catch {
-                self.logger.error("Failed to save progress: \(error.localizedDescription)")
-                // Fallback: queue for later sync if online save fails
-                let entry = QueuedProgress(
-                    bookId: bookId,
-                    audioFileId: audioFileId,
-                    positionSeconds: position,
-                    playbackRate: rate,
-                    audioDuration: fileDuration,
-                    timestamp: Date().timeIntervalSince1970 * 1000
-                )
-                Task {
-                    await OfflineProgressQueue.shared.enqueue(entry)
-                }
-            }
-        }
+        let remoteEntry = QueuedProgress(
+            bookId: bookId,
+            audioFileId: audioFileId,
+            positionSeconds: position,
+            playbackRate: rate,
+            audioDuration: fileDuration,
+            timestamp: timestamp
+        )
+        queueRemoteProgressSync(remoteEntry, immediate: forceRemoteSync)
     }
 
     /// Save progress with an explicit position and optional audio file override.
     /// Used to reset a finished file's progress (position 0) or to reset to the first file on book completion.
-    private func saveProgressWithPosition(_ position: Double, audioFileId overrideAudioFileId: String? = nil) {
+    private func saveProgressWithPosition(
+        _ position: Double,
+        audioFileId overrideAudioFileId: String? = nil,
+        forceRemoteSync: Bool = false
+    ) {
         guard
             let book = currentBook,
             let audioFile = currentAudioFile,
-            duration > 0,
             playbackRate > 0
         else { return }
 
@@ -871,65 +838,158 @@ final class AudioPlayerManager {
            let targetFile = audioFiles.first(where: { $0._id == overrideAudioFileId }) {
             fileDuration = targetFile.duration
         } else {
-            fileDuration = duration
+            fileDuration = duration > 0 ? duration : audioFile.duration
         }
+        guard fileDuration > 0 else { return }
+        let timestamp = Date().timeIntervalSince1970 * 1000
+        let localEntry = CachedListeningProgress(
+            audioFileId: audioFileId,
+            positionSeconds: position,
+            playbackRate: rate,
+            timestamp: timestamp
+        )
 
         lastSavedPosition = position
         lastSavedAt = Date()
 
-        if let dm = downloadManager, dm.isBookDownloaded(bookId) {
-            Task {
-                await dm.updateCachedProgress(
-                    bookId: bookId,
-                    audioFileId: audioFileId,
-                    positionSeconds: position,
-                    playbackRate: rate,
-                    timestamp: Date().timeIntervalSince1970 * 1000
-                )
-            }
+        persistLocalProgress(bookId: bookId, entry: localEntry)
+
+        let remoteEntry = QueuedProgress(
+            bookId: bookId,
+            audioFileId: audioFileId,
+            positionSeconds: position,
+            playbackRate: rate,
+            audioDuration: fileDuration,
+            timestamp: timestamp
+        )
+        queueRemoteProgressSync(remoteEntry, immediate: forceRemoteSync)
+    }
+
+    private func persistLocalProgress(bookId: String, entry: CachedListeningProgress) {
+        Task {
+            await PlaybackProgressStore.shared.saveLocalProgress(bookId: bookId, entry: entry)
         }
 
-        let canWriteToConvex = NetworkMonitor.shared.isConnected && {
-            if case .authenticated = ConvexService.shared.authState { return true }
-            return false
-        }()
+        Task { @MainActor [weak self] in
+            guard
+                let self,
+                let downloadManager = self.downloadManager,
+                downloadManager.isBookDownloaded(bookId)
+            else { return }
 
-        if !canWriteToConvex {
-            let entry = QueuedProgress(
+            await downloadManager.updateCachedProgress(
                 bookId: bookId,
-                audioFileId: audioFileId,
-                positionSeconds: position,
-                playbackRate: rate,
-                audioDuration: fileDuration,
-                timestamp: Date().timeIntervalSince1970 * 1000
+                audioFileId: entry.audioFileId,
+                positionSeconds: entry.positionSeconds,
+                playbackRate: entry.playbackRate,
+                timestamp: entry.timestamp
             )
+        }
+    }
+
+    private func queueRemoteProgressSync(_ entry: QueuedProgress, immediate: Bool) {
+        guard canWriteRemoteProgress else {
+            remoteProgressSyncTask?.cancel()
+            remoteProgressSyncTask = nil
+            pendingRemoteProgress = nil
+            needsImmediateRemoteFlush = false
             Task { await OfflineProgressQueue.shared.enqueue(entry) }
+            return
+        }
+
+        pendingRemoteProgress = entry
+        needsImmediateRemoteFlush = needsImmediateRemoteFlush || immediate
+
+        if immediate {
+            remoteProgressSyncTask?.cancel()
+            remoteProgressSyncTask = nil
+            flushPendingRemoteProgressIfNeeded()
+            return
+        }
+
+        scheduleRemoteProgressFlushIfNeeded()
+    }
+
+    private func scheduleRemoteProgressFlushIfNeeded() {
+        guard pendingRemoteProgress != nil else { return }
+        guard remoteProgressSyncTask == nil else { return }
+        guard !remoteProgressSyncInFlight else { return }
+
+        if needsImmediateRemoteFlush || !isPlaying {
+            flushPendingRemoteProgressIfNeeded()
+            return
+        }
+
+        remoteProgressSyncTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.remoteProgressSyncIntervalSeconds))
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.remoteProgressSyncTask = nil
+                self.flushPendingRemoteProgressIfNeeded()
+            }
+        }
+    }
+
+    private func flushPendingRemoteProgressIfNeeded() {
+        guard !remoteProgressSyncInFlight else { return }
+        guard let entry = pendingRemoteProgress else { return }
+
+        pendingRemoteProgress = nil
+        let shouldFlushImmediately = needsImmediateRemoteFlush || !isPlaying
+        needsImmediateRemoteFlush = false
+        remoteProgressSyncTask?.cancel()
+        remoteProgressSyncTask = nil
+        remoteProgressSyncInFlight = true
+
+        guard canWriteRemoteProgress else {
+            Task {
+                await OfflineProgressQueue.shared.enqueue(entry)
+                await MainActor.run { [weak self] in
+                    self?.finishRemoteProgressFlush(shouldFlushImmediately: shouldFlushImmediately)
+                }
+            }
             return
         }
 
         Task { @MainActor [weak self] in
             guard let self else { return }
+            defer { self.finishRemoteProgressFlush(shouldFlushImmediately: shouldFlushImmediately) }
+
             do {
                 try await self.progressRepository.saveProgress(
-                    bookId: bookId,
-                    audioFileId: audioFileId,
-                    positionSeconds: position,
-                    playbackRate: rate,
-                    audioDuration: fileDuration
+                    bookId: entry.bookId,
+                    audioFileId: entry.audioFileId,
+                    positionSeconds: entry.positionSeconds,
+                    playbackRate: entry.playbackRate,
+                    audioDuration: entry.audioDuration,
+                    clientTimestamp: entry.timestamp
                 )
             } catch {
                 self.logger.error("Failed to save progress: \(error.localizedDescription)")
-                let entry = QueuedProgress(
-                    bookId: bookId,
-                    audioFileId: audioFileId,
-                    positionSeconds: position,
-                    playbackRate: rate,
-                    audioDuration: fileDuration,
-                    timestamp: Date().timeIntervalSince1970 * 1000
-                )
-                Task { await OfflineProgressQueue.shared.enqueue(entry) }
+                Task {
+                    await OfflineProgressQueue.shared.enqueue(entry)
+                }
             }
         }
+    }
+
+    private func finishRemoteProgressFlush(shouldFlushImmediately: Bool) {
+        remoteProgressSyncInFlight = false
+
+        guard pendingRemoteProgress != nil else { return }
+        if needsImmediateRemoteFlush || shouldFlushImmediately || !isPlaying {
+            flushPendingRemoteProgressIfNeeded()
+        } else {
+            scheduleRemoteProgressFlushIfNeeded()
+        }
+    }
+
+    private var canWriteRemoteProgress: Bool {
+        guard NetworkMonitor.shared.isConnected else { return false }
+        if case .authenticated = ConvexService.shared.authState { return true }
+        return false
     }
 
     // MARK: - Private: Now Playing
@@ -988,7 +1048,7 @@ final class AudioPlayerManager {
                     // Interruption began or ended without resume flag
                     self.player?.pause()
                     self.isPlaying = false
-                    self.saveProgressNow()
+                    self.saveProgressNow(forceRemoteSync: true)
                     self.updateNowPlayingState()
                 }
             }
@@ -1054,7 +1114,7 @@ final class AudioPlayerManager {
     private func appWillResignActive() {
         // Save progress and update lock screen when app backgrounds
         if isPlaying {
-            saveProgressNow()
+            saveProgressNow(forceRemoteSync: true)
             updateNowPlayingFull()
         }
     }

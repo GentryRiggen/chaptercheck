@@ -6,7 +6,7 @@ import SwiftUI
 /// and a play button. The header includes a "Download All" action.
 struct AudioFileListView: View {
     let audioFiles: [AudioFile]
-    let progress: ListeningProgress?
+    let progress: CachedListeningProgress?
     let book: BookWithDetails
     let canUploadAudio: Bool
     let canShowUploadControls: Bool

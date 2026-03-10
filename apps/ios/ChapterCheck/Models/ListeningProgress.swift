@@ -15,6 +15,15 @@ struct ListeningProgress: Decodable, Identifiable, Sendable {
     let updatedAt: Double
 
     var id: String { _id }
+
+    var cachedProgress: CachedListeningProgress {
+        CachedListeningProgress(
+            audioFileId: audioFileId,
+            positionSeconds: positionSeconds,
+            playbackRate: playbackRate,
+            timestamp: lastListenedAt
+        )
+    }
 }
 
 /// Enriched listening progress for the "Continue Listening" section.
@@ -37,6 +46,22 @@ struct RecentListeningProgress: Decodable, Identifiable, Sendable {
     var formattedProgress: String {
         let percent = Int(progressFraction * 100)
         return "\(percent)%"
+    }
+
+    var cachedProgress: CachedListeningProgress {
+        CachedListeningProgress(
+            audioFileId: audioFile._id,
+            positionSeconds: positionSeconds,
+            playbackRate: playbackRate,
+            timestamp: lastListenedAt
+        )
+    }
+
+    func resolvedProgress(local: CachedListeningProgress?) -> CachedListeningProgress {
+        guard let local, local.timestamp >= lastListenedAt else {
+            return cachedProgress
+        }
+        return local
     }
 }
 

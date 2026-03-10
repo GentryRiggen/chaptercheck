@@ -106,6 +106,9 @@ actor DownloadService {
 
     /// Update cached listening progress for a book.
     func updateListeningProgress(bookId: String, entry: CachedListeningProgress) {
+        if let existing = manifest.listeningProgress[bookId], existing.timestamp > entry.timestamp {
+            return
+        }
         manifest.listeningProgress[bookId] = entry
         saveManifestToDisk()
     }

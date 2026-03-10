@@ -155,6 +155,15 @@ final class HomeViewModel {
                     self?.logger.info("recentlyListening: received \(items.count) items")
                     self?.recentlyListening = items
                     self?.markLoaded("recentlyListening")
+
+                    Task {
+                        for item in items {
+                            await PlaybackProgressStore.shared.mergeRemoteProgress(
+                                bookId: item.bookId,
+                                entry: item.cachedProgress
+                            )
+                        }
+                    }
                 }
             )
             .store(in: &cancellables)
@@ -248,7 +257,9 @@ final class HomeViewModel {
         offlineLoadTask = Task {
             var items: [RecentListeningProgress] = []
             for info in completedBooks {
-                let cached = await downloadManager.cachedProgress(for: info.bookId)
+                let storedProgress = await PlaybackProgressStore.shared.progress(for: info.bookId)
+                let cachedProgress = await downloadManager.cachedProgress(for: info.bookId)
+                let cached = storedProgress ?? cachedProgress
 
                 let authors = info.authorNames.map { name in
                     BookAuthorSummary(_id: "offline-\(name.hashValue)", name: name)

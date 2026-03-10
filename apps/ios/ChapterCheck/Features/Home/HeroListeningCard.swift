@@ -130,14 +130,27 @@ struct HeroListeningCard: View {
             return
         }
 
-        // Offline path: use downloaded data directly
-        if !networkMonitor.isConnected && downloadManager.isBookDownloaded(item.bookId) {
-            resumeFromDownload()
-            return
-        }
-
         isResuming = true
 
+        Task {
+            let local = await PlaybackProgressStore.shared.progress(for: item.bookId)
+            let resolved = item.resolvedProgress(local: local)
+
+            await MainActor.run {
+                if !networkMonitor.isConnected {
+                    if downloadManager.isBookDownloaded(item.bookId) {
+                        resumeFromDownload(using: resolved)
+                    }
+                    isResuming = false
+                    return
+                }
+
+                startRemoteResume(using: resolved)
+            }
+        }
+    }
+
+    private func startRemoteResume(using resolved: CachedListeningProgress) {
         let bookRepo = BookRepository()
         let audioRepo = AudioRepository()
 
@@ -149,13 +162,13 @@ struct HeroListeningCard: View {
             return
         }
 
-        let targetFileId = item.audioFile._id
+        let targetFileId = resolved.audioFileId
         let position = AudioPlayerManager.smartRewindPosition(
-            from: item.positionSeconds,
-            lastListenedAt: item.lastListenedAt,
+            from: resolved.positionSeconds,
+            lastListenedAt: resolved.timestamp,
             enabled: audioPlayer.isSmartRewindEnabled
         )
-        let rate = item.playbackRate
+        let rate = resolved.playbackRate
 
         bookPub
             .combineLatest(filesPub)
@@ -188,15 +201,15 @@ struct HeroListeningCard: View {
             .store(in: &resumeCancellables)
     }
 
-    private func resumeFromDownload() {
+    private func resumeFromDownload(using resolved: CachedListeningProgress) {
         guard let (book, allFiles) = downloadManager.offlinePlaybackData(for: item.bookId) else { return }
 
-        let targetFile = allFiles.first(where: { $0._id == item.audioFile._id }) ?? allFiles.first
+        let targetFile = allFiles.first(where: { $0._id == resolved.audioFileId }) ?? allFiles.first
         guard let audioFile = targetFile else { return }
 
         let position = AudioPlayerManager.smartRewindPosition(
-            from: item.positionSeconds,
-            lastListenedAt: item.lastListenedAt,
+            from: resolved.positionSeconds,
+            lastListenedAt: resolved.timestamp,
             enabled: audioPlayer.isSmartRewindEnabled
         )
 
@@ -205,7 +218,7 @@ struct HeroListeningCard: View {
             audioFile: audioFile,
             allFiles: allFiles,
             startPosition: position,
-            rate: item.playbackRate
+            rate: resolved.playbackRate
         )
         showNowPlaying()
     }

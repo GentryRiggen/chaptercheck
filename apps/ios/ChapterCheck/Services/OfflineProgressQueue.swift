@@ -85,7 +85,8 @@ actor OfflineProgressQueue {
                     audioFileId: entry.audioFileId,
                     positionSeconds: entry.positionSeconds,
                     playbackRate: entry.playbackRate,
-                    audioDuration: entry.audioDuration
+                    audioDuration: entry.audioDuration,
+                    clientTimestamp: entry.timestamp
                 )
                 logger.info("Flushed progress for book '\(entry.bookId)'")
             } catch {
