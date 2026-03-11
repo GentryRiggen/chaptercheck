@@ -3,7 +3,8 @@ import { v } from "convex/values";
 
 import { type Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
-import { getCurrentUser, requireAuth } from "../lib/auth";
+import { getCurrentUser, requireAdmin, requireAuth } from "../lib/auth";
+import { getFinishedAt, isBookFinished } from "../lib/bookUserData";
 
 /**
  * Get current user's data for a specific book
@@ -536,5 +537,82 @@ export const getUserReadBooks = query({
     );
 
     return booksWithDetails.filter((b) => b !== null);
+  },
+});
+
+/**
+ * Get all ratings/reviews for a user for the admin drill-in page.
+ * Includes private entries and basic read-status metadata.
+ */
+export const getAdminUserRatings = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      return null;
+    }
+
+    const allUserData = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const ratedOrReviewed = allUserData.filter(
+      (data) => data.rating !== undefined || !!data.reviewText?.trim()
+    );
+
+    ratedOrReviewed.sort((a, b) => {
+      const aTime = a.reviewedAt ?? a.finishedAt ?? a.readAt ?? a.updatedAt;
+      const bTime = b.reviewedAt ?? b.finishedAt ?? b.readAt ?? b.updatedAt;
+      return bTime - aTime;
+    });
+
+    return (
+      await Promise.all(
+        ratedOrReviewed.map(async (entry) => {
+          const book = await ctx.db.get(entry.bookId);
+          if (!book) return null;
+
+          const bookAuthors = await ctx.db
+            .query("bookAuthors")
+            .withIndex("by_book", (q) => q.eq("bookId", book._id))
+            .collect();
+
+          const authors = (
+            await Promise.all(
+              bookAuthors.map(async (ba) => {
+                const author = await ctx.db.get(ba.authorId);
+                return author ? { _id: author._id, name: author.name } : null;
+              })
+            )
+          ).filter((author): author is { _id: Id<"authors">; name: string } => author !== null);
+
+          return {
+            _id: entry._id,
+            rating: entry.rating,
+            reviewText: entry.reviewText,
+            reviewedAt: entry.reviewedAt,
+            updatedAt: entry.updatedAt,
+            status: entry.status,
+            startedAt: entry.startedAt,
+            finishedAt: entry.finishedAt,
+            readAt: entry.readAt,
+            isRead: entry.isRead,
+            isReadPrivate: entry.isReadPrivate,
+            isReviewPrivate: entry.isReviewPrivate,
+            book: {
+              _id: book._id,
+              title: book.title,
+              coverImageR2Key: book.coverImageR2Key,
+              authors,
+              averageRating: book.averageRating,
+              ratingCount: book.ratingCount,
+            },
+          };
+        })
+      )
+    ).filter((entry) => entry !== null);
   },
 });
