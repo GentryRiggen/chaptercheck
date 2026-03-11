@@ -32,6 +32,7 @@ final class HomeViewModel {
     // MARK: - Dependencies
 
     var downloadManager: DownloadManager?
+    var audioPlayerManager: AudioPlayerManager!
     private let networkMonitor = NetworkMonitor.shared
     private let logger = Logger(subsystem: "com.chaptercheck", category: "HomeViewModel")
     private let bookRepository = BookRepository()
@@ -156,7 +157,12 @@ final class HomeViewModel {
                     self?.recentlyListening = items
                     self?.markLoaded("recentlyListening")
 
-                    Task {
+                    Task { @MainActor in
+                        guard let self else { return }
+                        guard !self.audioPlayerManager.isSuppressingRemoteMerge else {
+                            self.logger.debug("Skipping remote progress merge — suppressed during reconnection")
+                            return
+                        }
                         for item in items {
                             await PlaybackProgressStore.shared.mergeRemoteProgress(
                                 bookId: item.bookId,

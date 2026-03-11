@@ -9,6 +9,7 @@ import SwiftUI
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @Environment(\.showSettings) private var showSettings
+    @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(ThemeManager.self) private var themeManager
     private let networkMonitor = NetworkMonitor.shared
@@ -60,6 +61,7 @@ struct HomeView: View {
         }
         .onAppear {
             viewModel.downloadManager = downloadManager
+            viewModel.audioPlayerManager = audioPlayer
             viewModel.subscribe()
         }
         .onDisappear {

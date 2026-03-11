@@ -60,7 +60,16 @@ actor PlaybackProgressStore {
         with candidate: CachedListeningProgress
     ) -> Bool {
         guard let existing else { return true }
-        return candidate.timestamp > existing.timestamp
+        guard candidate.timestamp > existing.timestamp else { return false }
+
+        // Reject remote progress that would regress position on the same audio file.
+        // Different audioFileId (part change) is always allowed through.
+        if candidate.audioFileId == existing.audioFileId,
+           candidate.positionSeconds < existing.positionSeconds {
+            return false
+        }
+
+        return true
     }
 
     private func saveToDisk() {

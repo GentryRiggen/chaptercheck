@@ -43,6 +43,17 @@ export const saveProgress = mutation({
         return existing._id;
       }
 
+      // Reject position regression on the same audio file.
+      // The > 5 threshold allows explicit restarts (position ~0) while
+      // blocking accidental regression from stale reconnection data.
+      if (
+        args.audioFileId === existing.audioFileId &&
+        args.positionSeconds < existing.positionSeconds &&
+        args.positionSeconds > 5
+      ) {
+        return existing._id;
+      }
+
       await ctx.db.patch(existing._id, {
         audioFileId: args.audioFileId,
         positionSeconds: args.positionSeconds,

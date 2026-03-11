@@ -29,6 +29,7 @@ final class ConvexService: ObservableObject {
     @Published private(set) var authState: AuthState<String> = .loading
     @Published private(set) var resetID = UUID()
     @Published private(set) var isResetting = false
+    @Published private(set) var isWebSocketConnected: Bool = false
 
     // MARK: - Client
 
@@ -39,14 +40,27 @@ final class ConvexService: ObservableObject {
     private let logger = Logger(subsystem: "com.chaptercheck", category: "ConvexService")
     private let networkMonitor = NetworkMonitor.shared
     private var authStateCancellable: AnyCancellable?
+    private var webSocketStateCancellable: AnyCancellable?
     private var tokenRefreshTask: Task<Void, Never>?
+    private var webSocketRecoveryTask: Task<Void, Never>?
     private var lastBackgroundedAt: Date?
     private var lastResetAt = Date.distantPast
+    private var wasWebSocketConnected = false
 
     /// Interval between proactive token refreshes (in seconds).
     /// Clerk JWTs expire after ~60s; refresh every 50s to stay ahead.
     private static let tokenRefreshInterval: UInt64 = 50
     private static let resetCooldownSeconds: TimeInterval = 5
+
+    /// True when network reachability, WebSocket, and auth are all healthy.
+    var isFullyConnected: Bool {
+        networkMonitor.isConnected && isWebSocketConnected && isAuthenticated
+    }
+
+    private var isAuthenticated: Bool {
+        if case .authenticated = authState { return true }
+        return false
+    }
 
     // MARK: - Init
 
@@ -88,6 +102,43 @@ final class ConvexService: ObservableObject {
                 self?.authState = state
                 self?.handleAuthStateChange(state)
             }
+
+        webSocketStateCancellable?.cancel()
+        webSocketStateCancellable = client.watchWebSocketState()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                self?.handleWebSocketStateChange(state)
+            }
+    }
+
+    private func handleWebSocketStateChange(_ state: WebSocketState) {
+        let wasConnected = wasWebSocketConnected
+        let nowConnected = (state == .connected)
+        isWebSocketConnected = nowConnected
+        wasWebSocketConnected = nowConnected
+
+        if !wasConnected && nowConnected {
+            logger.info("WebSocket connected")
+            NotificationCenter.default.post(name: .convexReconnected, object: nil)
+            webSocketRecoveryTask?.cancel()
+            webSocketRecoveryTask = nil
+        } else if wasConnected && !nowConnected {
+            logger.info("WebSocket disconnected (state: \(String(describing: state)))")
+            startWebSocketRecoveryWatchdog()
+        }
+    }
+
+    /// If WebSocket stays in `.connecting` for >5s while we have network,
+    /// nudge reconnection with `loginFromCache()`.
+    private func startWebSocketRecoveryWatchdog() {
+        webSocketRecoveryTask?.cancel()
+        webSocketRecoveryTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            guard !Task.isCancelled, let self else { return }
+            guard self.networkMonitor.isConnected, !self.isWebSocketConnected else { return }
+            self.logger.info("WebSocket stuck connecting — nudging with loginFromCache()")
+            _ = await self.client.loginFromCache()
+        }
     }
 
     private func isAuthError(_ error: Error) -> Bool {
@@ -150,6 +201,33 @@ final class ConvexService: ObservableObject {
             logger.info("Restoring Convex session after foreground resume")
             _ = await client.loginFromCache()
         }
+
+        // Wait up to 3s for WebSocket to reconnect after foregrounding.
+        // If still not connected, retry once. If still stuck, full reset.
+        if !isWebSocketConnected {
+            logger.info("WebSocket not connected after foreground resume — waiting up to 3s")
+            let connected = await waitForWebSocket(timeout: 3)
+            if !connected {
+                logger.info("WebSocket still not connected — retrying loginFromCache")
+                _ = await client.loginFromCache()
+                let retryConnected = await waitForWebSocket(timeout: 3)
+                if !retryConnected {
+                    logger.warning("WebSocket recovery failed — resetting session")
+                    await resetApplicationSession(reason: "websocket_stuck_after_foreground")
+                }
+            }
+        }
+    }
+
+    /// Wait for `isWebSocketConnected` to become true within a timeout.
+    private func waitForWebSocket(timeout: TimeInterval) async -> Bool {
+        if isWebSocketConnected { return true }
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            try? await Task.sleep(nanoseconds: 200_000_000) // 200ms
+            if isWebSocketConnected { return true }
+        }
+        return false
     }
 
     func handleNetworkRestored() async {
@@ -204,9 +282,15 @@ final class ConvexService: ObservableObject {
 
         tokenRefreshTask?.cancel()
         tokenRefreshTask = nil
+        webSocketRecoveryTask?.cancel()
+        webSocketRecoveryTask = nil
         authStateCancellable?.cancel()
         authStateCancellable = nil
+        webSocketStateCancellable?.cancel()
+        webSocketStateCancellable = nil
         authState = .loading
+        isWebSocketConnected = false
+        wasWebSocketConnected = false
 
         client = Self.makeClient()
         bindClientState()

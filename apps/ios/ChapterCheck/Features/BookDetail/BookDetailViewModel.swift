@@ -79,6 +79,7 @@ final class BookDetailViewModel {
 
     /// Optional download manager for warming the offline progress cache.
     var downloadManager: DownloadManager?
+    var audioPlayerManager: AudioPlayerManager?
 
     private let networkMonitor = NetworkMonitor.shared
     var isOffline: Bool { !networkMonitor.isConnected }
@@ -428,10 +429,16 @@ final class BookDetailViewModel {
                     }
                 },
                 receiveValue: { [weak self] progress in
-                    self?.progress = progress
+                    let isSuppressed = self?.audioPlayerManager?.isSuppressingRemoteMerge ?? false
+                    // Only update the published progress property when not suppressing,
+                    // so resolvedProgress doesn't briefly show stale remote data.
+                    if !isSuppressed {
+                        self?.progress = progress
+                    }
                     self?.markLoaded("progress")
-                    Task {
-                        if let progress {
+                    Task { @MainActor in
+                        guard let self else { return }
+                        if let progress, !isSuppressed {
                             await PlaybackProgressStore.shared.mergeRemoteProgress(
                                 bookId: bookId,
                                 entry: progress.cachedProgress

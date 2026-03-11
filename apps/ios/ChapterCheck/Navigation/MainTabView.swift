@@ -154,10 +154,19 @@ struct MainView: View {
                 stopStreamingTask = nil
 
                 subscribeToPreferences()
+                // Note: offline queue flush & metadata refresh are also triggered
+                // by .convexReconnected, but fire here as well for fast recovery
                 Task {
                     await OfflineProgressQueue.shared.flush()
                     await downloadManager.refreshDownloadedBookMetadata()
                 }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .convexReconnected)) { _ in
+            // WebSocket reconnected — flush queued progress and refresh metadata
+            Task {
+                await OfflineProgressQueue.shared.flush()
+                await downloadManager.refreshDownloadedBookMetadata()
             }
         }
         .onChange(of: audioPlayer.streamingEventId) { _, newValue in

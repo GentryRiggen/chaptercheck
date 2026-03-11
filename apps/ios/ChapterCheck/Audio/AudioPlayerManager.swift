@@ -191,6 +191,12 @@ final class AudioPlayerManager {
     private(set) var partCompletedAudioFileId: String?
     private(set) var partCompletedBookId: String?
 
+    /// Whether remote progress merges should be suppressed during reconnection.
+    /// Set when WebSocket disconnects, cleared shortly after reconnection.
+    /// Uses an epoch counter so only the most recent reconnection can clear it.
+    private(set) var isSuppressingRemoteMerge: Bool = false
+    private var suppressionEpoch: UInt = 0
+
     // MARK: - Private State
 
     private var player: AVPlayer?
@@ -199,6 +205,12 @@ final class AudioPlayerManager {
     private var endObservation: NSObjectProtocol?
     private var progressSaveTask: Task<Void, Never>?
     private var sleepTimerTask: Task<Void, Never>?
+
+    /// Last known live position from the AVPlayer, used as fallback
+    /// when the player is nil during reconnection to avoid stale `currentPosition`.
+    private var lastLivePosition: Double?
+    private var webSocketObservation: AnyCancellable?
+    private var reconnectObservation: NSObjectProtocol?
 
     /// Minimum position change (in seconds) before saving progress to the backend.
     /// Prevents unnecessary writes when the user pauses and resumes at the same spot.
@@ -265,6 +277,7 @@ final class AudioPlayerManager {
         configureAudioSession()
         configureRemoteCommands()
         observeAppLifecycle()
+        observeWebSocketState()
     }
 
     // MARK: - Public API
@@ -381,10 +394,7 @@ final class AudioPlayerManager {
     /// Skip forward. Uses momentum-adjusted amount when called without an explicit value.
     func skipForward(_ seconds: Double? = nil) {
         let amount = seconds ?? getSkipAmount(direction: .forward)
-        let target = min(
-            currentTimelinePosition() + amount,
-            currentTimelineDuration(for: currentAudioFile)
-        )
+        let target = min(currentTimelinePosition() + amount, currentTimelineDuration(for: currentAudioFile))
         seek(to: target)
     }
 
@@ -551,6 +561,7 @@ final class AudioPlayerManager {
         isLoading = false
         error = nil
         lastSavedPosition = 0
+        lastLivePosition = nil
 
         nowPlayingManager.clearNowPlayingInfo()
         sessionManager.deactivate()
@@ -712,6 +723,7 @@ final class AudioPlayerManager {
 
         player?.pause()
         player = nil
+        lastLivePosition = nil
 
         stopProgressSaving()
     }
@@ -792,6 +804,9 @@ final class AudioPlayerManager {
         let rate = playbackRate
         let fileDuration = currentTimelineDuration(for: audioFile)
         guard position > 0, fileDuration > 0, position <= fileDuration else { return }
+
+        // Skip redundant save when player is nil (e.g. during reconnection)
+        if player == nil, position == lastSavedPosition { return }
         let timestamp = Date().timeIntervalSince1970 * 1000
         let localEntry = CachedListeningProgress(
             audioFileId: audioFileId,
@@ -986,9 +1001,7 @@ final class AudioPlayerManager {
     }
 
     private var canWriteRemoteProgress: Bool {
-        guard NetworkMonitor.shared.isConnected else { return false }
-        if case .authenticated = ConvexService.shared.authState { return true }
-        return false
+        ConvexService.shared.isFullyConnected
     }
 
     // MARK: - Private: Now Playing
@@ -1025,9 +1038,7 @@ final class AudioPlayerManager {
         if let liveDuration = livePlayerDuration() {
             if duration <= 0 || abs(duration - liveDuration) > 0.5 {
                 if duration > 0, abs(duration - liveDuration) > 1 {
-                    logger.warning(
-                        "Player duration corrected from \(self.duration, format: .fixed(precision: 2))s to \(liveDuration, format: .fixed(precision: 2))s"
-                    )
+                    logger.warning("Player duration corrected from \(self.duration, format: .fixed(precision: 2))s to \(liveDuration, format: .fixed(precision: 2))s")
                 }
                 duration = liveDuration
             }
@@ -1041,7 +1052,11 @@ final class AudioPlayerManager {
     }
 
     private func currentTimelinePosition() -> Double {
-        livePlayerPosition() ?? currentPosition
+        if let live = livePlayerPosition() {
+            lastLivePosition = live
+            return live
+        }
+        return lastLivePosition ?? currentPosition
     }
 
     private func currentTimelineDuration(for audioFile: AudioFile?) -> Double {
@@ -1168,6 +1183,39 @@ final class AudioPlayerManager {
             let playerIsPlaying = player.rate > 0
             if isPlaying != playerIsPlaying {
                 isPlaying = playerIsPlaying
+            }
+        }
+    }
+
+    // MARK: - Private: WebSocket State
+
+    private func observeWebSocketState() {
+        webSocketObservation = ConvexService.shared.$isWebSocketConnected
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] connected in
+                guard let self else { return }
+                if !connected {
+                    self.suppressionEpoch &+= 1
+                    self.isSuppressingRemoteMerge = true
+                }
+            }
+
+        reconnectObservation = NotificationCenter.default.addObserver(
+            forName: .convexReconnected,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            let epoch = self.suppressionEpoch
+            // Flush offline queue first, then allow remote merges after a short delay.
+            // Only the most recent reconnection epoch can clear the suppression flag.
+            Task {
+                await OfflineProgressQueue.shared.flush()
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                await MainActor.run { [weak self] in
+                    guard let self, self.suppressionEpoch == epoch else { return }
+                    self.isSuppressingRemoteMerge = false
+                }
             }
         }
     }

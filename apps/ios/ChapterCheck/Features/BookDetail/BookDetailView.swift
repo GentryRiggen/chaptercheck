@@ -57,6 +57,7 @@ struct BookDetailView: View {
         }
         .onAppear {
             viewModel.downloadManager = downloadManager
+            viewModel.audioPlayerManager = audioPlayer
             viewModel.subscribe(bookId: bookId)
 
             if downloadManager.pendingDeletePromptBookId == bookId {
