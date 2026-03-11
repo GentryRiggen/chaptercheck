@@ -404,9 +404,7 @@ export default function AdminUserDetailPage() {
                               </p>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {formatEntryDate(
-                                entry.reviewedAt ?? entry.finishedAt ?? entry.readAt
-                              )}
+                              {formatEntryDate(entry.reviewedAt ?? entry.readAt)}
                             </div>
                           </div>
 
@@ -414,7 +412,7 @@ export default function AdminUserDetailPage() {
                             {entry.rating !== undefined && (
                               <StarRating value={entry.rating} readonly size="sm" />
                             )}
-                            {entry.status && <Badge variant="outline">{entry.status}</Badge>}
+                            {entry.isRead && <Badge variant="outline">Read</Badge>}
                             {entry.isReadPrivate && <Badge variant="outline">Read private</Badge>}
                             {entry.isReviewPrivate && (
                               <Badge variant="outline">Review private</Badge>

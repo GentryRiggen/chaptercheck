@@ -205,7 +205,7 @@ export const getAdminUserListeningActivity = query({
             },
             userBookData: userBookData
               ? {
-                  status: userBookData.status,
+                  status: userBookData.isRead ? "read" : undefined,
                   rating: userBookData.rating,
                   reviewText: userBookData.reviewText,
                 }

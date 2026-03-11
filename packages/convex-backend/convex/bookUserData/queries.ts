@@ -4,7 +4,20 @@ import { v } from "convex/values";
 import { type Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 import { getCurrentUser, requireAdmin, requireAuth } from "../lib/auth";
-import { getFinishedAt, isBookFinished } from "../lib/bookUserData";
+
+type BookUserDataLike = {
+  isRead?: boolean;
+  readAt?: number;
+  createdAt: number;
+};
+
+function isBookFinished(data: BookUserDataLike): boolean {
+  return data.isRead === true;
+}
+
+function getFinishedAt(data: BookUserDataLike): number {
+  return data.readAt ?? data.createdAt;
+}
 
 /**
  * Get current user's data for a specific book
@@ -564,8 +577,8 @@ export const getAdminUserRatings = query({
     );
 
     ratedOrReviewed.sort((a, b) => {
-      const aTime = a.reviewedAt ?? a.finishedAt ?? a.readAt ?? a.updatedAt;
-      const bTime = b.reviewedAt ?? b.finishedAt ?? b.readAt ?? b.updatedAt;
+      const aTime = a.reviewedAt ?? a.readAt ?? a.updatedAt;
+      const bTime = b.reviewedAt ?? b.readAt ?? b.updatedAt;
       return bTime - aTime;
     });
 
@@ -595,9 +608,6 @@ export const getAdminUserRatings = query({
             reviewText: entry.reviewText,
             reviewedAt: entry.reviewedAt,
             updatedAt: entry.updatedAt,
-            status: entry.status,
-            startedAt: entry.startedAt,
-            finishedAt: entry.finishedAt,
             readAt: entry.readAt,
             isRead: entry.isRead,
             isReadPrivate: entry.isReadPrivate,
