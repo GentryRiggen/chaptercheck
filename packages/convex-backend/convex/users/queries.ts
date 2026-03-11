@@ -197,3 +197,66 @@ export const getUserProfile = query({
     };
   },
 });
+
+/**
+ * Get full user detail for the admin drill-in page.
+ * This intentionally bypasses normal profile privacy rules.
+ */
+export const getAdminUserDetail = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const targetUser = await ctx.db.get(args.userId);
+    if (!targetUser) {
+      return null;
+    }
+
+    const [allUserData, allShelves, listeningRecords, storageAccount] = await Promise.all([
+      ctx.db
+        .query("bookUserData")
+        .withIndex("by_user", (q) => q.eq("userId", targetUser._id))
+        .collect(),
+      ctx.db
+        .query("shelves")
+        .withIndex("by_user", (q) => q.eq("userId", targetUser._id))
+        .collect(),
+      ctx.db
+        .query("listeningProgress")
+        .withIndex("by_user_and_lastListened", (q) => q.eq("userId", targetUser._id))
+        .collect(),
+      targetUser.storageAccountId ? ctx.db.get(targetUser.storageAccountId) : Promise.resolve(null),
+    ]);
+
+    const readBooks = allUserData.filter((d) => isBookFinished(d));
+    const reviews = allUserData.filter((d) => d.rating !== undefined || d.reviewText);
+
+    return {
+      _id: targetUser._id,
+      clerkId: targetUser.clerkId,
+      email: targetUser.email,
+      name: targetUser.name,
+      imageUrl: targetUser.imageUrl,
+      role: getEffectiveRole(targetUser),
+      hasPremium: hasPremium(targetUser),
+      isProfilePrivate: targetUser.isProfilePrivate ?? false,
+      createdAt: targetUser.createdAt,
+      storageAccountId: targetUser.storageAccountId,
+      storageAccount: storageAccount
+        ? {
+            _id: storageAccount._id,
+            name: storageAccount.name,
+            r2PathPrefix: storageAccount.r2PathPrefix,
+            totalBytesUsed: storageAccount.totalBytesUsed,
+            fileCount: storageAccount.fileCount,
+          }
+        : null,
+      stats: {
+        booksRead: readBooks.length,
+        reviewsWritten: reviews.length,
+        shelvesCount: allShelves.length,
+        listeningBooks: listeningRecords.length,
+      },
+    };
+  },
+});

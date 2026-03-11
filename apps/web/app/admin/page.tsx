@@ -4,7 +4,8 @@ import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { formatBytes } from "@chaptercheck/shared/utils";
 import { useQuery } from "convex/react";
-import { Crown, HardDrive, Loader2, Pencil, Plus, ShieldAlert, Users } from "lucide-react";
+import { Crown, Eye, HardDrive, Loader2, Pencil, Plus, ShieldAlert, Users } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
@@ -141,6 +142,11 @@ export default function AdminPage() {
                       </p>
                     )}
                   </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
+                    <Link href={`/admin/users/${user._id}`}>
+                      <Eye className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -218,23 +224,31 @@ export default function AdminPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setEditingUser({
-                              _id: user._id,
-                              name: user.name,
-                              email: user.email,
-                              role: user.role,
-                              hasPremium: user.hasPremium,
-                              storageAccountId: user.storageAccountId,
-                            })
-                          }
-                        >
-                          <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                          Edit
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/admin/users/${user._id}`}>
+                              <Eye className="mr-1.5 h-3.5 w-3.5" />
+                              View
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setEditingUser({
+                                _id: user._id,
+                                name: user.name,
+                                email: user.email,
+                                role: user.role,
+                                hasPremium: user.hasPremium,
+                                storageAccountId: user.storageAccountId,
+                              })
+                            }
+                          >
+                            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
