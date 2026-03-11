@@ -14,10 +14,12 @@ export const saveProgress = mutation({
     positionSeconds: v.number(),
     playbackRate: v.number(),
     audioDuration: v.optional(v.number()),
+    clientTimestamp: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireAuthMutation(ctx);
     const now = Date.now();
+    const clientTimestamp = args.clientTimestamp ?? now;
 
     // Verify audioFile belongs to the specified book
     const audioFile = await ctx.db.get(args.audioFileId);
@@ -37,11 +39,26 @@ export const saveProgress = mutation({
       .unique();
 
     if (existing) {
+      if (clientTimestamp < existing.lastListenedAt) {
+        return existing._id;
+      }
+
+      // Reject position regression on the same audio file.
+      // The > 5 threshold allows explicit restarts (position ~0) while
+      // blocking accidental regression from stale reconnection data.
+      if (
+        args.audioFileId === existing.audioFileId &&
+        args.positionSeconds < existing.positionSeconds &&
+        args.positionSeconds > 5
+      ) {
+        return existing._id;
+      }
+
       await ctx.db.patch(existing._id, {
         audioFileId: args.audioFileId,
         positionSeconds: args.positionSeconds,
         playbackRate: args.playbackRate,
-        lastListenedAt: now,
+        lastListenedAt: clientTimestamp,
         updatedAt: now,
       });
       return existing._id;
@@ -53,7 +70,7 @@ export const saveProgress = mutation({
       audioFileId: args.audioFileId,
       positionSeconds: args.positionSeconds,
       playbackRate: args.playbackRate,
-      lastListenedAt: now,
+      lastListenedAt: clientTimestamp,
       createdAt: now,
       updatedAt: now,
     });

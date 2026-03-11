@@ -57,6 +57,7 @@ struct BookDetailView: View {
         }
         .onAppear {
             viewModel.downloadManager = downloadManager
+            viewModel.audioPlayerManager = audioPlayer
             viewModel.subscribe(bookId: bookId)
 
             if downloadManager.pendingDeletePromptBookId == bookId {
@@ -256,7 +257,7 @@ struct BookDetailView: View {
                 if viewModel.hasAudioFiles || !viewModel.isOffline {
                     AudioFileListView(
                         audioFiles: viewModel.audioFiles,
-                        progress: viewModel.progress,
+                        progress: viewModel.resolvedProgress,
                         book: book,
                         canUploadAudio: viewModel.canUploadAudio,
                         canShowUploadControls: !viewModel.isOffline,
@@ -320,6 +321,11 @@ struct BookDetailView: View {
 
     private func playButton(_ book: BookWithDetails) -> some View {
         Button {
+            if audioPlayer.currentBook?._id == book._id {
+                if !audioPlayer.isPlaying { audioPlayer.resume() }
+                showNowPlaying()
+                return
+            }
             guard let audioFile = viewModel.resumeAudioFile else { return }
             Haptics.medium()
             audioPlayer.play(
@@ -343,7 +349,8 @@ struct BookDetailView: View {
     }
 
     private var hasExistingProgress: Bool {
-        viewModel.progress != nil && viewModel.resumePosition(smartRewindEnabled: audioPlayer.isSmartRewindEnabled) > 0
+        viewModel.resolvedProgress != nil
+            && viewModel.resumePosition(smartRewindEnabled: audioPlayer.isSmartRewindEnabled) > 0
     }
 
     private func playNote(_ note: BookNote) {

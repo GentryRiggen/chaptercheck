@@ -57,6 +57,7 @@ final class BookDetailViewModel {
     var book: BookWithDetails?
     var audioFiles: [AudioFile] = []
     var progress: ListeningProgress?
+    private(set) var localProgress: CachedListeningProgress?
     var userData: BookUserData?
     var ratingStats: RatingStats?
     var reviews: [PublicReview] = []
@@ -78,6 +79,7 @@ final class BookDetailViewModel {
 
     /// Optional download manager for warming the offline progress cache.
     var downloadManager: DownloadManager?
+    var audioPlayerManager: AudioPlayerManager?
 
     private let networkMonitor = NetworkMonitor.shared
     var isOffline: Bool { !networkMonitor.isConnected }
@@ -109,7 +111,7 @@ final class BookDetailViewModel {
 
     /// The audio file to resume from, based on saved progress.
     var resumeAudioFile: AudioFile? {
-        guard let progress else {
+        guard let progress = resolvedProgress else {
             return audioFiles.first
         }
         return audioFiles.first(where: { $0._id == progress.audioFileId }) ?? audioFiles.first
@@ -117,17 +119,26 @@ final class BookDetailViewModel {
 
     /// Position in seconds to resume from, with smart rewind applied.
     func resumePosition(smartRewindEnabled: Bool) -> Double {
-        guard let progress, progress.lastListenedAt > 0 else { return 0 }
+        guard let progress = resolvedProgress, progress.timestamp > 0 else { return 0 }
         return AudioPlayerManager.smartRewindPosition(
             from: progress.positionSeconds,
-            lastListenedAt: progress.lastListenedAt,
+            lastListenedAt: progress.timestamp,
             enabled: smartRewindEnabled
         )
     }
 
     /// Playback rate from saved progress.
     var resumeRate: Double {
-        progress?.playbackRate ?? 1.0
+        resolvedProgress?.playbackRate ?? 1.0
+    }
+
+    /// Device-local playback progress wins over remote progress when newer.
+    var resolvedProgress: CachedListeningProgress? {
+        guard let localProgress else {
+            return progress?.cachedProgress
+        }
+        guard let progress else { return localProgress }
+        return localProgress.timestamp >= progress.lastListenedAt ? localProgress : progress.cachedProgress
     }
 
     /// Formatted total book duration.
@@ -189,6 +200,7 @@ final class BookDetailViewModel {
 
     func subscribe(bookId: String) {
         currentBookId = bookId
+        refreshLocalProgress(bookId: bookId)
 
         // Offline: load from download manifest if available
         if isOffline {
@@ -230,6 +242,9 @@ final class BookDetailViewModel {
         guard isShowingOfflineData, currentBookId != nil else { return }
         isShowingOfflineData = false
         error = nil
+        if let currentBookId {
+            refreshLocalProgress(bookId: currentBookId)
+        }
 
         authObserver.start(
             onAuthenticated: { [weak self] in
@@ -414,19 +429,41 @@ final class BookDetailViewModel {
                     }
                 },
                 receiveValue: { [weak self] progress in
-                    self?.progress = progress
+                    let isSuppressed = self?.audioPlayerManager?.isSuppressingRemoteMerge ?? false
+                    // Only update the published progress property when not suppressing,
+                    // so resolvedProgress doesn't briefly show stale remote data.
+                    if !isSuppressed {
+                        self?.progress = progress
+                    }
                     self?.markLoaded("progress")
-
-                    // Warm the offline progress cache for downloaded books
-                    if let progress, let dm = self?.downloadManager, dm.isBookDownloaded(bookId) {
-                        Task {
-                            await dm.updateCachedProgress(
+                    Task { @MainActor in
+                        guard let self else { return }
+                        if let progress, !isSuppressed {
+                            await PlaybackProgressStore.shared.mergeRemoteProgress(
                                 bookId: bookId,
-                                audioFileId: progress.audioFileId,
-                                positionSeconds: progress.positionSeconds,
-                                playbackRate: progress.playbackRate,
-                                timestamp: progress.lastListenedAt
+                                entry: progress.cachedProgress
                             )
+                        }
+                        let localProgress = await PlaybackProgressStore.shared.progress(for: bookId)
+                        await MainActor.run { [weak self] in
+                            guard let self, self.currentBookId == bookId else { return }
+                            self.localProgress = localProgress
+
+                            guard
+                                let localProgress,
+                                let downloadManager = self.downloadManager,
+                                downloadManager.isBookDownloaded(bookId)
+                            else { return }
+
+                            Task {
+                                await downloadManager.updateCachedProgress(
+                                    bookId: bookId,
+                                    audioFileId: localProgress.audioFileId,
+                                    positionSeconds: localProgress.positionSeconds,
+                                    playbackRate: localProgress.playbackRate,
+                                    timestamp: localProgress.timestamp
+                                )
+                            }
                         }
                     }
                 }
@@ -553,6 +590,16 @@ final class BookDetailViewModel {
         }
     }
 
+    private func refreshLocalProgress(bookId: String) {
+        Task {
+            let localProgress = await PlaybackProgressStore.shared.progress(for: bookId)
+            await MainActor.run { [weak self] in
+                guard let self, self.currentBookId == bookId else { return }
+                self.localProgress = localProgress
+            }
+        }
+    }
+
     // MARK: - Offline
 
     private func loadFromManifest(bookId: String) {
@@ -569,19 +616,13 @@ final class BookDetailViewModel {
         audioFiles = offlineFiles
 
         Task {
-            if let cached = await dm.cachedProgress(for: bookId) {
-                progress = ListeningProgress(
-                    _id: "offline-progress",
-                    _creationTime: cached.timestamp,
-                    userId: "",
-                    bookId: bookId,
-                    audioFileId: cached.audioFileId,
-                    positionSeconds: cached.positionSeconds,
-                    playbackRate: cached.playbackRate,
-                    lastListenedAt: cached.timestamp,
-                    createdAt: cached.timestamp,
-                    updatedAt: cached.timestamp
-                )
+            let storedProgress = await PlaybackProgressStore.shared.progress(for: bookId)
+            let cachedProgress = await dm.cachedProgress(for: bookId)
+            let localProgress = storedProgress ?? cachedProgress
+
+            await MainActor.run { [weak self] in
+                guard let self, self.currentBookId == bookId else { return }
+                self.localProgress = localProgress
             }
             isLoading = false
         }

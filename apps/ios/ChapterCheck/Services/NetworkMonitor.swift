@@ -4,6 +4,7 @@ import os
 
 extension Notification.Name {
     static let networkRestored = Notification.Name("networkRestored")
+    static let convexReconnected = Notification.Name("convexReconnected")
 }
 
 /// Singleton that monitors network connectivity via `NWPathMonitor`.
