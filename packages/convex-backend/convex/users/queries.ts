@@ -228,7 +228,7 @@ export const getAdminUserDetail = query({
       targetUser.storageAccountId ? ctx.db.get(targetUser.storageAccountId) : Promise.resolve(null),
     ]);
 
-    const readBooks = allUserData.filter((d) => isBookFinished(d));
+    const readBooks = allUserData.filter((d) => d.isRead);
     const reviews = allUserData.filter((d) => d.rating !== undefined || d.reviewText);
 
     return {
