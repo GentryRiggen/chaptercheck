@@ -240,24 +240,82 @@ export default defineSchema({
   bookNotes: defineTable({
     userId: v.id("users"),
     bookId: v.id("books"),
-    audioFileId: v.id("audioFiles"),
+    entryType: v.optional(
+      v.union(
+        v.literal("note"),
+        v.literal("quote"),
+        v.literal("takeaway"),
+        v.literal("theme"),
+        v.literal("character"),
+        v.literal("discussion_prompt")
+      )
+    ),
+    audioFileId: v.optional(v.id("audioFiles")),
+    // Legacy category support during migration to tags
     categoryId: v.optional(v.id("noteCategories")),
-    startSeconds: v.number(),
-    endSeconds: v.number(),
+    startSeconds: v.optional(v.number()),
+    endSeconds: v.optional(v.number()),
     noteText: v.optional(v.string()),
+    sourceText: v.optional(v.string()),
+    sortOrder: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user_and_book", ["userId", "bookId"])
     .index("by_user_and_book_and_audioFile", ["userId", "bookId", "audioFileId"])
-    .index("by_user_and_updatedAt", ["userId", "updatedAt"]),
+    .index("by_user_and_updatedAt", ["userId", "updatedAt"])
+    .index("by_user_and_book_and_type", ["userId", "bookId", "entryType"])
+    .index("by_user_and_type_and_updatedAt", ["userId", "entryType", "updatedAt"]),
+
+  // Reusable per-user memory tags for notes, quotes, takeaways, and themes
+  memoryTags: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    normalizedName: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_normalizedName", ["userId", "normalizedName"]),
+
+  // Join table between memory entries and tags
+  bookNoteTags: defineTable({
+    noteId: v.id("bookNotes"),
+    tagId: v.id("memoryTags"),
+    userId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_note", ["noteId"])
+    .index("by_tag", ["tagId"])
+    .index("by_user_and_tag", ["userId", "tagId"])
+    .index("by_note_and_tag", ["noteId", "tagId"]),
 
   // Book User Data (read status, ratings, reviews)
   bookUserData: defineTable({
     userId: v.id("users"),
     bookId: v.id("books"),
 
-    // Read status
+    // Read status (legacy + new model during migration)
+    status: v.optional(
+      v.union(
+        v.literal("want_to_read"),
+        v.literal("reading"),
+        v.literal("finished"),
+        v.literal("paused"),
+        v.literal("dnf")
+      )
+    ),
+    startedAt: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+    lastStatusChangedAt: v.optional(v.number()),
+    rereadCount: v.optional(v.number()),
+    currentFormat: v.optional(
+      v.union(v.literal("physical"), v.literal("ebook"), v.literal("audiobook"), v.literal("mixed"))
+    ),
+    favorite: v.optional(v.boolean()),
+    personalSummary: v.optional(v.string()),
+
+    // Legacy compatibility fields
     isRead: v.boolean(),
     readAt: v.optional(v.number()),
 
@@ -278,5 +336,10 @@ export default defineSchema({
     .index("by_user", ["userId"]) // User's library
     .index("by_book", ["bookId"]) // Book's reviews
     .index("by_user_and_reviewedAt", ["userId", "reviewedAt"]) // Profile
-    .index("by_book_and_reviewedAt", ["bookId", "reviewedAt"]), // Book page
+    .index("by_book_and_reviewedAt", ["bookId", "reviewedAt"]) // Book page
+    .index("by_user_and_status", ["userId", "status"])
+    .index("by_user_and_finishedAt", ["userId", "finishedAt"])
+    .index("by_user_and_startedAt", ["userId", "startedAt"])
+    .index("by_user_and_updatedAt", ["userId", "updatedAt"])
+    .index("by_user_and_favorite", ["userId", "favorite"]),
 });

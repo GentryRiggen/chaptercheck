@@ -9,6 +9,7 @@ import {
   requireAdmin,
   requireAuth,
 } from "../lib/auth";
+import { isBookFinished } from "../lib/bookUserData";
 
 /**
  * Permissions object returned by getCurrentUserWithPermissions
@@ -169,8 +170,8 @@ export const getUserProfile = query({
 
     // Count read books (respecting per-book privacy for non-own profiles)
     const readBooks = isOwnProfile
-      ? allUserData.filter((d) => d.isRead)
-      : allUserData.filter((d) => d.isRead && !d.isReadPrivate);
+      ? allUserData.filter((d) => isBookFinished(d))
+      : allUserData.filter((d) => isBookFinished(d) && !d.isReadPrivate);
 
     // Count reviews (respecting per-review privacy for non-own profiles)
     const reviews = isOwnProfile

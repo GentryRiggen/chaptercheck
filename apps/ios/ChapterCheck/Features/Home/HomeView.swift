@@ -17,7 +17,7 @@ struct HomeView: View {
     var body: some View {
         Group {
             if viewModel.isLoading {
-                LoadingView(message: "Loading your library...")
+                HomeSkeletonView()
                     .overlay(alignment: .bottom) {
                         if viewModel.showRetry {
                             Button {
