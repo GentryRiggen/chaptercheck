@@ -10,84 +10,46 @@ extension VerticalAlignment {
     static let seekBarTrackCenter = VerticalAlignment(SeekBarTrackCenter.self)
 }
 
-/// Custom seek bar for the now playing screen.
+/// Seek bar for the now playing screen using the system Slider.
 ///
-/// Displays current time and remaining time labels with a draggable slider.
-/// Uses `DragGesture` for precise scrubbing, and debounces the seek call
-/// to avoid excessive seeks during rapid dragging.
+/// On iOS 26 the standard Slider automatically adopts the liquid-glass
+/// appearance.  Current time and remaining time labels sit below the track.
 struct SeekBarView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
 
     @State private var isDragging = false
-    @State private var dragProgress: Double = 0
+    @State private var sliderValue: Double = 0
 
-    /// The progress value to display (either live or drag-in-progress).
-    private var displayProgress: Double {
-        isDragging ? dragProgress : audioPlayer.progress
+    /// Seconds to display — live position or in-flight drag value.
+    private var displaySeconds: Double {
+        isDragging ? sliderValue : audioPlayer.currentPosition
     }
 
-    /// The time label for the current position.
     private var currentTimeLabel: String {
-        if isDragging {
-            let seconds = dragProgress * audioPlayer.duration
-            return TimeFormatting.formatTime(seconds)
-        }
-        return audioPlayer.formattedElapsedTime
+        TimeFormatting.formatTime(displaySeconds)
     }
 
-    /// The time label for the remaining duration.
     private var remainingTimeLabel: String {
-        if isDragging {
-            let remaining = (1 - dragProgress) * audioPlayer.duration
-            return "-\(TimeFormatting.formatTime(remaining))"
-        }
-        return audioPlayer.formattedRemainingTime
+        let remaining = max(audioPlayer.duration - displaySeconds, 0)
+        return "-\(TimeFormatting.formatTime(remaining))"
     }
 
     var body: some View {
         VStack(spacing: 4) {
-            // Slider track
-            GeometryReader { geometry in
-                let trackWidth = geometry.size.width
-
-                ZStack(alignment: .leading) {
-                    // Background track
-                    Capsule()
-                        .fill(.fill.tertiary)
-                        .frame(height: isDragging ? 8 : 4)
-
-                    // Filled track
-                    Capsule()
-                        .fill(.tint)
-                        .frame(width: trackWidth * displayProgress, height: isDragging ? 8 : 4)
-
-                    // Thumb
-                    Circle()
-                        .fill(.tint)
-                        .frame(width: isDragging ? 20 : 12, height: isDragging ? 20 : 12)
-                        .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-                        .offset(x: (trackWidth * displayProgress) - (isDragging ? 10 : 6))
+            Slider(
+                value: Binding(
+                    get: { isDragging ? sliderValue : audioPlayer.currentPosition },
+                    set: { sliderValue = $0 }
+                ),
+                in: 0...max(audioPlayer.duration, 0.1),
+                onEditingChanged: { editing in
+                    isDragging = editing
+                    if !editing {
+                        audioPlayer.seekFromSlider(to: sliderValue)
+                        Haptics.selection()
+                    }
                 }
-                .frame(height: 20)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            isDragging = true
-                            let newProgress = max(0, min(1, value.location.x / trackWidth))
-                            dragProgress = newProgress
-                        }
-                        .onEnded { value in
-                            let finalProgress = max(0, min(1, value.location.x / trackWidth))
-                            let seekPosition = finalProgress * audioPlayer.duration
-                            audioPlayer.seekFromSlider(to: seekPosition)
-                            Haptics.selection()
-
-                            isDragging = false
-                        }
-                )
-            }
-            .frame(height: 20)
+            )
             .alignmentGuide(.seekBarTrackCenter) { dimensions in
                 dimensions[VerticalAlignment.center]
             }
@@ -108,8 +70,7 @@ struct SeekBarView: View {
             }
         }
         .alignmentGuide(.seekBarTrackCenter) { dimensions in
-            dimensions[.top] + 10
+            dimensions[.top] + 16
         }
-        .animation(.easeInOut(duration: 0.15), value: isDragging)
     }
 }
