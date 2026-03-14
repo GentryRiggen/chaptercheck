@@ -530,18 +530,17 @@ struct NowPlayingView: View {
 
     private var bottomToolbar: some View {
         ZStack {
-            // Center group: audio settings + sleep timer — screen-centered
-            HStack(spacing: 12) {
+            // Center group: grouped in a glass capsule
+            HStack(spacing: 20) {
                 // Audio settings
                 Button {
                     Haptics.light()
                     isAudioSettingsPresented = true
                 } label: {
                     Image(systemName: "waveform")
-                        .font(.body.weight(.semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(auxiliaryButtonForeground)
                         .frame(width: 44, height: 44)
-                        .background(.ultraThinMaterial, in: Circle())
                 }
                 .buttonStyle(.plain)
                 .contentShape(Circle())
@@ -550,7 +549,6 @@ struct NowPlayingView: View {
                 // AirPlay route picker
                 AirPlayRoutePicker(tintColor: auxiliaryButtonUIColor)
                     .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
                     .accessibilityLabel("Audio output")
 
                 // Sleep timer
@@ -560,7 +558,7 @@ struct NowPlayingView: View {
                 } label: {
                     VStack(spacing: 2) {
                         Image(systemName: audioPlayer.isSleepTimerActive ? "moon.zzz.fill" : "moon.zzz")
-                            .font(.body.weight(.semibold))
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(audioPlayer.isSleepTimerActive ? AnyShapeStyle(.tint) : AnyShapeStyle(auxiliaryButtonForeground))
                         if audioPlayer.isSleepTimerActive {
                             Text(audioPlayer.formattedSleepTimer)
@@ -570,12 +568,29 @@ struct NowPlayingView: View {
                         }
                     }
                     .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
                 }
                 .buttonStyle(.plain)
                 .contentShape(Circle())
                 .accessibilityLabel(audioPlayer.isSleepTimerActive ? "Sleep timer \(audioPlayer.formattedSleepTimer) remaining" : "Sleep timer")
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 2)
+            .background(Color.white.opacity(0.06), in: Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.25),
+                                Color.white.opacity(0.08),
+                                Color.white.opacity(0.03)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 0.75
+                    )
+            )
 
             // Dismiss button — pinned leading
             HStack {
@@ -583,13 +598,19 @@ struct NowPlayingView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.down")
-                        .font(.body.weight(.semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(auxiliaryButtonForeground)
                         .frame(width: 44, height: 44)
-                        .background(.ultraThinMaterial, in: Circle())
                 }
                 .buttonStyle(.plain)
                 .contentShape(Circle())
+                .overlay(
+                    Circle()
+                        .strokeBorder(
+                            Color.white.opacity(0.15),
+                            lineWidth: 0.75
+                        )
+                )
 
                 Spacer()
             }
