@@ -538,7 +538,7 @@ struct NowPlayingView: View {
                     isAudioSettingsPresented = true
                 } label: {
                     Image(systemName: "waveform")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(auxiliaryButtonForeground)
                         .frame(width: 44, height: 44)
                 }
@@ -558,7 +558,7 @@ struct NowPlayingView: View {
                 } label: {
                     VStack(spacing: 2) {
                         Image(systemName: audioPlayer.isSleepTimerActive ? "moon.zzz.fill" : "moon.zzz")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(audioPlayer.isSleepTimerActive ? AnyShapeStyle(.tint) : AnyShapeStyle(auxiliaryButtonForeground))
                         if audioPlayer.isSleepTimerActive {
                             Text(audioPlayer.formattedSleepTimer)
