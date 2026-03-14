@@ -122,6 +122,8 @@ struct BookNoteRow: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    @State private var showDeleteConfirmation = false
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 12)
@@ -171,8 +173,15 @@ struct BookNoteRow: View {
                 Button(action: onEdit) {
                     Label("Edit", systemImage: "pencil")
                 }
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash")
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    Label {
+                        Text("Delete")
+                    } icon: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.red)
+                    }
                 }
             } label: {
                 Image(systemName: "ellipsis")
@@ -186,6 +195,12 @@ struct BookNoteRow: View {
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
         .contentShape(RoundedRectangle(cornerRadius: 18))
         .onTapGesture(perform: onPlay)
+        .alert("Delete Note", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive, action: onDelete)
+        } message: {
+            Text("Are you sure you want to delete this note? This action cannot be undone.")
+        }
         .padding(.horizontal)
     }
 

@@ -22,11 +22,11 @@ setup("authenticate", async ({ page }) => {
 
   // Verify we're authenticated — dashboard should show
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { level: 1, name: dashboardGreetingPattern })
-  ).toBeVisible({
-    timeout: 15000,
-  });
+  await expect(page.getByRole("heading", { level: 1, name: dashboardGreetingPattern })).toBeVisible(
+    {
+      timeout: 15000,
+    }
+  );
 
   // Save signed-in state for all test projects
   await page.context().storageState({ path: authFile });

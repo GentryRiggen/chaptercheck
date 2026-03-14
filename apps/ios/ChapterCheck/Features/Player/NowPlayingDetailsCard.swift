@@ -5,6 +5,7 @@ import SwiftUI
 /// Designed as a compact dashboard: quick actions, key metadata, contributor shortcuts,
 /// and the listener's current review/read state.
 struct NowPlayingDetailsCard: View {
+    @Environment(ThemeManager.self) private var themeManager
     let book: BookWithDetails
     let totalDurationSeconds: Double?
     let totalPartCount: Int
@@ -77,6 +78,12 @@ struct NowPlayingDetailsCard: View {
     private var summaryCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
+                BookCoverView(
+                    r2Key: book.coverImageR2Key,
+                    displayMode: .fit(maxWidth: 64, maxHeight: 64)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text(book.title)
                         .font(.headline)
@@ -328,8 +335,8 @@ struct NowPlayingDetailsCard: View {
     private var summaryBackground: some ShapeStyle {
         LinearGradient(
             colors: [
-                Color.cyan.opacity(0.28),
-                Color.blue.opacity(0.18),
+                themeManager.accentColor.opacity(0.28),
+                themeManager.accentColor.opacity(0.14),
                 Color.white.opacity(0.06),
             ],
             startPoint: .topLeading,
