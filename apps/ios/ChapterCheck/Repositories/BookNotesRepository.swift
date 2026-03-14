@@ -63,7 +63,8 @@ final class BookNotesRepository {
         endSeconds: Double?,
         noteText: String?,
         entryType: String?,
-        sourceText: String?
+        sourceText: String?,
+        isPublic: Bool? = nil
     ) async throws {
         var args: [String: ConvexEncodable?] = [
             "bookId": bookId,
@@ -89,6 +90,9 @@ final class BookNotesRepository {
         if let sourceText, !sourceText.isEmpty {
             args["sourceText"] = sourceText
         }
+        if let isPublic {
+            args["isPublic"] = isPublic
+        }
         try await convex.mutation("bookNotes/mutations:createNote", with: args)
     }
 
@@ -100,7 +104,8 @@ final class BookNotesRepository {
         endSeconds: Double?,
         noteText: String?,
         entryType: String?,
-        sourceText: String?
+        sourceText: String?,
+        isPublic: Bool? = nil
     ) async throws {
         var args: [String: ConvexEncodable?] = [
             "noteId": noteId,
@@ -125,6 +130,9 @@ final class BookNotesRepository {
         }
         if let sourceText, !sourceText.isEmpty {
             args["sourceText"] = sourceText
+        }
+        if let isPublic {
+            args["isPublic"] = isPublic
         }
         try await convex.mutation("bookNotes/mutations:updateNote", with: args)
     }

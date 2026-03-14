@@ -257,6 +257,7 @@ export default defineSchema({
     endSeconds: v.optional(v.number()),
     noteText: v.optional(v.string()),
     sourceText: v.optional(v.string()),
+    isPublic: v.optional(v.boolean()),
     sortOrder: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -265,7 +266,8 @@ export default defineSchema({
     .index("by_user_and_book_and_audioFile", ["userId", "bookId", "audioFileId"])
     .index("by_user_and_updatedAt", ["userId", "updatedAt"])
     .index("by_user_and_book_and_type", ["userId", "bookId", "entryType"])
-    .index("by_user_and_type_and_updatedAt", ["userId", "entryType", "updatedAt"]),
+    .index("by_user_and_type_and_updatedAt", ["userId", "entryType", "updatedAt"])
+    .index("by_isPublic_and_updatedAt", ["isPublic", "updatedAt"]),
 
   // Reusable per-user memory tags for notes, quotes, takeaways, and themes
   memoryTags: defineTable({
@@ -289,6 +291,16 @@ export default defineSchema({
     .index("by_tag", ["tagId"])
     .index("by_user_and_tag", ["userId", "tagId"])
     .index("by_note_and_tag", ["noteId", "tagId"]),
+
+  // Follows (user-to-user social graph)
+  follows: defineTable({
+    followerId: v.id("users"),
+    followingId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_follower", ["followerId", "createdAt"])
+    .index("by_following", ["followingId", "createdAt"])
+    .index("by_follower_and_following", ["followerId", "followingId"]),
 
   // Book User Data (read status, ratings, reviews)
   bookUserData: defineTable({

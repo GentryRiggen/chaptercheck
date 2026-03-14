@@ -17,4 +17,7 @@ enum AppDestination: Hashable {
     case browseShelves
     case allReadingHistory(userId: String)
     case allUserReviews(userId: String)
+    case followers(userId: String)
+    case following(userId: String)
+    case userSearch
 }

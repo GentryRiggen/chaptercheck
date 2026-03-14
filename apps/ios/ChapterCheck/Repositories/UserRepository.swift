@@ -37,6 +37,14 @@ final class UserRepository {
         )
     }
 
+    /// Subscribe to user search results for the given query string.
+    func subscribeToUserSearch(query: String) -> AnyPublisher<[FollowedUser], ClientError>? {
+        convex.subscribe(
+            to: "users/queries:searchUsers",
+            with: ["query": query]
+        )
+    }
+
     // MARK: - Mutations
 
     /// Update the current user's profile privacy setting.

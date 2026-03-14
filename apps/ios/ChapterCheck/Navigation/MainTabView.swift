@@ -423,6 +423,12 @@ struct MainView: View {
             AllReadingHistoryView(userId: userId)
         case .allUserReviews(let userId):
             AllUserReviewsView(userId: userId)
+        case .followers(let userId):
+            FollowListView(userId: userId, mode: .followers)
+        case .following(let userId):
+            FollowListView(userId: userId, mode: .following)
+        case .userSearch:
+            UserSearchView()
         }
     }
 }

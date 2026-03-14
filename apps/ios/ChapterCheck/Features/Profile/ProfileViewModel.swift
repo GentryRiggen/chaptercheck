@@ -4,10 +4,10 @@ import Foundation
 
 /// View model for the user profile screen.
 ///
-/// Subscribes to four parallel data sources: the user's profile, their shelves,
-/// their reading history, and their reviews. Loading is dismissed once all four
-/// have emitted at least one value. The `markLoaded` pattern prevents the loading
-/// state from flickering as each subscription arrives independently.
+/// Subscribes to five parallel data sources: the user's profile, their shelves,
+/// their reading history, their reviews, and follow status. Loading is dismissed
+/// once all five have emitted at least one value. The `markLoaded` pattern prevents
+/// the loading state from flickering as each subscription arrives independently.
 @Observable
 @MainActor
 final class ProfileViewModel {
@@ -21,12 +21,15 @@ final class ProfileViewModel {
     var reviews: [UserReview] = []
     var isLoading = true
     var error: String?
+    var followersCount: Int = 0
+    var followingCount: Int = 0
 
     // MARK: - Private State
 
     private let userRepository = UserRepository()
     private let shelfRepository = ShelfRepository()
     private let bookUserDataRepository = BookUserDataRepository()
+    private let socialRepository = SocialRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
     private var currentUserId: String?
@@ -45,6 +48,7 @@ final class ProfileViewModel {
                 subscribeToShelves(userId: userId)
                 subscribeToReadBooks(userId: userId)
                 subscribeToReviews(userId: userId)
+                subscribeToFollowStatus(userId: userId)
             },
             onUnauthenticated: { [weak self] in
                 self?.cancellables.removeAll()
@@ -150,13 +154,35 @@ final class ProfileViewModel {
             .store(in: &cancellables)
     }
 
+    private func subscribeToFollowStatus(userId: String) {
+        guard let publisher = socialRepository.subscribeToFollowStatus(userId: userId) else {
+            markLoaded(section: "followStatus")
+            return
+        }
+        publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure = completion {
+                        self?.markLoaded(section: "followStatus")
+                    }
+                },
+                receiveValue: { [weak self] status in
+                    self?.followersCount = status.followersCountInt
+                    self?.followingCount = status.followingCountInt
+                    self?.markLoaded(section: "followStatus")
+                }
+            )
+            .store(in: &cancellables)
+    }
+
     // MARK: - Loading State
 
     /// Marks a section as having loaded and dismisses the global loading state
-    /// once all four sections have received their first value.
+    /// once all five sections have received their first value.
     private func markLoaded(section: String) {
         loadedSections.insert(section)
-        if loadedSections.count >= 4 {
+        if loadedSections.count >= 5 {
             isLoading = false
         }
     }

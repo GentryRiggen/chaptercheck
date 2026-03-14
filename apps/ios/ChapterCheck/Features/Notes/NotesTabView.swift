@@ -68,13 +68,14 @@ struct NotesTabView: View {
                 FreeformNoteComposerSheet(
                     bookId: book._id,
                     tags: viewModel.allTags,
-                    onSave: { noteText, entryType, sourceText, tagIds in
+                    onSave: { noteText, entryType, sourceText, tagIds, isPublic in
                         try await viewModel.createNote(
                             bookId: book._id,
                             noteText: noteText,
                             entryType: entryType,
                             sourceText: sourceText,
-                            tagIds: tagIds
+                            tagIds: tagIds,
+                            isPublic: isPublic
                         )
                     },
                     onCreateTag: { name in
@@ -91,13 +92,14 @@ struct NotesTabView: View {
                 bookId: note.bookId,
                 tags: viewModel.allTags,
                 existingNote: note.asBookNote,
-                onSave: { noteText, entryType, sourceText, tagIds in
+                onSave: { noteText, entryType, sourceText, tagIds, isPublic in
                     try await viewModel.updateNote(
                         noteId: note._id,
                         noteText: noteText,
                         entryType: entryType,
                         sourceText: sourceText,
-                        tagIds: tagIds
+                        tagIds: tagIds,
+                        isPublic: isPublic
                     )
                 },
                 onCreateTag: { name in

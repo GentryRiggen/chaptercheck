@@ -119,7 +119,7 @@ struct BookDetailView: View {
                     bookId: bookId,
                     tags: viewModel.noteTags,
                     existingNote: note,
-                    onSave: { noteText, entryType, sourceText, tagIds in
+                    onSave: { noteText, entryType, sourceText, tagIds, isPublic in
                         try await viewModel.updateNote(
                             noteId: note._id,
                             audioFileId: nil,
@@ -128,7 +128,8 @@ struct BookDetailView: View {
                             endSeconds: nil,
                             noteText: noteText,
                             entryType: entryType,
-                            sourceText: sourceText
+                            sourceText: sourceText,
+                            isPublic: isPublic
                         )
                         Haptics.success()
                     },
@@ -145,7 +146,7 @@ struct BookDetailView: View {
             FreeformNoteComposerSheet(
                 bookId: bookId,
                 tags: viewModel.noteTags,
-                onSave: { noteText, entryType, sourceText, tagIds in
+                onSave: { noteText, entryType, sourceText, tagIds, isPublic in
                     try await viewModel.createNote(
                         audioFileId: nil,
                         tagIds: tagIds.isEmpty ? nil : tagIds,
@@ -153,7 +154,8 @@ struct BookDetailView: View {
                         endSeconds: nil,
                         noteText: noteText,
                         entryType: entryType,
-                        sourceText: sourceText
+                        sourceText: sourceText,
+                        isPublic: isPublic
                     )
                     Haptics.success()
                 },

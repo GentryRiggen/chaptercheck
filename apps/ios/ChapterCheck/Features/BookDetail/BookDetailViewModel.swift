@@ -359,7 +359,8 @@ final class BookDetailViewModel {
         endSeconds: Double?,
         noteText: String?,
         entryType: String? = nil,
-        sourceText: String? = nil
+        sourceText: String? = nil,
+        isPublic: Bool? = nil
     ) async throws {
         guard let book else { return }
         try await bookNotesRepository.createNote(
@@ -370,7 +371,8 @@ final class BookDetailViewModel {
             endSeconds: endSeconds,
             noteText: noteText,
             entryType: entryType,
-            sourceText: sourceText
+            sourceText: sourceText,
+            isPublic: isPublic
         )
     }
 
@@ -382,7 +384,8 @@ final class BookDetailViewModel {
         endSeconds: Double?,
         noteText: String?,
         entryType: String? = nil,
-        sourceText: String? = nil
+        sourceText: String? = nil,
+        isPublic: Bool? = nil
     ) async throws {
         try await bookNotesRepository.updateNote(
             noteId: noteId,
@@ -392,7 +395,8 @@ final class BookDetailViewModel {
             endSeconds: endSeconds,
             noteText: noteText,
             entryType: entryType,
-            sourceText: sourceText
+            sourceText: sourceText,
+            isPublic: isPublic
         )
     }
 

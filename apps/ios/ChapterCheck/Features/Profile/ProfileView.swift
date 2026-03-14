@@ -154,6 +154,10 @@ struct ProfileView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
 
+            if !profile.isOwnProfile {
+                FollowButton(userId: userId)
+            }
+
             if profile.isProfilePrivate {
                 Label("Private Profile", systemImage: "lock")
                     .font(.caption)
@@ -172,6 +176,16 @@ struct ProfileView: View {
                 statCell(value: stats.reviewsWrittenInt, label: "Reviews")
                 Divider()
                 statCell(value: stats.shelvesCountInt, label: "Shelves")
+                Divider()
+                NavigationLink(value: AppDestination.followers(userId: userId)) {
+                    statCell(value: viewModel.followersCount, label: "Followers")
+                }
+                .buttonStyle(.plain)
+                Divider()
+                NavigationLink(value: AppDestination.following(userId: userId)) {
+                    statCell(value: viewModel.followingCount, label: "Following")
+                }
+                .buttonStyle(.plain)
             }
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity)

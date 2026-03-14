@@ -9,9 +9,14 @@ struct UserProfile: Decodable, Identifiable, Sendable {
     let isOwnProfile: Bool
     let isProfilePrivate: Bool
     let stats: UserProfileStats?
+    let followersCount: Double?
+    let followingCount: Double?
+    let isFollowedByMe: Bool?
 
     var id: String { _id }
     var displayName: String { name ?? "Anonymous" }
+    var followersCountInt: Int { Int(followersCount ?? 0) }
+    var followingCountInt: Int { Int(followingCount ?? 0) }
 }
 
 /// Aggregate statistics returned alongside a user profile.

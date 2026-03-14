@@ -137,6 +137,14 @@
 		D294CC24D4A793F320FDCBB1 /* ShelfDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D57870B5D5BD6AB788E8022E /* ShelfDetailViewModel.swift */; };
 		D2ABABFD81AC98A0A6410089 /* AuthorDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A0E5D1CCA8528CAE814AEE /* AuthorDetailViewModel.swift */; };
 		D46DA48C71C1EE96C04B37C0 /* SocialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C116E0CD3F54F315CE6EE8 /* SocialView.swift */; };
+		246E38B1269F4C7596973A61 /* Social.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFF16B0CAD92467EBF40B888 /* Social.swift */; };
+		EC15680D89D843F6BB49B726 /* SocialRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D3E3CECEE9442B97EC8AD2 /* SocialRepository.swift */; };
+		BB404BAD6EFE415FA700E01D /* SocialViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8BE071B5A7146D08C3FD780 /* SocialViewModel.swift */; };
+		CCC45BC387A8423593CB58DF /* ActivityItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021CAD59FC94CF393B43F5C /* ActivityItemRow.swift */; };
+		BE5AB6527BA048449C3AA519 /* SocialSkeletonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073223AAB71A4705A8724E79 /* SocialSkeletonView.swift */; };
+		9C73AAA850C34C49B3F69924 /* FollowButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8931C25457F4D319ECD76BA /* FollowButton.swift */; };
+		0FD2E87CE6784426A4A4550C /* FollowListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7D3A38829E429497FA72EA /* FollowListView.swift */; };
+		CAA08B1BD28F4596AAF8D6FA /* UserSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D32B438C36D42BCA0A23FD2 /* UserSearchView.swift */; };
 		D4A69D1785F1FA55E7C1675F /* AddToShelfSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B85F0A854256083BB19FB5E9 /* AddToShelfSheet.swift */; };
 		D565CC66AFA417B2316B8849 /* NotesSkeletonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A38CC3D10F461AAEA449F625 /* NotesSkeletonView.swift */; };
 		D59485EC9682AD2AAF64984A /* Book.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19A12A255523680264877FDA /* Book.swift */; };
@@ -286,6 +294,14 @@
 		B1FC72B8DE0F620382E896CE /* ShelfFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfFormSheet.swift; sourceTree = "<group>"; };
 		B3F9F91502B2AE2C5366DA68 /* BookNoteComposerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookNoteComposerSheet.swift; sourceTree = "<group>"; };
 		B4C116E0CD3F54F315CE6EE8 /* SocialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialView.swift; sourceTree = "<group>"; };
+		DFF16B0CAD92467EBF40B888 /* Social.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Social.swift; sourceTree = "<group>"; };
+		45D3E3CECEE9442B97EC8AD2 /* SocialRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRepository.swift; sourceTree = "<group>"; };
+		C8BE071B5A7146D08C3FD780 /* SocialViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialViewModel.swift; sourceTree = "<group>"; };
+		D021CAD59FC94CF393B43F5C /* ActivityItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityItemRow.swift; sourceTree = "<group>"; };
+		073223AAB71A4705A8724E79 /* SocialSkeletonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialSkeletonView.swift; sourceTree = "<group>"; };
+		C8931C25457F4D319ECD76BA /* FollowButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowButton.swift; sourceTree = "<group>"; };
+		FE7D3A38829E429497FA72EA /* FollowListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowListView.swift; sourceTree = "<group>"; };
+		3D32B438C36D42BCA0A23FD2 /* UserSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSearchView.swift; sourceTree = "<group>"; };
 		B4FDA38AA9049E067DD7F8C7 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		B643205C062581187EB4845F /* ImageRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageRepository.swift; sourceTree = "<group>"; };
 		B788EAE27E3259114504F6B8 /* SearchRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRepository.swift; sourceTree = "<group>"; };
@@ -500,6 +516,7 @@
 				4BC19EA8B17DE29DBBE0653E /* SeriesRepository.swift */,
 				178EFAE095220D036BEA249B /* ShelfRepository.swift */,
 				F4910E3E5E28BB013846B979 /* UserRepository.swift */,
+				45D3E3CECEE9442B97EC8AD2 /* SocialRepository.swift */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -607,6 +624,12 @@
 			isa = PBXGroup;
 			children = (
 				B4C116E0CD3F54F315CE6EE8 /* SocialView.swift */,
+				C8BE071B5A7146D08C3FD780 /* SocialViewModel.swift */,
+				D021CAD59FC94CF393B43F5C /* ActivityItemRow.swift */,
+				073223AAB71A4705A8724E79 /* SocialSkeletonView.swift */,
+				C8931C25457F4D319ECD76BA /* FollowButton.swift */,
+				FE7D3A38829E429497FA72EA /* FollowListView.swift */,
+				3D32B438C36D42BCA0A23FD2 /* UserSearchView.swift */,
 			);
 			path = Social;
 			sourceTree = "<group>";
@@ -710,6 +733,7 @@
 				853FD7CA0E0107089396BFBA /* UserPreferences.swift */,
 				5FDD168E71B0BEEADF5B79DA /* UserProfile.swift */,
 				61916CE867290E161C23F4EA /* UserReview.swift */,
+				DFF16B0CAD92467EBF40B888 /* Social.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -964,6 +988,14 @@
 				DC234313D7578CBA03739D50 /* SleepTimerSheet.swift in Sources */,
 				C377BE223C39BC7F261F4B38 /* SliderSeekUndoBanner.swift in Sources */,
 				D46DA48C71C1EE96C04B37C0 /* SocialView.swift in Sources */,
+				246E38B1269F4C7596973A61 /* Social.swift in Sources */,
+				EC15680D89D843F6BB49B726 /* SocialRepository.swift in Sources */,
+				BB404BAD6EFE415FA700E01D /* SocialViewModel.swift in Sources */,
+				CCC45BC387A8423593CB58DF /* ActivityItemRow.swift in Sources */,
+				BE5AB6527BA048449C3AA519 /* SocialSkeletonView.swift in Sources */,
+				9C73AAA850C34C49B3F69924 /* FollowButton.swift in Sources */,
+				0FD2E87CE6784426A4A4550C /* FollowListView.swift in Sources */,
+				CAA08B1BD28F4596AAF8D6FA /* UserSearchView.swift in Sources */,
 				ABAEF11D0938A25BC09B31C6 /* SortPicker.swift in Sources */,
 				CE70CF2AF68C7671AA120A44 /* SpeedControlView.swift in Sources */,
 				2CE0B38F862BAED671FAAD5C /* StackedCoversView.swift in Sources */,

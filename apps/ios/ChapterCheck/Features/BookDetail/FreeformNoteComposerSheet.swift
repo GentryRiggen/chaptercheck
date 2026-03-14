@@ -4,7 +4,7 @@ struct FreeformNoteComposerSheet: View {
     let bookId: String
     let tags: [MemoryTag]
     let existingNote: BookNote?
-    let onSave: (_ noteText: String, _ entryType: String, _ sourceText: String?, _ tagIds: [String]) async throws -> Void
+    let onSave: (_ noteText: String, _ entryType: String, _ sourceText: String?, _ tagIds: [String], _ isPublic: Bool) async throws -> Void
     let onCreateTag: (_ name: String) async throws -> String
 
     @Environment(\.dismiss) private var dismiss
@@ -13,6 +13,7 @@ struct FreeformNoteComposerSheet: View {
     @State private var selectedEntryType: String
     @State private var sourceText: String
     @State private var selectedTagIds: Set<String>
+    @State private var isPublic: Bool
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var newTagName = ""
@@ -31,7 +32,7 @@ struct FreeformNoteComposerSheet: View {
         bookId: String,
         tags: [MemoryTag],
         existingNote: BookNote? = nil,
-        onSave: @escaping (_ noteText: String, _ entryType: String, _ sourceText: String?, _ tagIds: [String]) async throws -> Void,
+        onSave: @escaping (_ noteText: String, _ entryType: String, _ sourceText: String?, _ tagIds: [String], _ isPublic: Bool) async throws -> Void,
         onCreateTag: @escaping (_ name: String) async throws -> String
     ) {
         self.bookId = bookId
@@ -44,6 +45,7 @@ struct FreeformNoteComposerSheet: View {
         _selectedEntryType = State(initialValue: existingNote?.entryType ?? "note")
         _sourceText = State(initialValue: existingNote?.sourceText ?? "")
         _selectedTagIds = State(initialValue: Set(existingNote?.tags?.map(\._id) ?? []))
+        _isPublic = State(initialValue: existingNote?.isPublic ?? false)
     }
 
     private var canSave: Bool {
@@ -60,6 +62,7 @@ struct FreeformNoteComposerSheet: View {
                         sourceTextSection
                     }
                     tagSection
+                    Toggle("Share publicly", isOn: $isPublic)
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
@@ -237,7 +240,8 @@ struct FreeformNoteComposerSheet: View {
                 trimmedNote,
                 selectedEntryType,
                 trimmedSource.isEmpty ? nil : trimmedSource,
-                Array(selectedTagIds)
+                Array(selectedTagIds),
+                isPublic
             )
             dismiss()
         } catch {

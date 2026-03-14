@@ -121,6 +121,7 @@ struct BookNote: Decodable, Identifiable, Hashable, Sendable, NoteEntryDisplayab
     let noteText: String?
     let entryType: String?
     let sourceText: String?
+    let isPublic: Bool?
     let createdAt: Double
     let updatedAt: Double
     let audioFile: BookNoteAudioFile?
@@ -161,6 +162,7 @@ struct CrossBookNote: Decodable, Identifiable, Hashable, Sendable, NoteEntryDisp
     let noteText: String?
     let entryType: String?
     let sourceText: String?
+    let isPublic: Bool?
     let createdAt: Double
     let updatedAt: Double
     let audioFile: BookNoteAudioFile?
@@ -184,6 +186,7 @@ struct CrossBookNote: Decodable, Identifiable, Hashable, Sendable, NoteEntryDisp
             noteText: noteText,
             entryType: entryType,
             sourceText: sourceText,
+            isPublic: isPublic,
             createdAt: createdAt,
             updatedAt: updatedAt,
             audioFile: audioFile,

@@ -222,6 +222,7 @@ export const createNote = mutation({
     endSeconds: v.optional(v.number()),
     noteText: v.optional(v.string()),
     sourceText: v.optional(v.string()),
+    isPublic: v.optional(v.boolean()),
     tagIds: v.optional(v.array(v.id("memoryTags"))),
   },
   handler: async (ctx, args) => {
@@ -253,6 +254,7 @@ export const createNote = mutation({
       endSeconds: audioContext.endSeconds,
       noteText: normalizeOptionalText(args.noteText),
       sourceText: normalizeOptionalText(args.sourceText),
+      isPublic: args.isPublic,
       createdAt: now,
       updatedAt: now,
     });
@@ -284,6 +286,7 @@ export const updateNote = mutation({
     endSeconds: v.optional(v.number()),
     noteText: v.optional(v.string()),
     sourceText: v.optional(v.string()),
+    isPublic: v.optional(v.boolean()),
     tagIds: v.optional(v.array(v.id("memoryTags"))),
   },
   handler: async (ctx, args) => {
@@ -314,6 +317,7 @@ export const updateNote = mutation({
       endSeconds: audioContext.endSeconds,
       noteText: normalizeOptionalText(args.noteText),
       sourceText: normalizeOptionalText(args.sourceText),
+      isPublic: args.isPublic,
       updatedAt: now,
     });
 

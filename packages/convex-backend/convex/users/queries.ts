@@ -144,6 +144,30 @@ export const getUserProfile = query({
     const isOwnProfile = currentUser._id === targetUser._id;
     const isProfilePrivate = targetUser.isProfilePrivate ?? false;
 
+    // Follow counts
+    const followersCount = (
+      await ctx.db
+        .query("follows")
+        .withIndex("by_following", (q) => q.eq("followingId", args.userId))
+        .collect()
+    ).length;
+
+    const followingCount = (
+      await ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q) => q.eq("followerId", args.userId))
+        .collect()
+    ).length;
+
+    const isFollowedByMe = isOwnProfile
+      ? false
+      : (await ctx.db
+          .query("follows")
+          .withIndex("by_follower_and_following", (q) =>
+            q.eq("followerId", currentUser._id).eq("followingId", args.userId)
+          )
+          .unique()) !== null;
+
     // Basic info available to all authenticated users
     const basicInfo = {
       _id: targetUser._id,
@@ -152,6 +176,9 @@ export const getUserProfile = query({
       createdAt: targetUser.createdAt,
       isOwnProfile,
       isProfilePrivate,
+      followersCount,
+      followingCount,
+      isFollowedByMe,
     };
 
     // If profile is private and not own profile, return limited data
@@ -258,5 +285,32 @@ export const getAdminUserDetail = query({
         listeningBooks: listeningRecords.length,
       },
     };
+  },
+});
+
+/**
+ * Search users by name
+ * Returns matching users excluding the current user
+ */
+export const searchUsers = query({
+  args: { query: v.string() },
+  handler: async (ctx, args) => {
+    const { user } = await requireAuth(ctx);
+
+    const trimmed = args.query.trim();
+    if (!trimmed) return [];
+
+    const results = await ctx.db
+      .query("users")
+      .withSearchIndex("search_users", (q) => q.search("name", trimmed))
+      .take(20);
+
+    return results
+      .filter((u) => u._id !== user._id)
+      .map((u) => ({
+        _id: u._id,
+        name: u.name,
+        imageUrl: u.imageUrl,
+      }));
   },
 });

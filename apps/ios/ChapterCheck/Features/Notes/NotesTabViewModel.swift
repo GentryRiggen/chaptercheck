@@ -252,7 +252,8 @@ final class NotesTabViewModel {
         noteText: String,
         entryType: String,
         sourceText: String?,
-        tagIds: [String]
+        tagIds: [String],
+        isPublic: Bool? = nil
     ) async throws {
         try await notesRepository.createNote(
             bookId: bookId,
@@ -262,7 +263,8 @@ final class NotesTabViewModel {
             endSeconds: nil,
             noteText: noteText,
             entryType: entryType,
-            sourceText: sourceText
+            sourceText: sourceText,
+            isPublic: isPublic
         )
     }
 
@@ -271,7 +273,8 @@ final class NotesTabViewModel {
         noteText: String,
         entryType: String,
         sourceText: String?,
-        tagIds: [String]
+        tagIds: [String],
+        isPublic: Bool? = nil
     ) async throws {
         try await notesRepository.updateNote(
             noteId: noteId,
@@ -281,7 +284,8 @@ final class NotesTabViewModel {
             endSeconds: nil,
             noteText: noteText,
             entryType: entryType,
-            sourceText: sourceText
+            sourceText: sourceText,
+            isPublic: isPublic
         )
     }
 

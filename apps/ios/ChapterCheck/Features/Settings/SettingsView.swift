@@ -137,6 +137,12 @@ struct SettingsView: View {
             AllUserReviewsView(userId: userId)
         case .browseShelves:
             MyShelvesBrowseView()
+        case .followers(let userId):
+            FollowListView(userId: userId, mode: .followers)
+        case .following(let userId):
+            FollowListView(userId: userId, mode: .following)
+        case .userSearch:
+            UserSearchView()
         case .search, .browseLibrary, .browseAuthors:
             EmptyView()
         }
