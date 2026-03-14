@@ -116,7 +116,7 @@ struct BookNotesListView: View {
     }
 }
 
-private struct BookNoteRow: View {
+struct BookNoteRow: View {
     let note: BookNote
     let onPlay: () -> Void
     let onEdit: () -> Void

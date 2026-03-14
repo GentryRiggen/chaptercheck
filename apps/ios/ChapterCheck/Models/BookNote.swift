@@ -55,26 +55,18 @@ struct BookNoteCategorySummary: Decodable, Hashable, Sendable {
     let colorToken: String
 }
 
-struct BookNote: Decodable, Identifiable, Hashable, Sendable {
-    let _id: String
-    let _creationTime: Double
-    let userId: String
-    let bookId: String
-    let audioFileId: String?
-    let categoryId: String?
-    let startSeconds: Double?
-    let endSeconds: Double?
-    let noteText: String?
-    let entryType: String?
-    let sourceText: String?
-    let createdAt: Double
-    let updatedAt: Double
-    let audioFile: BookNoteAudioFile?
-    let category: BookNoteCategorySummary?
-    let tags: [MemoryTag]?
+// MARK: - Shared Entry Type Logic
 
-    var id: String { _id }
+/// Shared computed properties for note types that have `entryType`, `startSeconds`,
+/// `endSeconds`, and `audioFileId` fields.
+protocol NoteEntryDisplayable {
+    var entryType: String? { get }
+    var audioFileId: String? { get }
+    var startSeconds: Double? { get }
+    var endSeconds: Double? { get }
+}
 
+extension NoteEntryDisplayable {
     var isAudioAnchored: Bool { audioFileId != nil }
 
     var durationSeconds: Double {
@@ -90,16 +82,6 @@ struct BookNote: Decodable, Identifiable, Hashable, Sendable {
     var formattedDuration: String {
         guard durationSeconds > 0 else { return "" }
         return TimeFormatting.formatDuration(durationSeconds)
-    }
-
-    var displayTitle: String {
-        if let audioFile {
-            if let partNumber = audioFile.partNumberInt {
-                return "Part \(partNumber)"
-            }
-            return audioFile.displayName
-        }
-        return entryTypeLabel
     }
 
     var entryTypeLabel: String {
@@ -124,5 +106,89 @@ struct BookNote: Decodable, Identifiable, Hashable, Sendable {
         case "discussion_prompt": return "bubble.left.and.bubble.right"
         default: return "note.text"
         }
+    }
+}
+
+struct BookNote: Decodable, Identifiable, Hashable, Sendable, NoteEntryDisplayable {
+    let _id: String
+    let _creationTime: Double
+    let userId: String
+    let bookId: String
+    let audioFileId: String?
+    let categoryId: String?
+    let startSeconds: Double?
+    let endSeconds: Double?
+    let noteText: String?
+    let entryType: String?
+    let sourceText: String?
+    let createdAt: Double
+    let updatedAt: Double
+    let audioFile: BookNoteAudioFile?
+    let category: BookNoteCategorySummary?
+    let tags: [MemoryTag]?
+
+    var id: String { _id }
+
+    var displayTitle: String {
+        if let audioFile {
+            if let partNumber = audioFile.partNumberInt {
+                return "Part \(partNumber)"
+            }
+            return audioFile.displayName
+        }
+        return entryTypeLabel
+    }
+}
+
+// MARK: - Cross-Book Note Types
+
+struct CrossBookNoteSummary: Decodable, Hashable, Sendable {
+    let _id: String
+    let title: String
+    let coverImageR2Key: String?
+    let primaryAuthorName: String?
+}
+
+struct CrossBookNote: Decodable, Identifiable, Hashable, Sendable, NoteEntryDisplayable {
+    let _id: String
+    let _creationTime: Double
+    let userId: String
+    let bookId: String
+    let audioFileId: String?
+    let categoryId: String?
+    let startSeconds: Double?
+    let endSeconds: Double?
+    let noteText: String?
+    let entryType: String?
+    let sourceText: String?
+    let createdAt: Double
+    let updatedAt: Double
+    let audioFile: BookNoteAudioFile?
+    let tags: [MemoryTag]?
+    let book: CrossBookNoteSummary
+
+    var id: String { _id }
+
+    /// Convert to a BookNote for passing to sheets that expect BookNote.
+    /// Category is intentionally nil — the cross-book query omits legacy category enrichment.
+    var asBookNote: BookNote {
+        BookNote(
+            _id: _id,
+            _creationTime: _creationTime,
+            userId: userId,
+            bookId: bookId,
+            audioFileId: audioFileId,
+            categoryId: categoryId,
+            startSeconds: startSeconds,
+            endSeconds: endSeconds,
+            noteText: noteText,
+            entryType: entryType,
+            sourceText: sourceText,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            audioFile: audioFile,
+            category: nil,
+            tags: tags
+        )
     }
 }

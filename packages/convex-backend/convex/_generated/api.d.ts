@@ -52,6 +52,7 @@ import type * as storageAccounts_mutations from "../storageAccounts/mutations.js
 import type * as storageAccounts_queries from "../storageAccounts/queries.js";
 import type * as userPreferences_mutations from "../userPreferences/mutations.js";
 import type * as userPreferences_queries from "../userPreferences/queries.js";
+import type * as users_deleteAccount from "../users/deleteAccount.js";
 import type * as users_helpers from "../users/helpers.js";
 import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
@@ -107,6 +108,7 @@ declare const fullApi: ApiFromModules<{
   "storageAccounts/queries": typeof storageAccounts_queries;
   "userPreferences/mutations": typeof userPreferences_mutations;
   "userPreferences/queries": typeof userPreferences_queries;
+  "users/deleteAccount": typeof users_deleteAccount;
   "users/helpers": typeof users_helpers;
   "users/mutations": typeof users_mutations;
   "users/queries": typeof users_queries;

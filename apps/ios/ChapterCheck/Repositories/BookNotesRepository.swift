@@ -18,6 +18,10 @@ final class BookNotesRepository {
         )
     }
 
+    func subscribeToMyAllNotes() -> AnyPublisher<[CrossBookNote], ClientError>? {
+        convex.subscribe(to: "bookNotes/queries:getMyAllNotes")
+    }
+
     // MARK: - Tags (new system)
 
     func subscribeToMyTags() -> AnyPublisher<[MemoryTag], ClientError>? {
