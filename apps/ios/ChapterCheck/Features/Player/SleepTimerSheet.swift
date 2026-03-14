@@ -8,7 +8,10 @@ struct SleepTimerSheet: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(\.dismiss) private var dismiss
 
-    private static let quickSetMinutes: [Double] = [5, 10, 30, 60]
+    private static let quickSetMinutes: [[Double]] = [
+        [5, 10, 15, 20],
+        [30, 45, 60, 90],
+    ]
 
     private static let adjustMinutes: [Double] = [1, 5, 10, 15, 30, 60]
 
@@ -27,7 +30,7 @@ struct SleepTimerSheet: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 24)
-        .presentationDetents([.height(280)])
+        .presentationDetents([.height(audioPlayer.isSleepTimerActive ? 320 : 280)])
         .presentationDragIndicator(.visible)
     }
 
@@ -39,19 +42,23 @@ struct SleepTimerSheet: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 12) {
-                ForEach(Self.quickSetMinutes, id: \.self) { minutes in
-                    Button {
-                        Haptics.selection()
-                        audioPlayer.setSleepTimer(minutes: minutes)
-                    } label: {
-                        Text(formatMinutesLabel(minutes))
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
+            VStack(spacing: 10) {
+                ForEach(Self.quickSetMinutes, id: \.self) { row in
+                    HStack(spacing: 10) {
+                        ForEach(row, id: \.self) { minutes in
+                            Button {
+                                Haptics.selection()
+                                audioPlayer.setSleepTimer(minutes: minutes)
+                            } label: {
+                                Text(formatMinutesLabel(minutes))
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }

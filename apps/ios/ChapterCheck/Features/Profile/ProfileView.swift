@@ -66,7 +66,7 @@ struct ProfileView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                            .padding(.horizontal, 4)
+                            .padding(.horizontal, 16)
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                     } header: {
@@ -222,10 +222,10 @@ struct ProfileView: View {
     }
 
     private func profileShelfCard(_ shelf: Shelf) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             StackedCoversView(previewBooks: shelf.previewBooks, size: 80)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(shelf.name)
                         .font(.subheadline)
@@ -246,7 +246,7 @@ struct ProfileView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(width: 120)
+        .frame(width: 140)
     }
 
     private func profileReviewRow(_ review: UserReview, book: UserReviewBook) -> some View {
