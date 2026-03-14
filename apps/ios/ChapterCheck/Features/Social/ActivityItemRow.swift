@@ -3,72 +3,75 @@ import SwiftUI
 struct ActivityItemRow: View {
     let item: ActivityItem
 
+    private let coverSize: CGFloat = 56
+
     var body: some View {
-        NavigationLink(value: AppDestination.book(id: item.book._id)) {
-            HStack(alignment: .top, spacing: 12) {
-                BookCoverView(r2Key: item.book.coverImageR2Key, size: 56)
+        HStack(alignment: .top, spacing: 12) {
+            // Book cover — taps to book detail
+            NavigationLink(value: AppDestination.book(id: item.book._id)) {
+                BookCoverView(r2Key: item.book.coverImageR2Key, size: coverSize)
+            }
+            .buttonStyle(.plain)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    // User + action
+            VStack(alignment: .leading, spacing: 4) {
+                // User + action — taps to profile
+                NavigationLink(value: AppDestination.profile(userId: item.user._id)) {
                     HStack(spacing: 6) {
-                        userAvatar
-
+                        avatarImage
                         (Text(item.user.name ?? "Someone").fontWeight(.semibold)
                             + Text(" \(actionText)"))
                             .font(.caption)
                             .lineLimit(1)
                     }
+                }
+                .buttonStyle(.plain)
 
-                    // Book title
+                // Book title — taps to book
+                NavigationLink(value: AppDestination.book(id: item.book._id)) {
                     Text(item.book.title)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
                         .lineLimit(2)
-
-                    // Content preview
-                    contentPreview
-
-                    // Timestamp
-                    Text(TimeFormatting.formatRelativeDate(item.timestamp))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
                 }
+                .buttonStyle(.plain)
+
+                contentPreview
+
+                Text(TimeFormatting.formatRelativeDate(item.timestamp))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
-            .padding(.vertical, 10)
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 10)
     }
 
-    private var userAvatar: some View {
-        Group {
+    // MARK: - Avatar
+
+    private var avatarImage: some View {
+        ZStack {
+            Circle()
+                .fill(Color(.tertiarySystemFill))
+                .overlay {
+                    Text(initials)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+
+            // On failure/loading, the placeholder circle beneath remains visible
             if let imageUrl = item.user.imageUrl, let url = URL(string: imageUrl) {
                 AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    default:
-                        avatarPlaceholder
+                    if case .success(let image) = phase {
+                        image.resizable().scaledToFill()
                     }
                 }
-            } else {
-                avatarPlaceholder
             }
         }
         .frame(width: 20, height: 20)
         .clipShape(Circle())
     }
 
-    private var avatarPlaceholder: some View {
-        Circle()
-            .fill(Color(.tertiarySystemFill))
-            .overlay {
-                Text(initials)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-    }
+    // MARK: - Helpers
 
     private var initials: String {
         guard let name = item.user.name, let first = name.first else { return "?" }

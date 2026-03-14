@@ -311,6 +311,36 @@ export const getCommunityActivity = query({
       });
     }
 
+    // Public shelf adds from all users (except current)
+    const allShelves = await ctx.db.query("shelves").collect();
+
+    for (const shelf of allShelves) {
+      if (shelf.userId === user._id) continue;
+      if (!shelf.isPublic) continue;
+
+      const shelfUser = await getUser(shelf.userId);
+      if (!shelfUser) continue;
+
+      const shelfBooks = await ctx.db
+        .query("shelfBooks")
+        .withIndex("by_shelf", (q) => q.eq("shelfId", shelf._id))
+        .collect();
+
+      for (const sb of shelfBooks) {
+        const book = await getBook(sb.bookId);
+        if (!book) continue;
+
+        allItems.push({
+          _id: `shelf_${sb._id}`,
+          type: "shelf_add",
+          timestamp: sb.addedAt,
+          user: shelfUser,
+          book,
+          shelfName: shelf.name,
+        });
+      }
+    }
+
     // Public notes from all users (except current)
     const allNotes = await ctx.db.query("bookNotes").collect();
 

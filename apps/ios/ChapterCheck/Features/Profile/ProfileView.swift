@@ -170,26 +170,35 @@ struct ProfileView: View {
 
     private func statsSection(_ stats: UserProfileStats) -> some View {
         Section {
-            HStack {
-                statCell(value: stats.booksReadInt, label: "Books Read")
-                Divider()
-                statCell(value: stats.reviewsWrittenInt, label: "Reviews")
-                Divider()
-                statCell(value: stats.shelvesCountInt, label: "Shelves")
-                Divider()
-                NavigationLink(value: AppDestination.followers(userId: userId)) {
-                    statCell(value: viewModel.followersCount, label: "Followers")
+            VStack(spacing: 0) {
+                HStack {
+                    statCell(value: stats.booksReadInt, label: "Books Read")
+                    Divider()
+                    statCell(value: stats.reviewsWrittenInt, label: "Reviews")
+                    Divider()
+                    statCell(value: stats.shelvesCountInt, label: "Shelves")
                 }
-                .buttonStyle(.plain)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+
                 Divider()
-                NavigationLink(value: AppDestination.following(userId: userId)) {
-                    statCell(value: viewModel.followingCount, label: "Following")
+
+                HStack {
+                    NavigationLink(value: AppDestination.followers(userId: userId)) {
+                        statCell(value: viewModel.followersCount, label: "Followers")
+                    }
+                    .buttonStyle(.plain)
+                    Divider()
+                    NavigationLink(value: AppDestination.following(userId: userId)) {
+                        statCell(value: viewModel.followingCount, label: "Following")
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
             }
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 4)
         }
     }
 

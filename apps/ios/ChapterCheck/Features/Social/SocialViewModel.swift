@@ -3,12 +3,19 @@ import ConvexMobile
 import Foundation
 import os
 
+enum SocialTab: String, CaseIterable, Identifiable {
+    case following = "Following"
+    case discover = "Discover"
+    var id: String { rawValue }
+}
+
 @Observable
 @MainActor
 final class SocialViewModel {
 
     // MARK: - State
 
+    var selectedTab: SocialTab = .discover
     var activityFeed: [ActivityItem] = []
     var communityActivity: [ActivityItem] = []
     var following: [FollowedUser] = []
@@ -28,8 +35,8 @@ final class SocialViewModel {
     private var cancellables = Set<AnyCancellable>()
 
     private var loadedSections: Set<String> = []
-    /// Sections that must load before dismissing the skeleton.
     private static let requiredSections: Set<String> = ["following", "communityActivity"]
+    private var hasSetInitialTab = false
 
     var isOffline: Bool { !networkMonitor.isConnected }
     private(set) var isShowingOfflineData = false
@@ -92,6 +99,7 @@ final class SocialViewModel {
     private func tearDownSubscriptions() {
         cancellables.removeAll()
         loadedSections.removeAll()
+        hasSetInitialTab = false
     }
 
     // MARK: - Private Subscription Setup
@@ -170,6 +178,10 @@ final class SocialViewModel {
         error = nil
         if Self.requiredSections.isSubset(of: loadedSections) {
             isLoading = false
+            if !hasSetInitialTab {
+                hasSetInitialTab = true
+                selectedTab = hasFollowing ? .following : .discover
+            }
         }
     }
 
