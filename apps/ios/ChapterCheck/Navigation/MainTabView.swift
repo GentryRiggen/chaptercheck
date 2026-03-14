@@ -77,13 +77,29 @@ extension EnvironmentValues {
     }
 }
 
-/// Primary single-stack navigation after authentication.
+// MARK: - Tab Enum
+
+enum Tab: Int, Hashable {
+    case home
+    case library
+    case social
+    case notes
+    case profile
+}
+
+/// Primary tab-based navigation after authentication.
 ///
 /// Owns the `AudioPlayerManager` as `@State` and injects it into the
 /// environment so all child views can access playback state. A persistent
-/// `MiniPlayerView` overlay is shown at the bottom when audio is loaded.
+/// `MiniPlayerView` overlay is shown at the bottom above the tab bar.
 struct MainView: View {
-    @State private var navigationPath: [AppDestination] = []
+    @State private var selectedTab: Tab = .home
+    @State private var homePath: [AppDestination] = []
+    @State private var libraryPath: [AppDestination] = []
+    @State private var socialPath: [AppDestination] = []
+    @State private var notesPath: [AppDestination] = []
+    @State private var profilePath: [AppDestination] = []
+
     @State private var audioPlayer = AudioPlayerManager()
     @State private var downloadManager = DownloadManager()
     @State private var isNowPlayingPresented = false
@@ -99,18 +115,70 @@ struct MainView: View {
     @Environment(ThemeManager.self) private var themeManager
     private let networkMonitor = NetworkMonitor.shared
 
+    /// The navigation path binding for the currently selected tab.
+    private var activePathBinding: Binding<[AppDestination]> {
+        switch selectedTab {
+        case .home: return $homePath
+        case .library: return $libraryPath
+        case .social: return $socialPath
+        case .notes: return $notesPath
+        case .profile: return $profilePath
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
-            NavigationStack(path: $navigationPath) {
-                HomeView()
-                    .navigationDestination(for: AppDestination.self) { destination in
-                        destinationView(for: destination)
+            TabView(selection: $selectedTab) {
+                SwiftUI.Tab("Home", systemImage: "house", value: Tab.home) {
+                    NavigationStack(path: $homePath) {
+                        HomeView()
+                            .navigationDestination(for: AppDestination.self) { destination in
+                                destinationView(for: destination)
+                            }
                     }
+                }
+
+                SwiftUI.Tab("Library", systemImage: "books.vertical", value: Tab.library) {
+                    NavigationStack(path: $libraryPath) {
+                        LibraryView()
+                            .navigationDestination(for: AppDestination.self) { destination in
+                                destinationView(for: destination)
+                            }
+                    }
+                }
+
+                SwiftUI.Tab("Social", systemImage: "person.2", value: Tab.social) {
+                    NavigationStack(path: $socialPath) {
+                        SocialView()
+                            .navigationDestination(for: AppDestination.self) { destination in
+                                destinationView(for: destination)
+                            }
+                    }
+                }
+
+                SwiftUI.Tab("Notes", systemImage: "note.text", value: Tab.notes) {
+                    NavigationStack(path: $notesPath) {
+                        NotesTabView()
+                            .navigationDestination(for: AppDestination.self) { destination in
+                                destinationView(for: destination)
+                            }
+                    }
+                }
+
+                SwiftUI.Tab("Profile", systemImage: "person.crop.circle", value: Tab.profile) {
+                    NavigationStack(path: $profilePath) {
+                        ProfileTabView()
+                            .navigationDestination(for: AppDestination.self) { destination in
+                                destinationView(for: destination)
+                            }
+                    }
+                }
             }
 
             if audioPlayer.hasContent {
                 MiniPlayerView(isNowPlayingPresented: $isNowPlayingPresented)
                     .padding(.horizontal, 8)
+                    .padding(.bottom, 49) // Clear the tab bar
             }
         }
         .environment(audioPlayer)
@@ -191,15 +259,16 @@ struct MainView: View {
             // Stop player and dismiss Now Playing
             audioPlayer.stop()
 
-            // Navigate to the completed book's detail view (skip if already there)
-            let alreadyOnBookDetail = navigationPath.last == .book(id: bookId)
+            // Navigate to the completed book's detail view on the active tab
+            let activePath = activePathBinding
+            let alreadyOnBookDetail = activePath.wrappedValue.last == .book(id: bookId)
             if isNowPlayingPresented {
                 if !alreadyOnBookDetail {
                     pendingNavigation = .book(id: bookId)
                 }
                 isNowPlayingPresented = false
             } else if !alreadyOnBookDetail {
-                navigationPath.append(.book(id: bookId))
+                activePath.wrappedValue.append(.book(id: bookId))
             }
 
             // Handle download cleanup
@@ -251,7 +320,7 @@ struct MainView: View {
                 completedPartAudioFileId = nil
                 completedPartBookId = nil
             }
-            Button("No, Thank You", ) {
+            Button("No, Thank You") {
                 completedPartAudioFileId = nil
                 completedPartBookId = nil
             }
@@ -269,7 +338,7 @@ struct MainView: View {
                 }
                 deleteDownloadBookId = nil
             }
-            Button("No, Thank You", ) {
+            Button("No, Thank You") {
                 deleteDownloadBookId = nil
             }
         } message: {
@@ -278,7 +347,7 @@ struct MainView: View {
         .sheet(isPresented: $isNowPlayingPresented, onDismiss: {
             if let pending = pendingNavigation {
                 pendingNavigation = nil
-                navigationPath.append(pending)
+                activePathBinding.wrappedValue.append(pending)
             }
             if deleteDownloadBookId != nil {
                 showDeleteDownloadConfirmation = true
@@ -306,8 +375,10 @@ struct MainView: View {
     }
 
     private func subscribeToPreferences() {
-        guard preferencesCancellable == nil,
-              case .authenticated = ConvexService.shared.authState,
+        preferencesCancellable?.cancel()
+        preferencesCancellable = nil
+
+        guard case .authenticated = ConvexService.shared.authState,
               let publisher = PreferencesRepository().subscribeToPreferences() else { return }
 
         preferencesCancellable = publisher

@@ -110,6 +110,18 @@ final class BookUserDataRepository {
 
     // MARK: - Mutations
 
+    /// Set the reading status for a book (5-state model).
+    ///
+    /// - Parameters:
+    ///   - bookId: The `_id` of the book.
+    ///   - status: The new reading status.
+    func setReadingStatus(bookId: String, status: ReadingStatus) async throws {
+        try await convex.mutation(
+            "bookUserData/mutations:setReadingStatus",
+            with: ["bookId": bookId, "status": status.rawValue]
+        )
+    }
+
     /// Toggle the read status for a book.
     ///
     /// - Parameter bookId: The `_id` of the book.

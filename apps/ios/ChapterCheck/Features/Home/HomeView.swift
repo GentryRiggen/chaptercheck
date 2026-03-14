@@ -1,4 +1,6 @@
 import ClerkKit
+import Combine
+import ConvexMobile
 import SwiftUI
 
 /// The main home screen — a listening-first feed with discovery sections.
@@ -8,11 +10,13 @@ import SwiftUI
 /// browse the full library and authors.
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
-    @Environment(\.showSettings) private var showSettings
+    @State private var isAddBookPresented = false
+    @State private var currentUser: UserWithPermissions?
+    @State private var userCancellable: AnyCancellable?
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
-    @Environment(ThemeManager.self) private var themeManager
     private let networkMonitor = NetworkMonitor.shared
+    private let userRepository = UserRepository()
 
     var body: some View {
         Group {
@@ -45,27 +49,37 @@ struct HomeView: View {
         .navigationTitle("Chapter Check")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                if currentUser?.permissions.canCreateContent == true {
+                    Button {
+                        isAddBookPresented = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Add book")
+                }
+
                 NavigationLink(value: AppDestination.search) {
                     Image(systemName: "magnifyingglass")
                 }
                 .disabled(viewModel.isOffline)
                 .opacity(viewModel.isOffline ? 0.4 : 1)
-
-                Button {
-                    showSettings()
-                } label: {
-                    avatarImage
-                }
-                .accessibilityLabel("Settings")
+            }
+        }
+        .sheet(isPresented: $isAddBookPresented) {
+            AddBookView { _ in
+                isAddBookPresented = false
             }
         }
         .onAppear {
             viewModel.downloadManager = downloadManager
             viewModel.audioPlayerManager = audioPlayer
             viewModel.subscribe()
+            subscribeToUser()
         }
         .onDisappear {
             viewModel.unsubscribe()
+            userCancellable?.cancel()
+            userCancellable = nil
         }
         .onChange(of: networkMonitor.isConnected) { _, isConnected in
             if isConnected {
@@ -80,17 +94,15 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Avatar
-
-    private var avatarImage: some View {
-        Circle()
-            .fill(themeManager.accentGradient)
-            .frame(width: 28, height: 28)
-            .overlay {
-                Image(systemName: "person.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white)
-            }
+    private func subscribeToUser() {
+        guard userCancellable == nil,
+              let publisher = userRepository.subscribeToCurrentUser() else { return }
+        userCancellable = publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { user in currentUser = user }
+            )
     }
 
     // MARK: - Content

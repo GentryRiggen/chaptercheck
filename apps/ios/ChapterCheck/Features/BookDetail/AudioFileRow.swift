@@ -61,24 +61,14 @@ struct AudioFileRow: View {
                             .fontWeight(isCurrentPart ? .semibold : .regular)
                             .lineLimit(1)
 
-                        HStack(spacing: 4) {
-                            Text(audioFile.formattedDuration)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        Text("\(audioFile.formattedDuration) · \(audioFile.formattedFileSize)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
 
-                            Text("·")
+                        if let savedPosition, savedPosition > 0 {
+                            Text("Resume from \(TimeFormatting.formatTime(savedPosition))")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            Text(audioFile.formattedFileSize)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            if let savedPosition, savedPosition > 0 {
-                                Text("· Resume from \(TimeFormatting.formatTime(savedPosition))")
-                                    .font(.caption)
-                                    .foregroundStyle(.tint)
-                            }
+                                .foregroundStyle(.tint)
                         }
                     }
 

@@ -272,7 +272,7 @@ final class BookDetailViewModel {
 
     // MARK: - Mutations
 
-    /// Toggle the read status for this book.
+    /// Toggle the read status for this book (legacy toggle).
     ///
     /// The backend toggles the current `isRead` state. After a successful toggle
     /// the real-time `userData` subscription will emit the updated value automatically.
@@ -283,6 +283,17 @@ final class BookDetailViewModel {
             Haptics.success()
         } catch {
             self.error = "Failed to update read status"
+        }
+    }
+
+    /// Set the reading status for this book (5-state model).
+    func setReadingStatus(_ status: ReadingStatus) async {
+        guard let book else { return }
+        do {
+            try await bookUserDataRepository.setReadingStatus(bookId: book._id, status: status)
+            Haptics.success()
+        } catch {
+            self.error = "Failed to update reading status"
         }
     }
 

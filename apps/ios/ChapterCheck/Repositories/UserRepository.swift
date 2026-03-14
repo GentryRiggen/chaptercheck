@@ -46,4 +46,9 @@ final class UserRepository {
             with: ["isProfilePrivate": isPrivate]
         )
     }
+
+    /// Permanently delete the current user's account and all associated data.
+    func deleteAccount() async throws {
+        try await convex.action("users/deleteAccount:deleteAccount")
+    }
 }

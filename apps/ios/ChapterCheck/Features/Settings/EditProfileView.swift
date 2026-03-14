@@ -1,4 +1,5 @@
 import ClerkKit
+import Combine
 import CropViewController
 import PhotosUI
 import SwiftUI
@@ -16,6 +17,9 @@ struct EditProfileView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var didSave = false
+    @State private var isProfilePrivate = false
+    @State private var hasInitializedPrivacy = false
+    @State private var privacyCancellable: AnyCancellable?
 
     // Photo state
     @State private var selectedPhoto: PhotosPickerItem?
@@ -110,6 +114,25 @@ struct EditProfileView: View {
                 Text("Your name is displayed on your public profile.")
             }
 
+            Section {
+                Toggle("Private Profile", isOn: $isProfilePrivate)
+                    .onChange(of: isProfilePrivate) { _, newValue in
+                        guard hasInitializedPrivacy else { return }
+                        Task {
+                            do {
+                                try await UserRepository().updateProfilePrivacy(isPrivate: newValue)
+                            } catch {
+                                errorMessage = "Failed to update privacy setting."
+                                isProfilePrivate = !newValue
+                            }
+                        }
+                    }
+            } header: {
+                Text("Privacy")
+            } footer: {
+                Text("When enabled, other users won't see your read books, reviews, or shelves.")
+            }
+
             if let errorMessage {
                 Section {
                     Text(errorMessage)
@@ -140,7 +163,10 @@ struct EditProfileView: View {
         }
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { prefill() }
+        .onAppear {
+            prefill()
+            prefillPrivacy()
+        }
         .onChange(of: selectedPhoto) { _, item in
             guard let item else { return }
             loadImageForCropping(item)
@@ -259,6 +285,25 @@ struct EditProfileView: View {
         guard let user = Clerk.shared.user else { return }
         firstName = user.firstName ?? ""
         lastName = user.lastName ?? ""
+    }
+
+    private func prefillPrivacy() {
+        guard !hasInitializedPrivacy,
+              let publisher = UserRepository().subscribeToCurrentUser() else { return }
+        privacyCancellable?.cancel()
+        privacyCancellable = publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { user in
+                    if !hasInitializedPrivacy, let user {
+                        isProfilePrivate = user.isProfilePrivate
+                        hasInitializedPrivacy = true
+                    }
+                    privacyCancellable?.cancel()
+                    privacyCancellable = nil
+                }
+            )
     }
 
     private func save() {

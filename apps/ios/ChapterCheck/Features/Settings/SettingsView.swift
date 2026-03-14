@@ -11,8 +11,6 @@ struct SettingsView: View {
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.dismiss) private var dismiss
     @State private var convexUser: UserWithPermissions?
-    @State private var isProfilePrivate = false
-    @State private var hasInitialized = false
     @State private var storageStats: StorageStats?
     @State private var cancellables = Set<AnyCancellable>()
 
@@ -21,31 +19,6 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Profile section — only available once the Convex user is loaded
-                if let convexUser {
-                    Section {
-                        NavigationLink(value: AppDestination.profile(userId: convexUser._id)) {
-                            Label("View Profile", systemImage: "person.crop.circle")
-                        }
-
-                        NavigationLink {
-                            EditProfileView()
-                        } label: {
-                            Label("Edit Profile", systemImage: "pencil")
-                        }
-
-                        Toggle("Private Profile", isOn: $isProfilePrivate)
-                            .onChange(of: isProfilePrivate) { _, newValue in
-                                guard hasInitialized else { return }
-                                updatePrivacy(newValue)
-                            }
-                    } header: {
-                        Text("Profile")
-                    } footer: {
-                        Text("When enabled, other users won't see your read books, reviews, or shelves.")
-                    }
-                }
-
                 // Settings section
                 Section {
                     NavigationLink {
@@ -90,7 +63,7 @@ struct SettingsView: View {
                     storageSection(stats)
                 }
 
-                // Sign out
+                // Sign out & account
                 Section {
                     Button {
                         Task {
@@ -114,6 +87,13 @@ struct SettingsView: View {
                         Task {
                             await convexService.logout()
                         }
+                    }
+
+                    NavigationLink {
+                        DeleteAccountView()
+                    } label: {
+                        Label("Delete Account", systemImage: "trash")
+                            .foregroundStyle(.red)
                     }
                 }
             }
@@ -207,10 +187,6 @@ struct SettingsView: View {
                 receiveCompletion: { _ in },
                 receiveValue: { user in
                     convexUser = user
-                    if !hasInitialized, let user {
-                        isProfilePrivate = user.isProfilePrivate
-                        hasInitialized = true
-                    }
                 }
             )
             .store(in: &cancellables)
@@ -231,13 +207,5 @@ struct SettingsView: View {
                 receiveValue: { stats in storageStats = stats }
             )
             .store(in: &cancellables)
-    }
-
-    // MARK: - Actions
-
-    private func updatePrivacy(_ isPrivate: Bool) {
-        Task {
-            try? await userRepository.updateProfilePrivacy(isPrivate: isPrivate)
-        }
     }
 }

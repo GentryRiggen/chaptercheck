@@ -1,77 +1,101 @@
 import SwiftUI
 
-/// Displays the current read status for a book and provides actions to change it.
+/// Displays the current reading status for a book and provides a menu to change it.
 ///
-/// - If the book is marked as read, shows a green "Read" badge, any existing star rating,
-///   and a "Review" button to open the review sheet.
-/// - If the book is not yet read, shows a "Mark as Read" primary button.
-/// - A confirmation dialog guards the "Unmark as Read" action, warning that
-///   any existing rating and review will be cleared.
+/// Shows the current status as a colored inline badge with icon. Tapping opens a menu
+/// with all 5 status options. When status is `finished`, a review button appears.
 struct BookReadStatusView: View {
     let userData: BookUserData?
     let isLoading: Bool
-    let onMarkAsRead: () -> Void
+    let onStatusChange: (ReadingStatus) -> Void
     let onOpenReview: () -> Void
 
-    @State private var isUnmarkConfirmationPresented = false
-
-    private var isRead: Bool {
-        userData?.isRead == true
+    private var currentStatus: ReadingStatus? {
+        userData?.readingStatus
     }
 
     var body: some View {
         HStack(spacing: 12) {
-            if isRead {
-                readBadge
+            if let status = currentStatus {
+                currentStatusMenu(status: status)
                 Spacer()
-                reviewButton
+                if status == .finished {
+                    reviewButton
+                }
             } else {
-                markAsReadButton
+                addToLibraryMenu
             }
-        }
-        .confirmationDialog(
-            "Unmark as Read?",
-            isPresented: $isUnmarkConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Unmark as Read", role: .destructive) {
-                Haptics.medium()
-                onMarkAsRead()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will clear your rating and review for this book.")
         }
     }
 
-    // MARK: - Read Badge
+    // MARK: - Current Status (inline badge style)
 
-    private var readBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-            Text("Read")
-                .fontWeight(.medium)
+    private func currentStatusMenu(status: ReadingStatus) -> some View {
+        Menu {
+            statusMenuItems(current: status)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: status.icon)
+                    .foregroundStyle(status.color)
+                Text(status.label)
+                    .fontWeight(.medium)
 
-            if let rating = userData?.ratingInt {
-                RatingView(rating: Double(rating), size: 13)
-                    .padding(.leading, 2)
+                if status == .finished, let rating = userData?.ratingInt {
+                    RatingView(rating: Double(rating), size: 13)
+                        .padding(.leading, 2)
+                }
             }
+            .font(.subheadline)
         }
-        .font(.subheadline)
-        .onTapGesture {
-            isUnmarkConfirmationPresented = true
-        }
-        .accessibilityLabel(accessibilityReadLabel)
-        .accessibilityHint("Double-tap to unmark as read")
+        .disabled(isLoading)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint("Double-tap to change status")
         .accessibilityAddTraits(.isButton)
     }
 
-    private var accessibilityReadLabel: String {
-        if let rating = userData?.ratingInt {
-            return "Marked as read, rated \(rating) out of 3 stars"
+    // MARK: - Add to Library (bordered button style)
+
+    private var addToLibraryMenu: some View {
+        Menu {
+            statusMenuItems(current: nil)
+        } label: {
+            Label("Add to Library", systemImage: "plus.circle")
+                .padding(.vertical, 6)
+                .font(.subheadline)
         }
-        return "Marked as read"
+        .menuStyle(.button)
+        .buttonStyle(.bordered)
+        .disabled(isLoading)
+        .accessibilityLabel("Add to Library. Double-tap to set reading status.")
+    }
+
+    // MARK: - Menu Items
+
+    @ViewBuilder
+    private func statusMenuItems(current: ReadingStatus?) -> some View {
+        ForEach(ReadingStatus.allCases) { status in
+            Button {
+                guard status != current else { return }
+                Haptics.medium()
+                onStatusChange(status)
+            } label: {
+                Label {
+                    Text(status.label)
+                } icon: {
+                    Image(systemName: status == current ? "checkmark" : status.icon)
+                }
+            }
+        }
+    }
+
+    private var accessibilityLabel: String {
+        if let status = currentStatus {
+            if status == .finished, let rating = userData?.ratingInt {
+                return "\(status.label), rated \(rating) out of 3 stars"
+            }
+            return status.label
+        }
+        return "Add to Library"
     }
 
     // MARK: - Review Button
@@ -88,19 +112,5 @@ struct BookReadStatusView: View {
             .font(.subheadline)
         }
         .buttonStyle(.bordered)
-    }
-
-    // MARK: - Mark as Read Button
-
-    private var markAsReadButton: some View {
-        Button {
-            Haptics.medium()
-            onMarkAsRead()
-        } label: {
-            Label("Mark as Read", systemImage: "checkmark.circle")
-                .padding(.vertical, 6)
-        }
-        .buttonStyle(.bordered)
-        .disabled(isLoading)
     }
 }

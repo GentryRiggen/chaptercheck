@@ -218,10 +218,10 @@ struct BookDetailView: View {
                     descriptionSection(description)
                 }
 
-                // Play / Resume Button + Read Status
+                // Play / Resume Button + Reading Status
                 if viewModel.hasAudioFiles {
-                    if viewModel.userData?.isRead == true {
-                        // Read: full-width play button, read status below
+                    if viewModel.userData?.readingStatus == .finished {
+                        // Finished: full-width play button, status + review below
                         playButton(book)
                             .padding(.horizontal)
                         if !viewModel.isOffline {
@@ -229,7 +229,7 @@ struct BookDetailView: View {
                                 .padding(.horizontal)
                         }
                     } else {
-                        // Unread: play button + compact "Mark as Read" side-by-side
+                        // Not finished: play button + status side-by-side
                         HStack(spacing: 12) {
                             playButton(book)
                             if !viewModel.isOffline {
@@ -237,16 +237,9 @@ struct BookDetailView: View {
                             }
                         }
                         .padding(.horizontal)
-                        if !viewModel.isOffline {
-                            wantToReadButton
-                                .padding(.horizontal)
-                        }
                     }
                 } else if !viewModel.isOffline {
-                    VStack(spacing: 12) {
-                        readStatusView
-                        wantToReadButton
-                    }
+                    readStatusView
                         .padding(.horizontal)
                 }
 
@@ -291,7 +284,7 @@ struct BookDetailView: View {
                 )
 
                 // Reviews (hidden when offline)
-                if !viewModel.isOffline, !viewModel.sortedReviews.isEmpty || viewModel.userData?.isRead == true {
+                if !viewModel.isOffline, !viewModel.sortedReviews.isEmpty || viewModel.userData?.readingStatus == .finished {
                     Divider()
                         .padding(.horizontal)
 
@@ -374,8 +367,8 @@ struct BookDetailView: View {
         BookReadStatusView(
             userData: viewModel.userData,
             isLoading: viewModel.isLoading,
-            onMarkAsRead: {
-                Task { await viewModel.markAsRead() }
+            onStatusChange: { status in
+                Task { await viewModel.setReadingStatus(status) }
             },
             onOpenReview: {
                 isReviewSheetPresented = true
@@ -383,35 +376,8 @@ struct BookDetailView: View {
         )
     }
 
-    private var wantToReadButton: some View {
-        Group {
-            if viewModel.wantToReadStatus.isOnWantToRead {
-                Button {
-                    Task { await viewModel.toggleWantToRead() }
-                } label: {
-                    Label("Want to Read", systemImage: "bookmark.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                }
-                .buttonStyle(.borderedProminent)
-            } else {
-                Button {
-                    Task { await viewModel.toggleWantToRead() }
-                } label: {
-                    Label("Add to Want to Read", systemImage: "bookmark")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-    }
-
     private var statusActions: some View {
-        VStack(spacing: 12) {
-            readStatusView
-            wantToReadButton
-        }
+        readStatusView
     }
 
     // MARK: - Description

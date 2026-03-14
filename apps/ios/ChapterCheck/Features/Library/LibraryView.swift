@@ -1,3 +1,5 @@
+import Combine
+import ConvexMobile
 import SwiftUI
 
 /// Book library browser with search, genre filtering, and infinite scroll.
@@ -13,8 +15,12 @@ struct LibraryView: View {
 
     @State private var viewModel = LibraryViewModel()
     @State private var isGenreFilterPresented = false
+    @State private var isAddBookPresented = false
+    @State private var currentUser: UserWithPermissions?
+    @State private var userCancellable: AnyCancellable?
     @Environment(DownloadManager.self) private var downloadManager
     private let networkMonitor = NetworkMonitor.shared
+    private let userRepository = UserRepository()
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -58,6 +64,15 @@ struct LibraryView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 4) {
+                    if currentUser?.permissions.canCreateContent == true {
+                        Button {
+                            isAddBookPresented = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .accessibilityLabel("Add book")
+                    }
+
                     Button {
                         isGenreFilterPresented = true
                     } label: {
@@ -80,19 +95,38 @@ struct LibraryView: View {
         .sheet(isPresented: $isGenreFilterPresented) {
             GenreFilterSheet(selectedGenreIds: $viewModel.selectedGenreIds)
         }
+        .sheet(isPresented: $isAddBookPresented) {
+            AddBookView { bookId in
+                isAddBookPresented = false
+            }
+        }
         .onAppear {
             viewModel.downloadManager = downloadManager
             viewModel.sortOption = initialSort
             viewModel.subscribe()
+            subscribeToUser()
         }
         .onDisappear {
             viewModel.unsubscribe()
+            userCancellable?.cancel()
+            userCancellable = nil
         }
         .onChange(of: networkMonitor.isConnected) { _, isConnected in
             if isConnected {
                 viewModel.recoverFromOffline()
             }
         }
+    }
+
+    private func subscribeToUser() {
+        guard userCancellable == nil,
+              let publisher = userRepository.subscribeToCurrentUser() else { return }
+        userCancellable = publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { user in currentUser = user }
+            )
     }
 
     private var emptyStateSubtitle: String {
