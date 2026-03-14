@@ -14,12 +14,14 @@ struct BookNotePreviewSheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 18) {
                 headerSection
-                playbackSection
-                detailSection
+                if note.isAudioAnchored {
+                    playbackSection
+                    detailSection
+                }
                 Spacer(minLength: 0)
             }
             .padding(20)
-            .navigationTitle("Note Clip")
+            .navigationTitle(note.isAudioAnchored ? "Note Clip" : note.entryTypeLabel)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -29,7 +31,7 @@ struct BookNotePreviewSheet: View {
                 }
             }
         }
-        .presentationDetents([.height(340)])
+        .presentationDetents([note.isAudioAnchored ? .height(340) : .medium])
         .presentationDragIndicator(.visible)
         .onChange(of: clipPreviewPlayer.currentTime) { _, newValue in
             guard !isScrubbing else { return }
@@ -43,10 +45,18 @@ struct BookNotePreviewSheet: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                if let category = note.category {
-                    Label(category.name, systemImage: "tag.fill")
+                if let noteTags = note.tags, !noteTags.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(noteTags) { tag in
+                            Label(tag.name, systemImage: "tag.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(tag.displayColor)
+                        }
+                    }
+                } else if !note.isAudioAnchored {
+                    Label(note.entryTypeLabel, systemImage: note.entryTypeIcon)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(AccentColorToken.color(for: category.colorToken))
+                        .foregroundStyle(.tint)
                 } else {
                     Text("Private note")
                         .font(.caption.weight(.semibold))
@@ -60,10 +70,16 @@ struct BookNotePreviewSheet: View {
                     .foregroundStyle(.secondary)
             }
 
+            if let sourceText = note.sourceText, !sourceText.isEmpty {
+                Text("\u{201C}\(sourceText)\u{201D}")
+                    .font(.body)
+                    .italic()
+            }
+
             if let noteText = note.noteText, !noteText.isEmpty {
                 Text(noteText)
                     .font(.body)
-            } else {
+            } else if note.isAudioAnchored {
                 Text("Saved clip")
                     .font(.body)
                     .foregroundStyle(.secondary)
@@ -163,27 +179,35 @@ struct BookNotePreviewSheet: View {
 
     private var detailSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(note.audioFile.displayName, systemImage: "book.closed")
-                .font(.subheadline)
+            if let audioFile = note.audioFile {
+                Label(audioFile.displayName, systemImage: "book.closed")
+                    .font(.subheadline)
+            }
 
-            Label(note.formattedRange, systemImage: "waveform")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            if !note.formattedRange.isEmpty {
+                Label(note.formattedRange, systemImage: "waveform")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
     private func togglePreview() async {
+        guard let audioFileId = note.audioFileId,
+              let start = note.startSeconds,
+              let end = note.endSeconds else { return }
+
         if clipPreviewPlayer.isPlaying {
             clipPreviewPlayer.pause()
             return
         }
 
-        let localFileURL = await downloadManager.localFileURL(for: note.audioFileId)
+        let localFileURL = await downloadManager.localFileURL(for: audioFileId)
         await clipPreviewPlayer.playClip(
-            audioFileId: note.audioFileId,
+            audioFileId: audioFileId,
             localFileURL: localFileURL,
-            startSeconds: note.startSeconds,
-            endSeconds: note.endSeconds
+            startSeconds: start,
+            endSeconds: end
         )
     }
 }

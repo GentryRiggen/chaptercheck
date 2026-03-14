@@ -12,9 +12,9 @@ struct BookNoteComposerContext {
 
 struct BookNoteComposerSheet: View {
     let context: BookNoteComposerContext
-    let categories: [NoteCategory]
+    let tags: [MemoryTag]
     let onSave: (_ payload: BookNoteSavePayload) async throws -> Void
-    let onCreateCategory: (_ name: String, _ colorToken: String) async throws -> String
+    let onCreateTag: (_ name: String) async throws -> String
 
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(\.dismiss) private var dismiss
@@ -22,15 +22,14 @@ struct BookNoteComposerSheet: View {
 
     @State private var selectedAudioFileId: String
     @State private var noteText: String
-    @State private var selectedCategoryId: String?
+    @State private var selectedTagIds: Set<String>
     @State private var startSeconds: Double
     @State private var endSeconds: Double
     @State private var activeHandle: RangeHandle = .end
     @State private var isSaving = false
     @State private var errorMessage: String?
-    @State private var newCategoryName = ""
-    @State private var newCategoryColorToken = AccentColorToken.coral.id
-    @State private var isCreatingCategory = false
+    @State private var newTagName = ""
+    @State private var isCreatingTag = false
     @State private var clipPreviewPlayer = ClipPreviewPlayer()
     @State private var isScrubbingPreview = false
     @State private var previewScrubTime: Double = 0
@@ -40,18 +39,18 @@ struct BookNoteComposerSheet: View {
 
     init(
         context: BookNoteComposerContext,
-        categories: [NoteCategory],
+        tags: [MemoryTag],
         onSave: @escaping (_ payload: BookNoteSavePayload) async throws -> Void,
-        onCreateCategory: @escaping (_ name: String, _ colorToken: String) async throws -> String
+        onCreateTag: @escaping (_ name: String) async throws -> String
     ) {
         self.context = context
-        self.categories = categories
+        self.tags = tags
         self.onSave = onSave
-        self.onCreateCategory = onCreateCategory
+        self.onCreateTag = onCreateTag
 
         _selectedAudioFileId = State(initialValue: context.initialAudioFileId)
         _noteText = State(initialValue: context.existingNote?.noteText ?? "")
-        _selectedCategoryId = State(initialValue: context.existingNote?.category?._id)
+        _selectedTagIds = State(initialValue: Set(context.existingNote?.tags?.map(\._id) ?? []))
         _startSeconds = State(initialValue: context.initialStartSeconds)
         _endSeconds = State(initialValue: context.initialEndSeconds)
     }
@@ -64,7 +63,7 @@ struct BookNoteComposerSheet: View {
                     rangeSection
                     previewSection
                     noteTextSection
-                    categorySection
+                    tagSection
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
@@ -303,44 +302,26 @@ struct BookNoteComposerSheet: View {
         }
     }
 
-    private var categorySection: some View {
+    private var tagSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Category")
+            Text("Tags")
                 .font(.headline)
 
-            if categories.isEmpty {
-                Text("Create your first category below.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                Button {
-                    selectedCategoryId = nil
-                } label: {
-                    Text("No category")
-                        .font(.subheadline)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 999)
-                                .fill(selectedCategoryId == nil ? Color(.secondarySystemFill) : .clear)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 999)
-                                .stroke(selectedCategoryId == nil ? Color.secondary.opacity(0.4) : .clear, lineWidth: 1.5)
-                        )
-                }
-                .buttonStyle(.plain)
-
+            if !tags.isEmpty {
                 FlowLayout(spacing: 8) {
-                    ForEach(categories) { category in
+                    ForEach(tags) { tag in
                         Button {
-                            selectedCategoryId = category._id
+                            if selectedTagIds.contains(tag._id) {
+                                selectedTagIds.remove(tag._id)
+                            } else {
+                                selectedTagIds.insert(tag._id)
+                            }
                         } label: {
                             HStack(spacing: 6) {
                                 Circle()
-                                    .fill(AccentColorToken.color(for: category.colorToken))
+                                    .fill(tag.displayColor)
                                     .frame(width: 10, height: 10)
-                                Text(category.name)
+                                Text(tag.name)
                                     .lineLimit(1)
                             }
                             .font(.subheadline)
@@ -348,11 +329,11 @@ struct BookNoteComposerSheet: View {
                             .padding(.vertical, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 999)
-                                    .fill(selectedCategoryId == category._id ? AccentColorToken.color(for: category.colorToken).opacity(0.18) : Color(.secondarySystemFill))
+                                    .fill(selectedTagIds.contains(tag._id) ? tag.displayColor.opacity(0.18) : Color(.secondarySystemFill))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 999)
-                                    .stroke(selectedCategoryId == category._id ? AccentColorToken.color(for: category.colorToken) : .clear, lineWidth: 1.5)
+                                    .stroke(selectedTagIds.contains(tag._id) ? tag.displayColor : .clear, lineWidth: 1.5)
                             )
                         }
                         .buttonStyle(.plain)
@@ -361,61 +342,19 @@ struct BookNoteComposerSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("New category")
-                    .font(.subheadline.weight(.medium))
+                HStack {
+                    TextField("New tag name", text: $newTagName)
+                        .textFieldStyle(.roundedBorder)
 
-                TextField("Category name", text: $newCategoryName)
-                    .textFieldStyle(.roundedBorder)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(AccentColorToken.color(for: newCategoryColorToken))
-                            .frame(width: 18, height: 18)
-                        Text(
-                            AccentColorToken.all.first(where: { $0.id == newCategoryColorToken })?.displayName
-                            ?? "Selected Color"
-                        )
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                    Button {
+                        Task { await createTag() }
+                    } label: {
+                        Label("Create", systemImage: "plus")
                     }
-
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 40), spacing: 10)],
-                        spacing: 10
-                    ) {
-                        ForEach(AccentColorToken.all) { token in
-                            Button {
-                                Haptics.selection()
-                                newCategoryColorToken = token.id
-                            } label: {
-                                Circle()
-                                    .fill(token.color)
-                                    .frame(width: 34, height: 34)
-                                    .overlay {
-                                        if newCategoryColorToken == token.id {
-                                            Circle()
-                                                .stroke(Color.primary.opacity(0.18), lineWidth: 6)
-                                            Image(systemName: "checkmark")
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundStyle(token.id == AccentColorToken.yellow.id || token.id == AccentColorToken.lemon.id ? .black : .white)
-                                        }
-                                    }
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(token.displayName)
-                        }
-                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .disabled(isCreatingTag || newTagName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-
-                Button {
-                    Task { await createCategory() }
-                } label: {
-                    Label("Create Category", systemImage: "plus")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .disabled(isCreatingCategory || newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding()
             .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -474,17 +413,16 @@ struct BookNoteComposerSheet: View {
         }
     }
 
-    private func createCategory() async {
-        isCreatingCategory = true
-        defer { isCreatingCategory = false }
+    private func createTag() async {
+        isCreatingTag = true
+        defer { isCreatingTag = false }
 
         do {
-            let newId = try await onCreateCategory(
-                newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines),
-                newCategoryColorToken
+            let newId = try await onCreateTag(
+                newTagName.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            selectedCategoryId = newId
-            newCategoryName = ""
+            selectedTagIds.insert(newId)
+            newTagName = ""
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -500,7 +438,7 @@ struct BookNoteComposerSheet: View {
                 BookNoteSavePayload(
                     noteId: context.existingNote?._id,
                     audioFileId: selectedAudioFileId,
-                    categoryId: selectedCategoryId,
+                    tagIds: Array(selectedTagIds),
                     startSeconds: startSeconds,
                     endSeconds: endSeconds,
                     noteText: {
@@ -537,7 +475,7 @@ struct BookNoteComposerSheet: View {
 struct BookNoteSavePayload {
     let noteId: String?
     let audioFileId: String
-    let categoryId: String?
+    let tagIds: [String]
     let startSeconds: Double
     let endSeconds: Double
     let noteText: String?

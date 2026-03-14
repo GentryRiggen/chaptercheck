@@ -65,11 +65,13 @@ final class BookDetailViewModel {
     var myGenreVoteIds: [String] = []
     var notes: [BookNote] = []
     var noteCategories: [NoteCategory] = []
-    var selectedNoteCategoryId: String?
+    var noteTags: [MemoryTag] = []
+    var selectedNoteTagIds: Set<String> = []
     var notesFilterOption: BookNotesFilterOption = .all
     var reviewSortOption: ReviewSortOption = .recent
     var currentUser: UserWithPermissions?
     var wantToReadStatus = WantToReadStatus(isOnWantToRead: false, shelfId: nil)
+    var bookGenres: [BookGenre] = []
 
     var isLoading = true
     var error: String?
@@ -177,19 +179,25 @@ final class BookDetailViewModel {
 
     var filteredNotes: [BookNote] {
         let byCategory = notes.filter { note in
-            guard let selectedNoteCategoryId else { return true }
-            return note.category?._id == selectedNoteCategoryId
+            guard !selectedNoteTagIds.isEmpty else { return true }
+            return note.tags?.contains(where: { selectedNoteTagIds.contains($0._id) }) == true
         }
 
         switch notesFilterOption {
         case .all:
             return byCategory.sorted { lhs, rhs in
-                let lhsPart = lhs.audioFile.partNumber ?? 0
-                let rhsPart = rhs.audioFile.partNumber ?? 0
-                if lhsPart != rhsPart {
-                    return lhsPart < rhsPart
+                // Audio-anchored notes sort by part then position;
+                // freeform notes sort by creation time, interleaved.
+                if lhs.isAudioAnchored && rhs.isAudioAnchored {
+                    let lhsPart = lhs.audioFile?.partNumber ?? 0
+                    let rhsPart = rhs.audioFile?.partNumber ?? 0
+                    if lhsPart != rhsPart {
+                        return lhsPart < rhsPart
+                    }
+                    return (lhs.startSeconds ?? 0) < (rhs.startSeconds ?? 0)
                 }
-                return lhs.startSeconds < rhs.startSeconds
+                // Mix freeform with audio by creation time
+                return lhs._creationTime < rhs._creationTime
             }
         case .recent:
             return byCategory.sorted { $0.updatedAt > $1.updatedAt }
@@ -221,8 +229,10 @@ final class BookDetailViewModel {
                 subscribeToReviews(bookId: bookId)
                 subscribeToAllGenres()
                 subscribeToMyGenreVotes(bookId: bookId)
+                subscribeToBookGenres(bookId: bookId)
                 subscribeToNotes(bookId: bookId)
                 subscribeToNoteCategories()
+                subscribeToNoteTags()
                 subscribeToCurrentUser()
             },
             onUnauthenticated: { [weak self] in
@@ -260,6 +270,7 @@ final class BookDetailViewModel {
                 subscribeToMyGenreVotes(bookId: bookId)
                 subscribeToNotes(bookId: bookId)
                 subscribeToNoteCategories()
+                subscribeToNoteTags()
                 subscribeToCurrentUser()
             },
             onUnauthenticated: { [weak self] in
@@ -337,44 +348,69 @@ final class BookDetailViewModel {
         try await bookNotesRepository.createCategory(name: name, colorToken: colorToken)
     }
 
+    func createTag(name: String) async throws -> String {
+        try await bookNotesRepository.createTag(name: name)
+    }
+
     func createNote(
-        audioFileId: String,
-        categoryId: String?,
-        startSeconds: Double,
-        endSeconds: Double,
-        noteText: String?
+        audioFileId: String?,
+        tagIds: [String]?,
+        startSeconds: Double?,
+        endSeconds: Double?,
+        noteText: String?,
+        entryType: String? = nil,
+        sourceText: String? = nil
     ) async throws {
         guard let book else { return }
         try await bookNotesRepository.createNote(
             bookId: book._id,
             audioFileId: audioFileId,
-            categoryId: categoryId,
+            tagIds: tagIds,
             startSeconds: startSeconds,
             endSeconds: endSeconds,
-            noteText: noteText
+            noteText: noteText,
+            entryType: entryType,
+            sourceText: sourceText
         )
     }
 
     func updateNote(
         noteId: String,
-        audioFileId: String,
-        categoryId: String?,
-        startSeconds: Double,
-        endSeconds: Double,
-        noteText: String?
+        audioFileId: String?,
+        tagIds: [String]?,
+        startSeconds: Double?,
+        endSeconds: Double?,
+        noteText: String?,
+        entryType: String? = nil,
+        sourceText: String? = nil
     ) async throws {
         try await bookNotesRepository.updateNote(
             noteId: noteId,
             audioFileId: audioFileId,
-            categoryId: categoryId,
+            tagIds: tagIds,
             startSeconds: startSeconds,
             endSeconds: endSeconds,
-            noteText: noteText
+            noteText: noteText,
+            entryType: entryType,
+            sourceText: sourceText
         )
     }
 
     func deleteNote(noteId: String) async throws {
         try await bookNotesRepository.deleteNote(noteId: noteId)
+    }
+
+    func savePersonalSummary(_ text: String) async {
+        guard let book else { return }
+        do {
+            try await bookUserDataRepository.updateBookMemory(
+                bookId: book._id,
+                personalSummary: text
+            )
+            Haptics.success()
+        } catch {
+            self.error = "Failed to save personal summary"
+        }
     }
 
     func toggleWantToRead() async {
@@ -554,6 +590,18 @@ final class BookDetailViewModel {
             .store(in: &cancellables)
     }
 
+    private func subscribeToBookGenres(bookId: String) {
+        genreRepository.subscribeToGenresForBook(bookId: bookId)?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] genres in
+                    self?.bookGenres = genres
+                }
+            )
+            .store(in: &cancellables)
+    }
+
     private func subscribeToNotes(bookId: String) {
         bookNotesRepository.subscribeToMyNotes(bookId: bookId)?
             .receive(on: DispatchQueue.main)
@@ -573,10 +621,22 @@ final class BookDetailViewModel {
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] categories in
                     self?.noteCategories = categories
-                    if let selectedId = self?.selectedNoteCategoryId,
-                       !categories.contains(where: { $0._id == selectedId }) {
-                        self?.selectedNoteCategoryId = nil
-                    }
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToNoteTags() {
+        bookNotesRepository.subscribeToMyTags()?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] tags in
+                    guard let self else { return }
+                    noteTags = tags
+                    // Remove any selected tag IDs that no longer exist
+                    let existingIds = Set(tags.map(\._id))
+                    selectedNoteTagIds = selectedNoteTagIds.intersection(existingIds)
                 }
             )
             .store(in: &cancellables)

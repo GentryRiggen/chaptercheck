@@ -18,6 +18,22 @@ final class BookNotesRepository {
         )
     }
 
+    // MARK: - Tags (new system)
+
+    func subscribeToMyTags() -> AnyPublisher<[MemoryTag], ClientError>? {
+        convex.subscribe(to: "bookNotes/queries:getMyMemoryTags")
+    }
+
+    func createTag(name: String) async throws -> String {
+        let result: String = try await convex.mutation(
+            "bookNotes/mutations:createTag",
+            with: ["name": name]
+        )
+        return result
+    }
+
+    // MARK: - Categories (legacy — kept for backward compat)
+
     func subscribeToMyCategories() -> AnyPublisher<[NoteCategory], ClientError>? {
         convex.subscribe(to: "bookNotes/queries:getMyNoteCategories")
     }
@@ -33,48 +49,78 @@ final class BookNotesRepository {
         return result
     }
 
+    // MARK: - Notes
+
     func createNote(
         bookId: String,
-        audioFileId: String,
-        categoryId: String?,
-        startSeconds: Double,
-        endSeconds: Double,
-        noteText: String?
+        audioFileId: String?,
+        tagIds: [String]?,
+        startSeconds: Double?,
+        endSeconds: Double?,
+        noteText: String?,
+        entryType: String?,
+        sourceText: String?
     ) async throws {
         var args: [String: ConvexEncodable?] = [
             "bookId": bookId,
-            "audioFileId": audioFileId,
-            "startSeconds": startSeconds,
-            "endSeconds": endSeconds,
         ]
-        if let categoryId {
-            args["categoryId"] = categoryId
+        if let audioFileId {
+            args["audioFileId"] = audioFileId
+        }
+        if let startSeconds {
+            args["startSeconds"] = startSeconds
+        }
+        if let endSeconds {
+            args["endSeconds"] = endSeconds
+        }
+        if let tagIds, !tagIds.isEmpty {
+            args["tagIds"] = tagIds.map { $0 as ConvexEncodable? } as [ConvexEncodable?]
         }
         if let noteText, !noteText.isEmpty {
             args["noteText"] = noteText
+        }
+        if let entryType {
+            args["entryType"] = entryType
+        }
+        if let sourceText, !sourceText.isEmpty {
+            args["sourceText"] = sourceText
         }
         try await convex.mutation("bookNotes/mutations:createNote", with: args)
     }
 
     func updateNote(
         noteId: String,
-        audioFileId: String,
-        categoryId: String?,
-        startSeconds: Double,
-        endSeconds: Double,
-        noteText: String?
+        audioFileId: String?,
+        tagIds: [String]?,
+        startSeconds: Double?,
+        endSeconds: Double?,
+        noteText: String?,
+        entryType: String?,
+        sourceText: String?
     ) async throws {
         var args: [String: ConvexEncodable?] = [
             "noteId": noteId,
-            "audioFileId": audioFileId,
-            "startSeconds": startSeconds,
-            "endSeconds": endSeconds,
         ]
-        if let categoryId {
-            args["categoryId"] = categoryId
+        if let audioFileId {
+            args["audioFileId"] = audioFileId
+        }
+        if let startSeconds {
+            args["startSeconds"] = startSeconds
+        }
+        if let endSeconds {
+            args["endSeconds"] = endSeconds
+        }
+        if let tagIds, !tagIds.isEmpty {
+            args["tagIds"] = tagIds.map { $0 as ConvexEncodable? } as [ConvexEncodable?]
         }
         if let noteText, !noteText.isEmpty {
             args["noteText"] = noteText
+        }
+        if let entryType {
+            args["entryType"] = entryType
+        }
+        if let sourceText, !sourceText.isEmpty {
+            args["sourceText"] = sourceText
         }
         try await convex.mutation("bookNotes/mutations:updateNote", with: args)
     }

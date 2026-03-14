@@ -69,7 +69,7 @@ struct ReviewsListView: View {
                 }
             } label: {
                 Label("Sort", systemImage: "arrow.up.arrow.down")
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundStyle(.tint)
                     .labelStyle(.iconOnly)
             }
@@ -89,7 +89,7 @@ struct ReviewsListView: View {
                 userHasReview ? "Edit Your Review" : "Write a Review",
                 systemImage: userHasReview ? "pencil" : "square.and.pencil"
             )
-            .font(.subheadline)
+            .font(.body)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 4)
         }

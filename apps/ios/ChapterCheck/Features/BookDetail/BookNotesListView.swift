@@ -2,9 +2,10 @@ import SwiftUI
 
 struct BookNotesListView: View {
     let notes: [BookNote]
-    let categories: [NoteCategory]
-    @Binding var selectedCategoryId: String?
+    let tags: [MemoryTag]
+    @Binding var selectedTagIds: Set<String>
     @Binding var filterOption: BookNotesFilterOption
+    let onAddNote: () -> Void
     let onPlayNote: (BookNote) -> Void
     let onEditNote: (BookNote) -> Void
     let onDeleteNote: (BookNote) -> Void
@@ -18,7 +19,7 @@ struct BookNotesListView: View {
                 ContentUnavailableView(
                     "No Notes Yet",
                     systemImage: "text.quote",
-                    description: Text("Capture moments from the player, then revisit them here.")
+                    description: Text("Capture moments from the player or add freeform notes.")
                 )
                 .padding(.horizontal)
             } else {
@@ -47,6 +48,14 @@ struct BookNotesListView: View {
 
             Spacer()
 
+            Button {
+                onAddNote()
+            } label: {
+                Image(systemName: "plus")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.tint)
+            }
+
             Menu {
                 Picker("Sort", selection: $filterOption) {
                     ForEach(BookNotesFilterOption.allCases) { option in
@@ -55,7 +64,7 @@ struct BookNotesListView: View {
                 }
             } label: {
                 Label("Sort", systemImage: "arrow.up.arrow.down")
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundStyle(.tint)
                     .labelStyle(.iconOnly)
             }
@@ -67,33 +76,37 @@ struct BookNotesListView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 Button {
-                    selectedCategoryId = nil
+                    selectedTagIds = []
                 } label: {
-                    Text("All Categories")
+                    Text("All Tags")
                         .font(.caption.weight(.medium))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(
                             Capsule()
-                                .fill(selectedCategoryId == nil ? AnyShapeStyle(.tint.opacity(0.18)) : AnyShapeStyle(Color(.secondarySystemFill)))
+                                .fill(selectedTagIds.isEmpty ? AnyShapeStyle(.tint.opacity(0.18)) : AnyShapeStyle(Color(.secondarySystemFill)))
                         )
                 }
                 .buttonStyle(.plain)
 
-                ForEach(categories) { category in
+                ForEach(tags) { tag in
                     Button {
-                        selectedCategoryId = category._id
+                        if selectedTagIds.contains(tag._id) {
+                            selectedTagIds.remove(tag._id)
+                        } else {
+                            selectedTagIds.insert(tag._id)
+                        }
                     } label: {
                         HStack(spacing: 6) {
                             Circle()
-                                .fill(AccentColorToken.color(for: category.colorToken))
+                                .fill(tag.displayColor)
                                 .frame(width: 8, height: 8)
-                            Text(category.name)
+                            Text(tag.name)
                                 .font(.caption.weight(.medium))
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(selectedCategoryId == category._id ? AccentColorToken.color(for: category.colorToken).opacity(0.18) : Color(.secondarySystemFill), in: Capsule())
+                        .background(selectedTagIds.contains(tag._id) ? tag.displayColor.opacity(0.18) : Color(.secondarySystemFill), in: Capsule())
                     }
                     .buttonStyle(.plain)
                 }
@@ -112,24 +125,24 @@ private struct BookNoteRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 12)
-                .fill(categoryColor)
+                .fill(accentColor)
                 .frame(width: 6)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    if let category = note.category {
-                        Text(category.name)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(categoryColor)
-                    } else {
-                        Text("Uncategorized")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
+                    tagBadges
                     Spacer()
                     Text(TimeFormatting.formatRelativeDate(note.updatedAt))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                }
+
+                if let sourceText = note.sourceText, !sourceText.isEmpty {
+                    Text("\u{201C}\(sourceText)\u{201D}")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .italic()
+                        .lineLimit(2)
                 }
 
                 if let noteText = note.noteText, !noteText.isEmpty {
@@ -140,16 +153,18 @@ private struct BookNoteRow: View {
                         .lineLimit(3)
                 }
 
-                HStack(spacing: 6) {
-                    Text(note.audioFile.displayName)
-                    Text("·")
-                    Text(note.formattedRange)
-                    Text("·")
-                    Text(note.formattedDuration)
+                if note.isAudioAnchored, let audioFile = note.audioFile {
+                    HStack(spacing: 6) {
+                        Text(audioFile.displayName)
+                        Text("·")
+                        Text(note.formattedRange)
+                        Text("·")
+                        Text(note.formattedDuration)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
             }
 
             Menu {
@@ -174,8 +189,32 @@ private struct BookNoteRow: View {
         .padding(.horizontal)
     }
 
-    private var categoryColor: Color {
-        guard let category = note.category else { return .secondary }
-        return AccentColorToken.color(for: category.colorToken)
+    @ViewBuilder
+    private var tagBadges: some View {
+        if let noteTags = note.tags, !noteTags.isEmpty {
+            HStack(spacing: 4) {
+                ForEach(noteTags) { tag in
+                    Text(tag.name)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(tag.displayColor)
+                }
+            }
+        } else if !note.isAudioAnchored {
+            Label(note.entryTypeLabel, systemImage: note.entryTypeIcon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tint)
+        } else {
+            Text("Untagged")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The accent color used for the left-side indicator bar.
+    ///
+    /// Uses the first tag's deterministic color if tags exist; falls back to
+    /// secondary for notes without tags.
+    private var accentColor: Color {
+        note.tags?.first?.displayColor ?? .secondary
     }
 }

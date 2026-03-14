@@ -15,7 +15,7 @@ final class NowPlayingDetailsViewModel {
     var ratingStats: RatingStats?
     var allGenres: [Genre] = []
     var myGenreVoteIds: [String] = []
-    var noteCategories: [NoteCategory] = []
+    var noteTags: [MemoryTag] = []
     var currentUser: UserWithPermissions?
     var error: String?
 
@@ -66,7 +66,7 @@ final class NowPlayingDetailsViewModel {
         ratingStats = nil
         allGenres = []
         myGenreVoteIds = []
-        noteCategories = []
+        noteTags = []
         currentUser = nil
     }
 
@@ -111,12 +111,12 @@ final class NowPlayingDetailsViewModel {
             )
             .store(in: &cancellables)
 
-        bookNotesRepository.subscribeToMyCategories()?
+        bookNotesRepository.subscribeToMyTags()?
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { _ in },
-                receiveValue: { [weak self] categories in
-                    self?.noteCategories = categories
+                receiveValue: { [weak self] tags in
+                    self?.noteTags = tags
                 }
             )
             .store(in: &cancellables)
@@ -176,14 +176,14 @@ final class NowPlayingDetailsViewModel {
         }
     }
 
-    func createCategory(name: String, colorToken: String) async throws -> String {
-        try await bookNotesRepository.createCategory(name: name, colorToken: colorToken)
+    func createTag(name: String) async throws -> String {
+        try await bookNotesRepository.createTag(name: name)
     }
 
     func createNote(
         bookId: String,
         audioFileId: String,
-        categoryId: String?,
+        tagIds: [String]?,
         startSeconds: Double,
         endSeconds: Double,
         noteText: String?
@@ -191,10 +191,12 @@ final class NowPlayingDetailsViewModel {
         try await bookNotesRepository.createNote(
             bookId: bookId,
             audioFileId: audioFileId,
-            categoryId: categoryId,
+            tagIds: tagIds,
             startSeconds: startSeconds,
             endSeconds: endSeconds,
-            noteText: noteText
+            noteText: noteText,
+            entryType: nil,
+            sourceText: nil
         )
     }
 }

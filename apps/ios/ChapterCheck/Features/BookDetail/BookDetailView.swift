@@ -3,8 +3,8 @@ import UniformTypeIdentifiers
 
 /// Full book detail screen.
 ///
-/// Shows the book cover, metadata (authors, series, rating), a play/resume button,
-/// read status badge, audio file list, and reviews section.
+/// Shows the book cover, metadata, reading status, community signal,
+/// personal memory, notes, reviews, audio files, and description.
 struct BookDetailView: View {
     let bookId: String
 
@@ -15,6 +15,7 @@ struct BookDetailView: View {
     @State private var noteToEdit: BookNote?
     @State private var noteToDelete: BookNote?
     @State private var noteToPreview: BookNote?
+    @State private var isFreeformNoteComposerPresented = false
     @State private var isAudioImporterPresented = false
     @State private var isAudioUploadQueuePresented = false
     @State private var audioUploadQueueItems: [AudioUploadQueueItem] = []
@@ -94,27 +95,72 @@ struct BookDetailView: View {
             )
         }
         .sheet(item: $noteToEdit) { note in
-            BookNoteComposerSheet(
-                context: noteComposerContext(for: note),
-                categories: viewModel.noteCategories,
-                onSave: { payload in
-                    try await viewModel.updateNote(
-                        noteId: note._id,
-                        audioFileId: payload.audioFileId,
-                        categoryId: payload.categoryId,
-                        startSeconds: payload.startSeconds,
-                        endSeconds: payload.endSeconds,
-                        noteText: payload.noteText
-                    )
-                    Haptics.success()
-                },
-                onCreateCategory: { name, colorToken in
-                    try await viewModel.createCategory(name: name, colorToken: colorToken)
-                }
-            )
+            if note.isAudioAnchored {
+                BookNoteComposerSheet(
+                    context: noteComposerContext(for: note),
+                    tags: viewModel.noteTags,
+                    onSave: { payload in
+                        try await viewModel.updateNote(
+                            noteId: note._id,
+                            audioFileId: payload.audioFileId,
+                            tagIds: payload.tagIds.isEmpty ? nil : payload.tagIds,
+                            startSeconds: payload.startSeconds,
+                            endSeconds: payload.endSeconds,
+                            noteText: payload.noteText
+                        )
+                        Haptics.success()
+                    },
+                    onCreateTag: { name in
+                        try await viewModel.createTag(name: name)
+                    }
+                )
+            } else {
+                FreeformNoteComposerSheet(
+                    bookId: bookId,
+                    tags: viewModel.noteTags,
+                    existingNote: note,
+                    onSave: { noteText, entryType, sourceText, tagIds in
+                        try await viewModel.updateNote(
+                            noteId: note._id,
+                            audioFileId: nil,
+                            tagIds: tagIds.isEmpty ? nil : tagIds,
+                            startSeconds: nil,
+                            endSeconds: nil,
+                            noteText: noteText,
+                            entryType: entryType,
+                            sourceText: sourceText
+                        )
+                        Haptics.success()
+                    },
+                    onCreateTag: { name in
+                        try await viewModel.createTag(name: name)
+                    }
+                )
+            }
         }
         .sheet(item: $noteToPreview) { note in
             BookNotePreviewSheet(note: note)
+        }
+        .sheet(isPresented: $isFreeformNoteComposerPresented) {
+            FreeformNoteComposerSheet(
+                bookId: bookId,
+                tags: viewModel.noteTags,
+                onSave: { noteText, entryType, sourceText, tagIds in
+                    try await viewModel.createNote(
+                        audioFileId: nil,
+                        tagIds: tagIds.isEmpty ? nil : tagIds,
+                        startSeconds: nil,
+                        endSeconds: nil,
+                        noteText: noteText,
+                        entryType: entryType,
+                        sourceText: sourceText
+                    )
+                    Haptics.success()
+                },
+                onCreateTag: { name in
+                    try await viewModel.createTag(name: name)
+                }
+            )
         }
         .sheet(isPresented: $isAudioUploadQueuePresented, onDismiss: releaseImportedAudioFiles) {
             if let book = viewModel.book {
@@ -184,15 +230,16 @@ struct BookDetailView: View {
     private func bookContent(_ book: BookWithDetails) -> some View {
         ScrollView {
             VStack(spacing: 24) {
+                // 1. Offline banner
                 if viewModel.isOffline {
                     OfflineBanner()
                 }
 
-                // Cover Image
+                // 2. Cover Image
                 BookCoverView(r2Key: book.coverImageR2Key, displayMode: .fit(maxWidth: 200, maxHeight: 300))
                     .frame(maxWidth: .infinity)
 
-                // Title and Subtitle
+                // 3. Title and Subtitle
                 VStack(spacing: 4) {
                     Text(book.title)
                         .font(.title2)
@@ -207,21 +254,17 @@ struct BookDetailView: View {
                     }
                 }
 
-                // Metadata
-                BookMetadataView(
-                    book: book,
-                    ratingStats: viewModel.ratingStats
-                )
+                // 4. Compact metadata: authors, series, year, duration
+                BookMetadataView(book: book)
 
-                // Description
+                // 4b. Description (compact, under metadata)
                 if let description = book.description, !description.isEmpty {
                     descriptionSection(description)
                 }
 
-                // Play / Resume Button + Reading Status
+                // 5. Status + actions: reading status picker, play/resume (if audio)
                 if viewModel.hasAudioFiles {
                     if viewModel.userData?.readingStatus == .finished {
-                        // Finished: full-width play button, status + review below
                         playButton(book)
                             .padding(.horizontal)
                         if !viewModel.isOffline {
@@ -229,7 +272,6 @@ struct BookDetailView: View {
                                 .padding(.horizontal)
                         }
                     } else {
-                        // Not finished: play button + status side-by-side
                         HStack(spacing: 12) {
                             playButton(book)
                             if !viewModel.isOffline {
@@ -246,34 +288,49 @@ struct BookDetailView: View {
                 Divider()
                     .padding(.horizontal)
 
-                // Audio Files
-                if viewModel.hasAudioFiles || !viewModel.isOffline {
-                    AudioFileListView(
-                        audioFiles: viewModel.audioFiles,
-                        progress: viewModel.resolvedProgress,
-                        book: book,
-                        canUploadAudio: viewModel.canUploadAudio,
-                        canShowUploadControls: !viewModel.isOffline,
-                        onUploadRequested: {
-                            isAudioImporterPresented = true
-                        }
+                // 6. Community signal
+                if !viewModel.isOffline {
+                    CommunitySignalView(
+                        ratingStats: viewModel.ratingStats,
+                        bookGenres: viewModel.bookGenres
                     )
+
+                    Divider()
+                        .padding(.horizontal)
                 }
 
-                Divider()
-                    .padding(.horizontal)
+                // 7. Your memory
+                if !viewModel.isOffline {
+                    YourMemoryView(
+                        userData: viewModel.userData,
+                        readingStatus: viewModel.userData?.readingStatus,
+                        onSaveSummary: { text in
+                            await viewModel.savePersonalSummary(text)
+                        },
+                        onOpenReviewSheet: {
+                            isReviewSheetPresented = true
+                        }
+                    )
 
+                    Divider()
+                        .padding(.horizontal)
+                }
+
+                // 8. Your notes
                 BookNotesListView(
                     notes: viewModel.filteredNotes,
-                    categories: viewModel.noteCategories,
-                    selectedCategoryId: Binding(
-                        get: { viewModel.selectedNoteCategoryId },
-                        set: { viewModel.selectedNoteCategoryId = $0 }
+                    tags: viewModel.noteTags,
+                    selectedTagIds: Binding(
+                        get: { viewModel.selectedNoteTagIds },
+                        set: { viewModel.selectedNoteTagIds = $0 }
                     ),
                     filterOption: Binding(
                         get: { viewModel.notesFilterOption },
                         set: { viewModel.notesFilterOption = $0 }
                     ),
+                    onAddNote: {
+                        isFreeformNoteComposerPresented = true
+                    },
                     onPlayNote: playNote,
                     onEditNote: { note in
                         noteToEdit = note
@@ -283,7 +340,7 @@ struct BookDetailView: View {
                     }
                 )
 
-                // Reviews (hidden when offline)
+                // 9. Reviews (hidden when offline)
                 if !viewModel.isOffline, !viewModel.sortedReviews.isEmpty || viewModel.userData?.readingStatus == .finished {
                     Divider()
                         .padding(.horizontal)
@@ -302,12 +359,53 @@ struct BookDetailView: View {
                     )
                 }
 
+                // 10. Audio (collapsible, collapsed by default)
+                if viewModel.hasAudioFiles || !viewModel.isOffline {
+                    Divider()
+                        .padding(.horizontal)
+
+                    audioSection(book)
+                }
+
                 // Bottom spacing for mini player
                 Spacer()
                     .frame(height: 100)
             }
             .padding(.top)
         }
+    }
+
+    // MARK: - Audio Section (Collapsible)
+
+    @State private var isAudioSectionExpanded = false
+
+    private func audioSection(_ book: BookWithDetails) -> some View {
+        DisclosureGroup(isExpanded: $isAudioSectionExpanded) {
+            AudioFileListView(
+                audioFiles: viewModel.audioFiles,
+                progress: viewModel.resolvedProgress,
+                book: book,
+                canUploadAudio: viewModel.canUploadAudio,
+                canShowUploadControls: !viewModel.isOffline,
+                onUploadRequested: {
+                    isAudioImporterPresented = true
+                },
+                showHeader: false
+            )
+            .padding(.top, 8)
+        } label: {
+            HStack {
+                Text("Audio Files")
+                    .font(.headline)
+                if !viewModel.audioFiles.isEmpty {
+                    Text("\(viewModel.audioFiles.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .tint(.primary)
+        .padding(.horizontal)
     }
 
     // MARK: - Play Button
@@ -355,10 +453,10 @@ struct BookDetailView: View {
         BookNoteComposerContext(
             bookId: bookId,
             audioFiles: viewModel.audioFiles,
-            anchorSeconds: (note.startSeconds + note.endSeconds) / 2,
-            initialAudioFileId: note.audioFileId,
-            initialStartSeconds: note.startSeconds,
-            initialEndSeconds: note.endSeconds,
+            anchorSeconds: ((note.startSeconds ?? 0) + (note.endSeconds ?? 0)) / 2,
+            initialAudioFileId: note.audioFileId ?? "",
+            initialStartSeconds: note.startSeconds ?? 0,
+            initialEndSeconds: note.endSeconds ?? 0,
             existingNote: note
         )
     }
@@ -395,7 +493,7 @@ struct BookDetailView: View {
             Text(text)
                 .font(.body)
                 .foregroundStyle(.secondary)
-                .lineLimit(isDescriptionExpanded ? nil : 2)
+                .lineLimit(isDescriptionExpanded ? nil : 1)
                 .background {
                     GeometryReader { geo in
                         Color.clear

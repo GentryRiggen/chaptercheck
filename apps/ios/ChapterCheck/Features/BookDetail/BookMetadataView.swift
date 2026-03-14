@@ -6,7 +6,6 @@ import SwiftUI
 /// (navigate to SeriesDetailView), published year, rating, and duration.
 struct BookMetadataView: View {
     let book: BookWithDetails
-    var ratingStats: RatingStats?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -18,19 +17,10 @@ struct BookMetadataView: View {
                 seriesRow(series)
             }
 
-            // Stats row: year, rating, duration
+            // Stats row: year, duration
             HStack(spacing: 16) {
                 if let year = book.publishedYear.map({ Int($0) }) {
                     metadataItem(icon: "calendar", text: "\(year)")
-                }
-
-                if let stats = ratingStats, let avg = stats.averageRating {
-                    HStack(spacing: 4) {
-                        RatingView(rating: avg, size: 12)
-                        Text("(\(stats.ratingCountInt))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
                 }
 
                 if let duration = book.formattedDuration {

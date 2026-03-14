@@ -274,20 +274,20 @@ struct NowPlayingView: View {
             if let context = noteComposerContext {
                 BookNoteComposerSheet(
                     context: context,
-                    categories: detailsViewModel.noteCategories,
+                    tags: detailsViewModel.noteTags,
                     onSave: { payload in
                         try await detailsViewModel.createNote(
                             bookId: context.bookId,
                             audioFileId: payload.audioFileId,
-                            categoryId: payload.categoryId,
+                            tagIds: payload.tagIds.isEmpty ? nil : payload.tagIds,
                             startSeconds: payload.startSeconds,
                             endSeconds: payload.endSeconds,
                             noteText: payload.noteText
                         )
                         Haptics.success()
                     },
-                    onCreateCategory: { name, colorToken in
-                        try await detailsViewModel.createCategory(name: name, colorToken: colorToken)
+                    onCreateTag: { name in
+                        try await detailsViewModel.createTag(name: name)
                     }
                 )
             }

@@ -141,6 +141,18 @@ final class BookUserDataRepository {
     ///   - reviewText: Optional review body text. Pass `nil` or empty to omit.
     ///   - isReadPrivate: Whether to hide the read status from other users.
     ///   - isReviewPrivate: Whether to hide the full review from other users.
+    func updateBookMemory(bookId: String, personalSummary: String) async throws {
+        var args: [String: ConvexEncodable?] = [
+            "bookId": bookId,
+        ]
+        let trimmed = personalSummary.trimmingCharacters(in: .whitespacesAndNewlines)
+        args["personalSummary"] = trimmed.isEmpty ? nil : trimmed
+        try await convex.mutation(
+            "bookUserData/mutations:updateBookMemory",
+            with: args
+        )
+    }
+
     func saveReview(
         bookId: String,
         rating: Int?,

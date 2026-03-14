@@ -11,6 +11,7 @@ struct AudioFileListView: View {
     let canUploadAudio: Bool
     let canShowUploadControls: Bool
     let onUploadRequested: () -> Void
+    let showHeader: Bool
 
     @Environment(DownloadManager.self) private var downloadManager
 
@@ -28,8 +29,30 @@ struct AudioFileListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            header
-                .padding(.horizontal)
+            if showHeader {
+                header
+                    .padding(.horizontal)
+            } else {
+                // Compact controls row (no title) when header is hidden (e.g. inside DisclosureGroup)
+                HStack(spacing: 8) {
+                    if canShowUploadControls {
+                        Button {
+                            Haptics.medium()
+                            onUploadRequested()
+                        } label: {
+                            Label("Upload", systemImage: canUploadAudio ? "plus.circle.fill" : "lock.circle")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(canUploadAudio ? Color.accentColor : .gray)
+                        .disabled(!canUploadAudio)
+                    }
+
+                    Spacer()
+
+                    downloadAllView
+                }
+            }
 
             if canShowUploadControls && !canUploadAudio {
                 Text("Uploading requires premium and editor access.")
