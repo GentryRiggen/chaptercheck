@@ -57,11 +57,18 @@ struct ProfileView: View {
                 // Shelves
                 if !viewModel.shelves.isEmpty {
                     Section {
-                        ForEach(viewModel.shelves) { shelf in
-                            NavigationLink(value: AppDestination.shelf(id: shelf._id)) {
-                                shelfRow(shelf)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: 14) {
+                                ForEach(viewModel.shelves) { shelf in
+                                    NavigationLink(value: AppDestination.shelf(id: shelf._id)) {
+                                        profileShelfCard(shelf)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
+                            .padding(.horizontal, 4)
                         }
+                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                     } header: {
                         Text("Shelves")
                     }
@@ -214,25 +221,32 @@ struct ProfileView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func shelfRow(_ shelf: Shelf) -> some View {
-        HStack {
+    private func profileShelfCard(_ shelf: Shelf) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            StackedCoversView(previewBooks: shelf.previewBooks, size: 80)
+
             VStack(alignment: .leading, spacing: 2) {
-                Text(shelf.name)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                if let description = shelf.description, !description.isEmpty {
-                    Text(description)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(shelf.name)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    if !shelf.isPublic {
+                        Image(systemName: "lock.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Private shelf")
+                    }
                 }
+
+                Text("\(shelf.bookCountInt) \(shelf.bookCountInt == 1 ? "book" : "books")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            Spacer()
-            Text("\(shelf.bookCountInt) books")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 2)
+        .frame(width: 120)
     }
 
     private func profileReviewRow(_ review: UserReview, book: UserReviewBook) -> some View {

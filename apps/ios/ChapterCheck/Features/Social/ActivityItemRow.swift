@@ -113,7 +113,14 @@ struct ActivityItemRow: View {
                     .lineLimit(2)
             }
         case .shelfAdd:
-            EmptyView()
+            if let shelfId = item.shelfId {
+                NavigationLink(value: AppDestination.shelf(id: shelfId)) {
+                    Label(item.shelfName ?? "Shelf", systemImage: "books.vertical")
+                        .font(.caption)
+                        .foregroundStyle(.tint)
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }

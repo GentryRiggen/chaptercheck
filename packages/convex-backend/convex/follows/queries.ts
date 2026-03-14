@@ -127,6 +127,7 @@ type ActivityItem = {
   book: { _id: string; title: string; coverImageR2Key?: string };
   rating?: number;
   reviewText?: string;
+  shelfId?: string;
   shelfName?: string;
   noteText?: string;
   entryType?: string;
@@ -181,7 +182,7 @@ export const getActivityFeed = query({
         .collect();
 
       for (const review of reviews) {
-        if (review.isReviewPrivate) continue;
+        if (review.isReviewPrivate || review.isReadPrivate) continue;
         if (review.rating === undefined && !review.reviewText) continue;
         if (!review.reviewedAt) continue;
 
@@ -221,6 +222,7 @@ export const getActivityFeed = query({
             timestamp: sb.addedAt,
             user: userInfo,
             book,
+            shelfId: shelf._id,
             shelfName: shelf.name,
           });
         }
@@ -269,7 +271,9 @@ export const getCommunityActivity = query({
       const cached = userCache.get(userId);
       if (cached !== undefined) return cached;
       const u = await ctx.db.get(userId);
-      const info = u ? { _id: u._id, name: u.name, imageUrl: u.imageUrl } : null;
+      // Exclude private profiles from the discover feed
+      const info =
+        u && !u.isProfilePrivate ? { _id: u._id, name: u.name, imageUrl: u.imageUrl } : null;
       userCache.set(userId, info);
       return info;
     }
@@ -290,7 +294,7 @@ export const getCommunityActivity = query({
 
     for (const review of allReviews) {
       if (review.userId === user._id) continue;
-      if (review.isReviewPrivate) continue;
+      if (review.isReviewPrivate || review.isReadPrivate) continue;
       if (review.rating === undefined && !review.reviewText) continue;
       if (!review.reviewedAt) continue;
 
@@ -336,6 +340,7 @@ export const getCommunityActivity = query({
           timestamp: sb.addedAt,
           user: shelfUser,
           book,
+          shelfId: shelf._id,
           shelfName: shelf.name,
         });
       }

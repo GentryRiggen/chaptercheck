@@ -30,6 +30,7 @@ struct ActivityItem: Decodable, Identifiable {
     let book: ActivityBook
     let rating: Double?
     let reviewText: String?
+    let shelfId: String?
     let shelfName: String?
     let noteText: String?
     let entryType: String?
