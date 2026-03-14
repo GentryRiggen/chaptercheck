@@ -16,6 +16,12 @@ struct SettingsView: View {
 
     private let userRepository = UserRepository()
 
+    private var appVersionString: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        return "\(version) (\(build))"
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -94,6 +100,16 @@ struct SettingsView: View {
                     } label: {
                         Label("Delete Account", systemImage: "trash")
                             .foregroundStyle(.red)
+                    }
+                }
+
+                // App info
+                Section {
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text(appVersionString)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

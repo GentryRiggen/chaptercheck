@@ -575,19 +575,10 @@ struct NowPlayingView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 2)
-            .background(Color.white.opacity(0.06), in: Capsule())
             .overlay(
                 Capsule()
                     .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.25),
-                                Color.white.opacity(0.08),
-                                Color.white.opacity(0.03)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
+                        Color.white.opacity(0.15),
                         lineWidth: 0.75
                     )
             )

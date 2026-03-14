@@ -34,6 +34,15 @@ struct SeekBarView: View {
         return "-\(TimeFormatting.formatTime(remaining))"
     }
 
+    /// Remaining time adjusted for playback speed, shown only when rate > 1.0.
+    private var realTimeRemainingLabel: String? {
+        let rate = audioPlayer.playbackRate
+        guard rate > 1.0 else { return nil }
+        let remaining = max(audioPlayer.duration - displaySeconds, 0)
+        let adjusted = remaining / rate
+        return "-\(TimeFormatting.formatTime(adjusted)) at \(formatRate(rate))"
+    }
+
     var body: some View {
         VStack(spacing: 4) {
             Slider(
@@ -63,14 +72,39 @@ struct SeekBarView: View {
 
                 Spacer()
 
-                Text(remainingTimeLabel)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(remainingTimeLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+
+                    if let realTime = realTimeRemainingLabel {
+                        HStack(spacing: 4) {
+                            Image(systemName: "hare.fill")
+                                .font(.system(size: 9))
+                            Text(realTime)
+                                .font(.caption2.weight(.medium))
+                                .monospacedDigit()
+                        }
+                        .foregroundStyle(.tint)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(.tint.opacity(0.12), in: Capsule())
+                        .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .trailing)))
+                    }
+                }
+                .animation(.spring(duration: 0.3), value: realTimeRemainingLabel != nil)
             }
         }
         .alignmentGuide(.seekBarTrackCenter) { dimensions in
             dimensions[.top] + 16
         }
+    }
+
+    private func formatRate(_ rate: Double) -> String {
+        if rate == floor(rate) {
+            return "\(Int(rate))×"
+        }
+        return String(format: "%.1f×", rate)
     }
 }

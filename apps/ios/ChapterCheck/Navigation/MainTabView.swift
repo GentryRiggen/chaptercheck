@@ -178,7 +178,11 @@ struct MainView: View {
             if audioPlayer.hasContent {
                 MiniPlayerView(isNowPlayingPresented: $isNowPlayingPresented)
                     .padding(.horizontal, 8)
-                    .padding(.bottom, 49) // Clear the tab bar
+                    .padding(.bottom, 57) // Clear the tab bar + visual gap
+                    .opacity(isNowPlayingPresented ? 0.3 : 1)
+                    .scaleEffect(isNowPlayingPresented ? 0.94 : 1, anchor: .bottom)
+                    .blur(radius: isNowPlayingPresented ? 4 : 0)
+                    .animation(.easeInOut(duration: 0.35), value: isNowPlayingPresented)
             }
         }
         .environment(audioPlayer)
