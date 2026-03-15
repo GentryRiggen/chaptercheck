@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { NowPlayingSpacer } from "@/components/audio/NowPlayingSpacer";
 import { NowPlayingUI } from "@/components/audio/NowPlayingUI";
 import { AccentApplicator } from "@/components/layout/AccentApplicator";
+import { Footer } from "@/components/layout/Footer";
 import { IOSBackground } from "@/components/layout/IOSBackground";
 import { Navigation } from "@/components/layout/Navigation";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
@@ -30,6 +31,7 @@ export default function RootLayout({
           <IOSBackground />
           <Navigation />
           {children}
+          <Footer />
           <NowPlayingSpacer />
           <NowPlayingUI />
         </Providers>
