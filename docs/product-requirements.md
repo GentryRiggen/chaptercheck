@@ -532,7 +532,7 @@ If users don't rate books and vote on genres, community signal stays thin and th
 3. **Web is admin-only for V1.** No web consumer features until iOS ships and has users.
 4. **Personal books are separate from the global catalog.** Users can add any book without polluting the curated catalog.
 5. **Social is personal-first.** Friend activity enriches the individual experience. No feed-engagement optimization.
-6. **Rating scale stays 1-3 for now.** Simpler scale = faster rating = more data. Revisit after launch.
+6. **Rating scale is 1-5 stars.** Standard 5-star scale for familiarity. Existing 1-3 ratings migrated (1→2, 2→3, 3→5).
 7. **Recommendation engine is a later investment.** Build the data foundation now, invest in the engine when there's enough signal.
 
 ## Immediate Next Planning Output

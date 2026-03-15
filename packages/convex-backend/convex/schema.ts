@@ -105,7 +105,7 @@ export default defineSchema({
     seriesId: v.optional(v.id("series")),
     seriesOrder: v.optional(v.number()), // Supports decimals (e.g., 2.5 for novellas)
     // Denormalized rating stats (updated when reviews change)
-    averageRating: v.optional(v.number()), // Average of all ratings (1-3 scale)
+    averageRating: v.optional(v.number()), // Average of all ratings (1-5 scale)
     ratingCount: v.optional(v.number()), // Number of ratings
     // Migration-ready
     firebaseId: v.optional(v.string()),
@@ -332,7 +332,7 @@ export default defineSchema({
     readAt: v.optional(v.number()),
 
     // Rating & Review
-    rating: v.optional(v.number()), // 1, 2, or 3 stars
+    rating: v.optional(v.number()), // 1-5 stars
     reviewText: v.optional(v.string()),
     reviewedAt: v.optional(v.number()),
 

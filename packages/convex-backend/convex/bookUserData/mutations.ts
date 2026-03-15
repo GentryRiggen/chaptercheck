@@ -273,9 +273,9 @@ export const saveReview = mutation({
       throw new Error("Book not found");
     }
 
-    // Validate rating if provided (1, 2, or 3 stars)
-    if (args.rating !== undefined && (args.rating < 1 || args.rating > 3)) {
-      throw new Error("Rating must be 1, 2, or 3");
+    // Validate rating if provided (1-5 stars)
+    if (args.rating !== undefined && (args.rating < 1 || args.rating > 5)) {
+      throw new Error("Rating must be between 1 and 5");
     }
 
     // Enforce privacy cascade: if read is private, review must also be private

@@ -189,7 +189,7 @@ export const seedBookUserData = mutation({
         userId: v.string(), // String ID to be cast
         bookId: v.string(), // String ID to be cast
         isRead: v.boolean(),
-        rating: v.optional(v.number()), // 1, 2, or 3
+        rating: v.optional(v.number()), // 1-5
         reviewText: v.optional(v.string()),
         isReadPrivate: v.boolean(),
         isReviewPrivate: v.boolean(),

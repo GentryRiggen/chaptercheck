@@ -2,11 +2,11 @@ import SwiftUI
 
 /// Displays a rating as filled/empty star icons.
 ///
-/// Supports the ChapterCheck 1-3 rating scale. Stars are displayed
+/// Supports the ChapterCheck 1-5 rating scale. Stars are displayed
 /// at a configurable size and color.
 struct RatingView: View {
     let rating: Double?
-    var maxRating: Int = 3
+    var maxRating: Int = 5
     var size: CGFloat = 14
     var color: Color = .orange
 
@@ -36,9 +36,9 @@ struct RatingView: View {
 
 #Preview {
     VStack(spacing: 8) {
-        RatingView(rating: 3.0)
-        RatingView(rating: 2.5)
-        RatingView(rating: 1.0)
+        RatingView(rating: 5.0)
+        RatingView(rating: 3.5)
+        RatingView(rating: 2.0)
         RatingView(rating: nil)
     }
 }

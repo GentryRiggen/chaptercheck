@@ -28,7 +28,7 @@ export function StarRating({ value, onChange, readonly = false, size = "md" }: S
 
   return (
     <div className="flex gap-1">
-      {[0, 1, 2].map((index) => {
+      {[0, 1, 2, 3, 4].map((index) => {
         const isFilled = index < value;
 
         return (

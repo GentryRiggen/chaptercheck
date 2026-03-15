@@ -692,7 +692,7 @@ These were open questions in the PRD. They are now decided:
 3. **Web is admin-only for V1.** No web consumer features until iOS ships and has users.
 4. **Personal books are separate from the global catalog.** Users can add any book without polluting the curated catalog. Editors promote standout entries.
 5. **Social is personal-first.** Friend activity and community signal enrich the individual experience. No feed-engagement optimization.
-6. **Rating scale stays 1-3 for now.** Revisit after launch if users request 5-star. Simpler scale = faster rating = more data.
+6. **Rating scale is 1-5 stars.** Standard 5-star scale for familiarity. Existing 1-3 ratings migrated (1→2, 2→3, 3→5).
 7. **Recommendation engine is Phase 8.** Build the data foundation first (ratings, genres, follows, shelves), invest in the engine only when there's enough signal.
 
 ## Suggested Next Deliverables

@@ -1326,34 +1326,34 @@ function assignBookQualityTier(random: () => number): BookQualityTier {
 }
 
 function getUserPersonaRatingBias(persona: UserPersona): number[] {
-  // Returns [weight1, weight2, weight3] for ratings 1, 2, 3
+  // Returns [weight1, weight2, weight3, weight4, weight5] for ratings 1-5
   switch (persona) {
     case "harsh_critic":
-      return [60, 30, 10];
+      return [40, 25, 20, 10, 5];
     case "enthusiast":
-      return [5, 25, 70];
+      return [2, 5, 10, 28, 55];
     case "balanced":
-      return [33, 33, 34];
+      return [15, 20, 30, 20, 15];
     case "positive_leaning":
-      return [10, 40, 50];
+      return [5, 10, 20, 30, 35];
     case "negative_leaning":
-      return [40, 45, 15];
+      return [30, 30, 20, 15, 5];
   }
 }
 
 function getBookQualityRatingBias(tier: BookQualityTier): number[] {
-  // Returns [weight1, weight2, weight3] for ratings 1, 2, 3
+  // Returns [weight1, weight2, weight3, weight4, weight5] for ratings 1-5
   switch (tier) {
     case "masterpiece":
-      return [5, 20, 75];
+      return [2, 5, 10, 25, 58];
     case "great":
-      return [10, 35, 55];
+      return [5, 10, 20, 35, 30];
     case "good":
-      return [30, 40, 30];
+      return [15, 20, 30, 20, 15];
     case "mediocre":
-      return [50, 35, 15];
+      return [30, 30, 25, 10, 5];
     case "bad":
-      return [70, 25, 5];
+      return [50, 25, 15, 7, 3];
   }
 }
 
@@ -1370,12 +1370,16 @@ function calculateRating(
     (personaBias[0] + bookBias[0]) / 2,
     (personaBias[1] + bookBias[1]) / 2,
     (personaBias[2] + bookBias[2]) / 2,
+    (personaBias[3] + bookBias[3]) / 2,
+    (personaBias[4] + bookBias[4]) / 2,
   ];
 
   return seededPickWeighted(random, [
     { value: 1, weight: combined[0] },
     { value: 2, weight: combined[1] },
     { value: 3, weight: combined[2] },
+    { value: 4, weight: combined[3] },
+    { value: 5, weight: combined[4] },
   ]);
 }
 
@@ -1606,7 +1610,7 @@ const PARAGRAPH_CLOSERS = [
 function generateSingleSentence(random: () => number, rating: number): string {
   const aspect = seededRandomPick(random, REVIEW_ASPECTS);
 
-  if (rating === 1) {
+  if (rating <= 2) {
     const templates = [
       `The ${aspect} was ${seededRandomPick(random, REVIEW_NEGATIVE_ADJECTIVES)}.`,
       seededRandomPick(random, NEGATIVE_COMPLAINTS),
@@ -1617,7 +1621,7 @@ function generateSingleSentence(random: () => number, rating: number): string {
     return seededRandomPick(random, templates);
   }
 
-  if (rating === 2) {
+  if (rating === 3) {
     const templates = [
       seededRandomPick(random, MIXED_OPENERS),
       `The ${aspect} was okay but nothing special.`,
@@ -1628,7 +1632,7 @@ function generateSingleSentence(random: () => number, rating: number): string {
     return seededRandomPick(random, templates);
   }
 
-  // Rating 3
+  // Rating 4-5
   const templates = [
     seededRandomPick(random, POSITIVE_OPENERS),
     seededRandomPick(random, POSITIVE_PRAISES),
@@ -1643,12 +1647,12 @@ function generateFewSentences(random: () => number, rating: number): string {
   const sentences: string[] = [];
   const numSentences = 2 + Math.floor(random() * 3); // 2-4 sentences
 
-  if (rating === 1) {
+  if (rating <= 2) {
     sentences.push(seededRandomPick(random, NEGATIVE_OPENERS));
     for (let i = 1; i < numSentences; i++) {
       sentences.push(seededRandomPick(random, NEGATIVE_COMPLAINTS));
     }
-  } else if (rating === 2) {
+  } else if (rating === 3) {
     sentences.push(seededRandomPick(random, MIXED_OPENERS));
     sentences.push(
       `${seededRandomPick(random, MIXED_POSITIVES)}, but ${seededRandomPick(random, MIXED_NEGATIVES)}.`
@@ -1682,7 +1686,7 @@ function generateOneParagraph(random: () => number, rating: number): string {
     sentences.push(seededRandomPick(random, PERSONAL_SETUPS));
   }
 
-  if (rating === 1) {
+  if (rating <= 2) {
     sentences.push(seededRandomPick(random, NEGATIVE_OPENERS));
     sentences.push(seededRandomPick(random, NEGATIVE_COMPLAINTS));
     sentences.push(seededRandomPick(random, NEGATIVE_COMPLAINTS));
@@ -1693,7 +1697,7 @@ function generateOneParagraph(random: () => number, rating: number): string {
     if (random() > 0.5) {
       sentences.push(seededRandomPick(random, NEGATIVE_RECOMMENDATIONS));
     }
-  } else if (rating === 2) {
+  } else if (rating === 3) {
     sentences.push(seededRandomPick(random, MIXED_OPENERS));
     sentences.push(`${seededRandomPick(random, MIXED_POSITIVES)}, and I appreciated that.`);
     sentences.push(
@@ -1722,12 +1726,12 @@ function generateThreeParagraphs(random: () => number, rating: number): string {
   const p1Sentences: string[] = [];
   p1Sentences.push(seededRandomPick(random, PERSONAL_SETUPS));
 
-  if (rating === 1) {
+  if (rating <= 2) {
     p1Sentences.push(
       `I was hoping for something better, but ${seededRandomPick(random, NEGATIVE_COMPLAINTS).toLowerCase()}`
     );
     p1Sentences.push(`From the beginning, I could tell this wasn't going to work for me.`);
-  } else if (rating === 2) {
+  } else if (rating === 3) {
     p1Sentences.push(`I had moderate expectations going in, and that's about what I got.`);
     p1Sentences.push(seededRandomPick(random, MIXED_OPENERS));
   } else {
@@ -1744,7 +1748,7 @@ function generateThreeParagraphs(random: () => number, rating: number): string {
     REVIEW_ASPECTS.filter((a) => a !== aspect1)
   );
 
-  if (rating === 1) {
+  if (rating <= 2) {
     p2Sentences.push(
       `The ${aspect1} was ${seededRandomPick(random, REVIEW_NEGATIVE_ADJECTIVES)} throughout.`
     );
@@ -1753,7 +1757,7 @@ function generateThreeParagraphs(random: () => number, rating: number): string {
       `And don't even get me started on the ${aspect2} - ${seededRandomPick(random, REVIEW_NEGATIVE_ADJECTIVES)} is the kindest word I can use.`
     );
     p2Sentences.push(seededRandomPick(random, NEGATIVE_COMPLAINTS));
-  } else if (rating === 2) {
+  } else if (rating === 3) {
     p2Sentences.push(`Let me break down what worked and what didn't.`);
     p2Sentences.push(
       `The ${aspect1} was actually quite good - ${seededRandomPick(random, MIXED_POSITIVES).toLowerCase()}.`
@@ -1777,13 +1781,13 @@ function generateThreeParagraphs(random: () => number, rating: number): string {
   // Paragraph 3: Conclusion and recommendation
   const p3Sentences: string[] = [];
 
-  if (rating === 1) {
+  if (rating <= 2) {
     p3Sentences.push(`In conclusion, this just wasn't for me.`);
     p3Sentences.push(seededRandomPick(random, NEGATIVE_RECOMMENDATIONS));
     p3Sentences.push(
       `I'm sure some people enjoy it, but I found the experience frustrating from start to finish.`
     );
-  } else if (rating === 2) {
+  } else if (rating === 3) {
     p3Sentences.push(seededRandomPick(random, PARAGRAPH_CLOSERS));
     p3Sentences.push(`If the premise sounds interesting to you, it might be worth a try.`);
     p3Sentences.push(`Just don't go in expecting perfection and you might enjoy it.`);

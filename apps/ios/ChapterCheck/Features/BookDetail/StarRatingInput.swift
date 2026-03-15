@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// Interactive 1–3 star rating input.
+/// Interactive 1–5 star rating input.
 ///
 /// Tapping a star sets the rating to that value.
 /// Tapping the currently-selected star clears the rating (sets to `nil`).
 struct StarRatingInput: View {
     @Binding var rating: Int?
 
-    private static let maxRating = 3
+    private static let maxRating = 5
 
     var body: some View {
         HStack(spacing: 8) {

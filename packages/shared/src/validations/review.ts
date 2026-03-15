@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const reviewSchema = z
   .object({
-    rating: z.number().min(0).max(3),
+    rating: z.number().min(0).max(5),
     reviewText: z.string().max(2000).optional().or(z.literal("")),
     isReadPrivate: z.boolean(),
     isReviewPrivate: z.boolean(),

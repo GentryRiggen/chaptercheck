@@ -19,6 +19,7 @@ import type * as bookGenreVotes_mutations from "../bookGenreVotes/mutations.js";
 import type * as bookGenreVotes_queries from "../bookGenreVotes/queries.js";
 import type * as bookNotes_mutations from "../bookNotes/mutations.js";
 import type * as bookNotes_queries from "../bookNotes/queries.js";
+import type * as bookUserData_migrations from "../bookUserData/migrations.js";
 import type * as bookUserData_mutations from "../bookUserData/mutations.js";
 import type * as bookUserData_queries from "../bookUserData/queries.js";
 import type * as books_mutations from "../books/mutations.js";
@@ -77,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   "bookGenreVotes/queries": typeof bookGenreVotes_queries;
   "bookNotes/mutations": typeof bookNotes_mutations;
   "bookNotes/queries": typeof bookNotes_queries;
+  "bookUserData/migrations": typeof bookUserData_migrations;
   "bookUserData/mutations": typeof bookUserData_mutations;
   "bookUserData/queries": typeof bookUserData_queries;
   "books/mutations": typeof books_mutations;
