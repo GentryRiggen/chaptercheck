@@ -51,7 +51,11 @@ export function AuthorForm({
     },
   });
 
-  const { suggestions, isLoading } = useOpenLibraryAuthorSearch(nameSearch);
+  const {
+    suggestions,
+    isLoading,
+    error: openLibraryError,
+  } = useOpenLibraryAuthorSearch(nameSearch);
   const uploadImageFromUrl = useAction(api.openLibrary.actions.uploadImageFromUrl);
 
   const handleSuggestionSelect = useCallback(
@@ -152,6 +156,12 @@ export function AuthorForm({
                   )}
                 </div>
               </FormControl>
+              {openLibraryError && (
+                <p className="text-xs text-muted-foreground">
+                  Couldn&apos;t load suggestions from Open Library. You can still fill in the
+                  details manually.
+                </p>
+              )}
               <FormMessage />
             </FormItem>
           )}

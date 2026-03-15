@@ -23,6 +23,7 @@ struct BookDetailView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.showNowPlaying) private var showNowPlaying
+    @Environment(\.showToast) private var showToast
     private let networkMonitor = NetworkMonitor.shared
 
     var body: some View {
@@ -59,6 +60,7 @@ struct BookDetailView: View {
         .onAppear {
             viewModel.downloadManager = downloadManager
             viewModel.audioPlayerManager = audioPlayer
+            viewModel.showToast = { toast in showToast(toast) }
             viewModel.subscribe(bookId: bookId)
 
             if downloadManager.pendingDeletePromptBookId == bookId {

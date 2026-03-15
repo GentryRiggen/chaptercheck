@@ -285,7 +285,7 @@ struct BookReviewSheet: View {
             if message.contains("similar name already exists") {
                 genreError = message
             } else {
-                genreError = "Failed to create genre. Please try again."
+                genreError = "Couldn't create genre. Please try again."
             }
             Haptics.error()
         }

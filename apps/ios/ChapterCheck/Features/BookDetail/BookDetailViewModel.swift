@@ -77,6 +77,10 @@ final class BookDetailViewModel {
     var error: String?
     private(set) var isShowingOfflineData = false
 
+    /// Callback for showing transient toast messages on mutation errors.
+    /// Wired from the View using the `showToast` environment value.
+    var showToast: ((ToastMessage) -> Void)?
+
     // MARK: - Dependencies
 
     /// Optional download manager for warming the offline progress cache.
@@ -247,6 +251,17 @@ final class BookDetailViewModel {
         cancellables.removeAll()
     }
 
+    func refresh() async {
+        guard let bookId = currentBookId else { return }
+        unsubscribe()
+        isLoading = true
+        error = nil
+        subscribe(bookId: bookId)
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     /// Transition from offline manifest data to live Convex subscriptions.
     func recoverFromOffline() {
         guard isShowingOfflineData, currentBookId != nil else { return }
@@ -293,7 +308,7 @@ final class BookDetailViewModel {
             _ = try await bookUserDataRepository.markAsRead(bookId: book._id)
             Haptics.success()
         } catch {
-            self.error = "Failed to update read status"
+            showToast?(ToastMessage(message: "Couldn't update read status. Please try again.", style: .error))
         }
     }
 
@@ -304,7 +319,7 @@ final class BookDetailViewModel {
             try await bookUserDataRepository.setReadingStatus(bookId: book._id, status: status)
             Haptics.success()
         } catch {
-            self.error = "Failed to update reading status"
+            showToast?(ToastMessage(message: "Couldn't update reading status. Please try again.", style: .error))
         }
     }
 
@@ -340,7 +355,7 @@ final class BookDetailViewModel {
         if errors.isEmpty {
             Haptics.success()
         } else {
-            self.error = "Failed to save \(errors.joined(separator: " and "))"
+            showToast?(ToastMessage(message: "Couldn't save \(errors.joined(separator: " and ")). Please try again.", style: .error))
         }
     }
 
@@ -413,7 +428,7 @@ final class BookDetailViewModel {
             )
             Haptics.success()
         } catch {
-            self.error = "Failed to save personal summary"
+            showToast?(ToastMessage(message: "Couldn't save personal summary. Please try again.", style: .error))
         }
     }
 
@@ -427,7 +442,7 @@ final class BookDetailViewModel {
             )
             Haptics.success()
         } catch {
-            self.error = "Failed to update Want to Read"
+            showToast?(ToastMessage(message: "Couldn't update Want to Read. Please try again.", style: .error))
         }
     }
 
@@ -439,7 +454,7 @@ final class BookDetailViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.error = error.localizedDescription
+                        self?.error = userFacingMessage(from: error, fallback: "Unable to load book details")
                         self?.authObserver.needsResubscription()
                     }
                 },
@@ -457,7 +472,7 @@ final class BookDetailViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.error = error.localizedDescription
+                        self?.error = userFacingMessage(from: error, fallback: "Unable to load book details")
                         self?.authObserver.needsResubscription()
                     }
                 },
@@ -475,7 +490,7 @@ final class BookDetailViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.error = error.localizedDescription
+                        self?.error = userFacingMessage(from: error, fallback: "Unable to load book details")
                         self?.authObserver.needsResubscription()
                     }
                 },

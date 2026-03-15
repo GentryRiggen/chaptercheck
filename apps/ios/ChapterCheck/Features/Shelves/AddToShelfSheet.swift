@@ -234,8 +234,8 @@ struct AddToShelfSheet: View {
                 }
             } catch {
                 self.error = shelf.containsBook
-                    ? "Failed to remove from shelf"
-                    : "Failed to add to shelf"
+                    ? "Couldn't remove from shelf. Please try again."
+                    : "Couldn't add to shelf. Please try again."
             }
             pendingBookIds.remove(shelf._id)
         }
@@ -253,7 +253,7 @@ struct AddToShelfSheet: View {
                     shelfId: result.shelfId
                 )
             } catch {
-                self.error = "Failed to update Want to Read"
+                self.error = "Couldn't update Want to Read. Please try again."
             }
             isWantToReadPending = false
         }

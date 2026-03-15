@@ -11,6 +11,7 @@ struct NowPlayingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.navigateToDestination) private var navigateToDestination
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.showToast) private var showToast
 
     @State private var isPartSelectorPresented = false
     @State private var isAudioSettingsPresented = false
@@ -171,6 +172,14 @@ struct NowPlayingView: View {
             Color.clear
                 .frame(height: transportToToolbarSpacing)
 
+            // Inline error banner — shown when the player encounters an error
+            if let errorMessage = audioPlayer.error {
+                playerErrorBanner(errorMessage)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
             // Bottom toolbar
             bottomToolbar
                 .padding(.horizontal, 24)
@@ -199,6 +208,7 @@ struct NowPlayingView: View {
         .animation(.spring(duration: 0.35, bounce: 0.16), value: selectedCarouselPage)
         .onAppear {
             isPlayingAnimated = audioPlayer.isPlaying
+            detailsViewModel.showToast = { toast in showToast(toast) }
             // Handle streaming event that fired before this sheet was presented
             handleStreamingEvent()
             // Subscribe details ViewModel to current book
@@ -606,6 +616,39 @@ struct NowPlayingView: View {
                 Spacer()
             }
         }
+    }
+
+    // MARK: - Player Error Banner
+
+    @ViewBuilder
+    private func playerErrorBanner(_ message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.orange)
+
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button("Try Again") {
+                audioPlayer.retryLastTrack()
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.orange)
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.orange.opacity(0.12), in: Capsule())
+        .overlay(
+            Capsule()
+                .strokeBorder(.orange.opacity(0.3), lineWidth: 1)
+        )
+        .animation(.spring(duration: 0.35), value: audioPlayer.error)
     }
 
     private var noteComposerContext: BookNoteComposerContext? {

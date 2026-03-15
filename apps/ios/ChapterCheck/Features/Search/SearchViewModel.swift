@@ -128,7 +128,7 @@ final class SearchViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("search FAILED: \(error)")
-                        self?.error = error.localizedDescription
+                        self?.error = userFacingMessage(from: error, fallback: "Search isn't available right now")
                         self?.isLoading = false
                         self?.authObserver.needsResubscription()
                     }

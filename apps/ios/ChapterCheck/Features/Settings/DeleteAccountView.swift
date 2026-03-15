@@ -101,7 +101,7 @@ struct DeleteAccountView: View {
             UserDefaults.standard.removeObject(forKey: "hasAuthenticatedBefore")
             await convexService.logout()
         } catch {
-            self.error = "Failed to delete account. Please try again."
+            self.error = "Couldn't delete account. Please try again."
             isDeleting = false
         }
     }

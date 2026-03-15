@@ -47,6 +47,17 @@ final class SeriesDetailViewModel {
         cancellables.removeAll()
     }
 
+    func refresh() async {
+        guard let seriesId = currentSeriesId else { return }
+        unsubscribe()
+        isLoading = true
+        error = nil
+        subscribe(seriesId: seriesId)
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     // MARK: - Private
 
     private func subscribeToSeries(seriesId: String) {

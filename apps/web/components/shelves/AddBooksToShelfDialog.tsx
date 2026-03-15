@@ -11,6 +11,7 @@ import { BookCover } from "@/components/books/BookCover";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { handleMutationError } from "@/lib/handle-mutation-error";
 
 interface AddBooksToShelfDialogProps {
   shelfId: Id<"shelves">;
@@ -46,6 +47,8 @@ export function AddBooksToShelfDialog({
       } else {
         await addBook({ shelfId, bookId });
       }
+    } catch (err) {
+      handleMutationError(err, "Couldn't update the shelf. Please try again.");
     } finally {
       setPendingIds((prev) => {
         const next = new Set(prev);

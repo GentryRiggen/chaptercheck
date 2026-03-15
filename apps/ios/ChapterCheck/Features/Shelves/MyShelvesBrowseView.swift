@@ -158,4 +158,13 @@ final class MyShelvesBrowseViewModel {
         authObserver.cancel()
         cancellables.removeAll()
     }
+
+    func refresh() async {
+        unsubscribe()
+        isLoading = true
+        subscribe()
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
 }

@@ -83,6 +83,16 @@ final class LibraryViewModel {
         searchDebounceTask?.cancel()
     }
 
+    func refresh() async {
+        unsubscribe()
+        isLoading = true
+        error = nil
+        subscribe()
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     /// Transition from offline data to live Convex subscriptions.
     func recoverFromOffline() {
         guard isShowingOfflineData else { return }
@@ -195,7 +205,7 @@ final class LibraryViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("search FAILED: \(error)")
-                        self?.error = error.localizedDescription
+                        self?.error = userFacingMessage(from: error, fallback: "Unable to load your library")
                         self?.isLoading = false
                         self?.authObserver.needsResubscription()
                     }
@@ -222,7 +232,7 @@ final class LibraryViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("genreFilter FAILED: \(error)")
-                        self?.error = error.localizedDescription
+                        self?.error = userFacingMessage(from: error, fallback: "Unable to load your library")
                         self?.isLoading = false
                         self?.authObserver.needsResubscription()
                     }
@@ -252,7 +262,7 @@ final class LibraryViewModel {
             receiveCompletion: { [weak self] completion in
                 if case .failure(let error) = completion {
                     self?.logger.error("bookList FAILED: \(error)")
-                    self?.error = error.localizedDescription
+                    self?.error = userFacingMessage(from: error, fallback: "Unable to load your library")
                     self?.isLoading = false
                     self?.isLoadingMore = false
                     self?.authObserver.needsResubscription()

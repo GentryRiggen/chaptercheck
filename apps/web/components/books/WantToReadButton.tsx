@@ -25,8 +25,8 @@ export function WantToReadButton({ bookId }: WantToReadButtonProps) {
     try {
       const result = await toggleWantToRead({ bookId });
       toast.success(result.isOnWantToRead ? "Added to Want to Read" : "Removed from Want to Read");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update Want to Read");
+    } catch {
+      toast.error("Couldn't update Want to Read. Please try again.");
     } finally {
       setIsPending(false);
     }

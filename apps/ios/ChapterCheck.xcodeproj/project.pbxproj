@@ -12,6 +12,9 @@
 		03DFFC4A1F98D1EEFBE03E20 /* ConvexMobile in Frameworks */ = {isa = PBXBuildFile; productRef = 7CA92B75F78B88C1882BB0E7 /* ConvexMobile */; };
 		04520148B6A97C7736F5B018 /* PlaybackSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B87ACED80DD28E594782A65 /* PlaybackSettingsView.swift */; };
 		04AA7EE238D3A65BCB6AEC4E /* OfflineBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A3B31A69EFE47BC15F52A5 /* OfflineBanner.swift */; };
+		33526569AF5F447FA8E93D0C /* UserFacingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA0237F052C54F9886B8FE1F /* UserFacingError.swift */; };
+		744029AB589A4794A973E8CA /* ToastEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31336B9E9044D2082205478 /* ToastEnvironment.swift */; };
+		FF4B58851D4C434CA5A7A7C7 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D6884BB2CB4EC599BBDDC1 /* ToastView.swift */; };
 		04DD78C029DADF600B6A0C75 /* UserReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61916CE867290E161C23F4EA /* UserReview.swift */; };
 		059D47F2826CDE407960EABD /* PreferencesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDD05971F1BDD2B6095A952 /* PreferencesRepository.swift */; };
 		090C73006702B09D5CFFF094 /* AudioRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0C12489543394591DDBD2F /* AudioRepository.swift */; };
@@ -188,6 +191,9 @@
 /* Begin PBXFileReference section */
 		02CE2E1CDD25DBB212743925 /* ContinueListeningSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueListeningSection.swift; sourceTree = "<group>"; };
 		06A3B31A69EFE47BC15F52A5 /* OfflineBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineBanner.swift; sourceTree = "<group>"; };
+		BA0237F052C54F9886B8FE1F /* UserFacingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingError.swift; sourceTree = "<group>"; };
+		A31336B9E9044D2082205478 /* ToastEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastEnvironment.swift; sourceTree = "<group>"; };
+		67D6884BB2CB4EC599BBDDC1 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		083E562C56AA51B1B36325F9 /* ChapterCheck.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChapterCheck.entitlements; sourceTree = "<group>"; };
 		0849415E420346D4324CBC81 /* SentryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryService.swift; sourceTree = "<group>"; };
 		0A2483BD58770AC337B213B4 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
@@ -606,6 +612,7 @@
 				C5649355EC3354C073E1C562 /* EmptyStateView.swift */,
 				8877E26E0752C55A45134B6E /* ErrorView.swift */,
 				3401C41101E7DDCEAC04120E /* FlowLayout.swift */,
+				67D6884BB2CB4EC599BBDDC1 /* ToastView.swift */,
 				6FE4D41FB4E6B82B28C75571 /* LoadingView.swift */,
 				7B2378962E933FABD7C0C295 /* RatingView.swift */,
 				3542D0C04C257DC378A6B338 /* SkeletonView.swift */,
@@ -783,6 +790,8 @@
 				DA97502AD85AF8872354E13B /* Haptics.swift */,
 				06A3B31A69EFE47BC15F52A5 /* OfflineBanner.swift */,
 				1277AE5AAB42ECE08E81020B /* TimeFormatting.swift */,
+				BA0237F052C54F9886B8FE1F /* UserFacingError.swift */,
+				A31336B9E9044D2082205478 /* ToastEnvironment.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -969,6 +978,9 @@
 				4D19DD6B01ED1C2138898CA2 /* GenreFilterSheet.swift in Sources */,
 				E173ECE33D9F1C773F4AC933 /* GenreRepository.swift in Sources */,
 				9A8A43C873AF394C94594DC0 /* Haptics.swift in Sources */,
+				33526569AF5F447FA8E93D0C /* UserFacingError.swift in Sources */,
+				744029AB589A4794A973E8CA /* ToastEnvironment.swift in Sources */,
+				FF4B58851D4C434CA5A7A7C7 /* ToastView.swift in Sources */,
 				D8AAF32CACD25FAF6330C16D /* HeroListeningCard.swift in Sources */,
 				2807999D29D04D131C82C418 /* HomeBookCard.swift in Sources */,
 				4CC44FBA708725A627B72D93 /* HomeSkeletonView.swift in Sources */,

@@ -17,6 +17,11 @@ struct ProfileView: View {
         Group {
             if viewModel.isLoading {
                 loadingView
+            } else if let error = viewModel.error, viewModel.profile == nil {
+                ErrorView(message: error) {
+                    viewModel.unsubscribe()
+                    viewModel.subscribe(userId: userId)
+                }
             } else if let profile = viewModel.profile {
                 profileContent(profile)
             } else {

@@ -86,7 +86,7 @@ export function GenreMultiSelect({ value, onChange, bookId }: GenreMultiSelectPr
       onChange([...value, genreId]);
       setSearch("");
     } catch {
-      toast.error("Failed to create genre");
+      toast.error("Couldn't create the genre. Please try again.");
     } finally {
       setIsCreating(false);
     }

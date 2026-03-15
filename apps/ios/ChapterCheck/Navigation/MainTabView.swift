@@ -116,6 +116,7 @@ enum Tab: Int, Hashable {
 /// Owns the `AudioPlayerManager` as `@State` and injects it into the
 /// environment so all child views can access playback state. A persistent
 /// `MiniPlayerView` overlay is shown at the bottom above the tab bar.
+/// A `ToastView` overlay sits above the mini player for transient notifications.
 struct MainView: View {
     @State private var selectedTab: Tab = .home
     @State private var homePath: [AppDestination] = []
@@ -128,6 +129,7 @@ struct MainView: View {
     @State private var downloadManager = DownloadManager()
     @State private var isNowPlayingPresented = false
     @State private var isSettingsPresented = false
+    @State private var currentToast: ToastMessage?
     @State private var pendingNavigation: AppDestination?
     @State private var preferencesCancellable: AnyCancellable?
     @State private var showDeletePartConfirmation = false
@@ -208,6 +210,22 @@ struct MainView: View {
                     .blur(radius: isNowPlayingPresented ? 4 : 0)
                     .animation(.easeInOut(duration: 0.35), value: isNowPlayingPresented)
             }
+
+            // Toast overlay — positioned above the mini player, below the safe area top
+            if let toast = currentToast {
+                VStack {
+                    ToastView(toast: toast) {
+                        currentToast = nil
+                    }
+                    Spacer()
+                }
+                // Offset from the top: below the status bar, clear of the dynamic island
+                .padding(.top, 56)
+                // Clear the mini player + tab bar when present
+                .padding(.bottom, audioPlayer.hasContent ? 130 : 70)
+                .transition(.opacity)
+                .zIndex(100)
+            }
         }
         .environment(audioPlayer)
         .environment(downloadManager)
@@ -217,6 +235,21 @@ struct MainView: View {
         .environment(\.pushDestination, PushDestinationAction { destination in
             activePathBinding.wrappedValue.append(destination)
         })
+        .environment(\.showToast, ShowToastAction { toast in
+            // Replace any existing toast immediately so the new one is always visible
+            currentToast = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                currentToast = toast
+            }
+        })
+        .onChange(of: downloadManager.downloadFailedBookTitle) { _, bookTitle in
+            guard let bookTitle else { return }
+            currentToast = ToastMessage(
+                message: "Download failed for \"\(bookTitle)\". Check your connection and try again.",
+                style: .error
+            )
+            downloadManager.clearDownloadFailure()
+        }
         .task {
             await downloadManager.initialize()
             audioPlayer.downloadManager = downloadManager

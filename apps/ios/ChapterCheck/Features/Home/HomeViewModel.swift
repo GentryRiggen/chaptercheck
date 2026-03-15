@@ -101,6 +101,13 @@ final class HomeViewModel {
         subscribe()
     }
 
+    func refresh() async {
+        retry()
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     /// Transition from offline data to live Convex subscriptions.
     /// Uses `needsResubscription()` so the auth observer waits for a fresh
     /// `.authenticated` emission rather than firing on the stale cached state.
@@ -149,7 +156,7 @@ final class HomeViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("recentlyListening FAILED: \(error)")
-                        self?.handleSectionError("recentlyListening", message: error.localizedDescription)
+                        self?.handleSectionError("recentlyListening", message: userFacingMessage(from: error, fallback: "Unable to load your library"))
                     }
                 },
                 receiveValue: { [weak self] items in
@@ -182,7 +189,7 @@ final class HomeViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("topRatedBooks FAILED: \(error)")
-                        self?.handleSectionError("topRatedBooks", message: error.localizedDescription)
+                        self?.handleSectionError("topRatedBooks", message: userFacingMessage(from: error, fallback: "Unable to load your library"))
                     }
                 },
                 receiveValue: { [weak self] books in
@@ -201,7 +208,7 @@ final class HomeViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("myShelves FAILED: \(error)")
-                        self?.handleSectionError("myShelves", message: error.localizedDescription)
+                        self?.handleSectionError("myShelves", message: userFacingMessage(from: error, fallback: "Unable to load your library"))
                     }
                 },
                 receiveValue: { [weak self] shelves in

@@ -17,6 +17,9 @@ final class ShelfDetailViewModel {
     var isLoading = true
     var error: String?
 
+    /// Callback for showing transient toast messages on mutation errors.
+    var showToast: ((ToastMessage) -> Void)?
+
     // MARK: - Dependencies
 
     private let repository = ShelfRepository()
@@ -45,13 +48,24 @@ final class ShelfDetailViewModel {
         currentShelfId = nil
     }
 
+    func refresh() async {
+        guard let shelfId = currentShelfId else { return }
+        unsubscribe()
+        isLoading = true
+        error = nil
+        subscribe(shelfId: shelfId)
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     private func setupSubscription(shelfId: String) {
         repository.subscribeToShelf(shelfId: shelfId)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let err) = completion {
-                        self?.error = err.localizedDescription
+                        self?.error = userFacingMessage(from: err, fallback: "Unable to load this shelf")
                         self?.isLoading = false
                         self?.authObserver.needsResubscription()
                     }
@@ -73,7 +87,7 @@ final class ShelfDetailViewModel {
             Haptics.medium()
             try await repository.deleteShelf(shelfId: shelfId)
         } catch {
-            self.error = error.localizedDescription
+            self.error = userFacingMessage(from: error, fallback: "Unable to delete shelf")
         }
     }
 
@@ -83,7 +97,7 @@ final class ShelfDetailViewModel {
         do {
             try await repository.removeBookFromShelf(shelfId: shelfId, bookId: bookId)
         } catch {
-            self.error = error.localizedDescription
+            showToast?(ToastMessage(message: "Failed to remove book from shelf", style: .error))
         }
     }
 
@@ -120,7 +134,7 @@ final class ShelfDetailViewModel {
             do {
                 try await repository.reorderShelfBooks(shelfId: shelfId, bookIds: bookIds)
             } catch {
-                self.error = error.localizedDescription
+                showToast?(ToastMessage(message: "Failed to save new order", style: .error))
             }
         }
     }

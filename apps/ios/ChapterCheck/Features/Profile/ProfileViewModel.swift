@@ -63,6 +63,17 @@ final class ProfileViewModel {
         loadedSections.removeAll()
     }
 
+    func refresh() async {
+        guard let userId = currentUserId else { return }
+        unsubscribe()
+        isLoading = true
+        error = nil
+        subscribe(userId: userId)
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     // MARK: - Private Subscriptions
 
     private func subscribeToProfile(userId: String) {
@@ -75,7 +86,7 @@ final class ProfileViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let err) = completion {
-                        self?.error = err.localizedDescription
+                        self?.error = userFacingMessage(from: err, fallback: "Unable to load profile")
                         self?.markLoaded(section: "profile")
                         self?.authObserver.needsResubscription()
                     }
@@ -94,7 +105,7 @@ final class ProfileViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let err) = completion {
-                        self?.error = err.localizedDescription
+                        self?.error = userFacingMessage(from: err, fallback: "Unable to load profile")
                         self?.markLoaded(section: "shelves")
                         self?.authObserver.needsResubscription()
                     }
@@ -118,7 +129,7 @@ final class ProfileViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let err) = completion {
-                        self?.error = err.localizedDescription
+                        self?.error = userFacingMessage(from: err, fallback: "Unable to load profile")
                         self?.markLoaded(section: "readBooks")
                         self?.authObserver.needsResubscription()
                     }
@@ -141,7 +152,7 @@ final class ProfileViewModel {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let err) = completion {
-                        self?.error = err.localizedDescription
+                        self?.error = userFacingMessage(from: err, fallback: "Unable to load profile")
                         self?.markLoaded(section: "reviews")
                         self?.authObserver.needsResubscription()
                     }

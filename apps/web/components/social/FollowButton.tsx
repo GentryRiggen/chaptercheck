@@ -6,6 +6,7 @@ import { useAuthReady } from "@chaptercheck/shared/hooks/useAuthReady";
 import { useMutation, useQuery } from "convex/react";
 import { Loader2, UserCheck, UserPlus } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,7 @@ export function FollowButton({ targetUserId, compact = false, className }: Follo
     } catch {
       // Revert optimistic update on error
       setIsOptimistic(null);
+      toast.error("Couldn't update. Please try again.");
     } finally {
       setIsOptimistic(null);
       setIsPending(false);

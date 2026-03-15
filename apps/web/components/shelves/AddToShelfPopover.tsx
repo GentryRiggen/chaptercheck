@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { handleMutationError } from "@/lib/handle-mutation-error";
 
 import { ShelfDialog } from "./ShelfDialog";
 
@@ -31,6 +32,8 @@ export function AddToShelfPopover({ bookId }: AddToShelfPopoverProps) {
       } else {
         await addBook({ shelfId, bookId });
       }
+    } catch (err) {
+      handleMutationError(err, "Couldn't update the shelf. Please try again.");
     } finally {
       setPendingIds((prev) => {
         const next = new Set(prev);

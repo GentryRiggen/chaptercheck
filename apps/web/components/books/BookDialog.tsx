@@ -7,6 +7,7 @@ import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { handleMutationError } from "@/lib/handle-mutation-error";
 
 import { BookForm } from "./BookForm";
 
@@ -27,22 +28,26 @@ export function BookDialog({
   const createBook = useMutation(api.books.mutations.createBook);
 
   const handleSubmit = async (values: BookFormValues) => {
-    const bookId = await createBook({
-      title: values.title,
-      subtitle: values.subtitle || undefined,
-      description: values.description || undefined,
-      isbn: values.isbn || undefined,
-      publishedYear: values.publishedYear ?? undefined,
-      language: values.language || undefined,
-      coverImageR2Key: values.coverImageR2Key,
-      seriesId: values.seriesId as Id<"series"> | undefined,
-      seriesOrder: values.seriesOrder ?? undefined,
-      authorIds: values.authorIds?.length ? (values.authorIds as Id<"authors">[]) : undefined,
-      genreIds: values.genreIds?.length ? (values.genreIds as Id<"genres">[]) : undefined,
-    });
-    onOpenChange(false);
-    if (navigateOnCreate) {
-      router.push(`/books/${bookId}`);
+    try {
+      const bookId = await createBook({
+        title: values.title,
+        subtitle: values.subtitle || undefined,
+        description: values.description || undefined,
+        isbn: values.isbn || undefined,
+        publishedYear: values.publishedYear ?? undefined,
+        language: values.language || undefined,
+        coverImageR2Key: values.coverImageR2Key,
+        seriesId: values.seriesId as Id<"series"> | undefined,
+        seriesOrder: values.seriesOrder ?? undefined,
+        authorIds: values.authorIds?.length ? (values.authorIds as Id<"authors">[]) : undefined,
+        genreIds: values.genreIds?.length ? (values.genreIds as Id<"genres">[]) : undefined,
+      });
+      onOpenChange(false);
+      if (navigateOnCreate) {
+        router.push(`/books/${bookId}`);
+      }
+    } catch (err) {
+      handleMutationError(err, "Couldn't create the book. Please try again.");
     }
   };
 

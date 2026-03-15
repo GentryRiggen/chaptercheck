@@ -109,7 +109,7 @@ final class AddBookConfirmViewModel {
             isSaving = false
             return bookId
         } catch {
-            self.error = "Failed to create book. Please try again."
+            self.error = "Couldn't create the book. Please try again."
             isSaving = false
             return nil
         }

@@ -29,6 +29,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { handleMutationError } from "@/lib/handle-mutation-error";
 import { cn } from "@/lib/utils";
 
 import { StarRating } from "./StarRating";
@@ -91,21 +92,30 @@ export function BookReviewDialog({
   }, [isReadPrivate, form]);
 
   const handleSubmit = async (values: ReviewFormData) => {
-    await saveReview({
-      bookId,
-      // Convert 0 rating to undefined (no rating)
-      rating: values.rating > 0 ? values.rating : undefined,
-      reviewText: values.reviewText || undefined,
-      isReadPrivate: values.isReadPrivate,
-      isReviewPrivate: values.isReviewPrivate,
-    });
+    try {
+      await saveReview({
+        bookId,
+        // Convert 0 rating to undefined (no rating)
+        rating: values.rating > 0 ? values.rating : undefined,
+        reviewText: values.reviewText || undefined,
+        isReadPrivate: values.isReadPrivate,
+        isReviewPrivate: values.isReviewPrivate,
+      });
+    } catch (err) {
+      handleMutationError(err, "Couldn't save your review. Please try again.");
+      return;
+    }
 
     // Save genre votes if any were selected
     if (values.genreIds && values.genreIds.length > 0) {
-      await setGenreVotes({
-        bookId,
-        genreIds: values.genreIds as Parameters<typeof setGenreVotes>[0]["genreIds"],
-      });
+      try {
+        await setGenreVotes({
+          bookId,
+          genreIds: values.genreIds as Parameters<typeof setGenreVotes>[0]["genreIds"],
+        });
+      } catch (err) {
+        handleMutationError(err, "Your review was saved, but genre votes couldn't be saved.");
+      }
     }
 
     onOpenChange(false);

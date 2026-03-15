@@ -141,8 +141,8 @@ export function FreeformNoteComposerDialog({
         form.setValue("tagIds", [...current, tagId]);
       }
       setNewTagInput("");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create tag");
+    } catch {
+      toast.error("Couldn't create the tag. Please try again.");
     } finally {
       setIsCreatingTag(false);
     }
@@ -184,8 +184,8 @@ export function FreeformNoteComposerDialog({
         toast.success("Note created");
       }
       onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save note");
+    } catch {
+      toast.error("Couldn't save the note. Please try again.");
     }
   };
 

@@ -12,6 +12,7 @@ struct ShelfDetailView: View {
     @State private var isAddBooksPresented = false
     @State private var isDeleteConfirmationPresented = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.showToast) private var showToast
 
     var body: some View {
         Group {
@@ -75,6 +76,7 @@ struct ShelfDetailView: View {
             Text("This will permanently delete the shelf and cannot be undone.")
         }
         .onAppear {
+            viewModel.showToast = { toast in showToast(toast) }
             viewModel.subscribe(shelfId: shelfId)
         }
         .onDisappear {

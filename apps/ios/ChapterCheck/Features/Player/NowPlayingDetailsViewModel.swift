@@ -19,6 +19,9 @@ final class NowPlayingDetailsViewModel {
     var currentUser: UserWithPermissions?
     var error: String?
 
+    /// Callback for showing transient toast messages on mutation errors.
+    var showToast: ((ToastMessage) -> Void)?
+
     // MARK: - Dependencies
 
     private let bookUserDataRepository = BookUserDataRepository()
@@ -140,7 +143,7 @@ final class NowPlayingDetailsViewModel {
             _ = try await bookUserDataRepository.markAsRead(bookId: bookId)
             Haptics.success()
         } catch {
-            self.error = "Failed to mark as read"
+            showToast?(ToastMessage(message: "Couldn't mark as read. Please try again.", style: .error))
         }
     }
 
@@ -172,7 +175,7 @@ final class NowPlayingDetailsViewModel {
         if errors.isEmpty {
             Haptics.success()
         } else {
-            self.error = "Failed to save \(errors.joined(separator: " and "))"
+            showToast?(ToastMessage(message: "Couldn't save \(errors.joined(separator: " and ")). Please try again.", style: .error))
         }
     }
 

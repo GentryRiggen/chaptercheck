@@ -124,8 +124,8 @@ export function SeriesSelect({
       setNewSeriesName("");
       setSearchTerm("");
       setShowDropdown(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create series");
+    } catch {
+      toast.error("Couldn't create the series. Please try again.");
     }
   };
 

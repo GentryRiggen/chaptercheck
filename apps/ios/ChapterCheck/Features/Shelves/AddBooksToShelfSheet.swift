@@ -260,7 +260,7 @@ struct AddBooksToShelfSheet: View {
             let addedCount = bookIds.count - failedCount
             self.error = addedCount > 0
                 ? "Added \(addedCount) books, but \(failedCount) failed. Try again for the rest."
-                : "Failed to add books. Please try again."
+                : "Couldn't add books. Please try again."
             isAdding = false
         }
     }

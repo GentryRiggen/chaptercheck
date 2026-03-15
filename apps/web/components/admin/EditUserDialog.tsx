@@ -71,8 +71,8 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
       });
       toast.success(`Updated ${user.name || user.email}`);
       onOpenChange(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update user");
+    } catch {
+      toast.error("Couldn't update the user. Please try again.");
     }
   };
 

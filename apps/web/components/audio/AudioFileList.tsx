@@ -52,8 +52,8 @@ export function AudioFileList({ bookId, audioFiles, bookInfo, savedProgress }: A
         bookId,
         orderedFileIds: newOrder.map((f) => f._id),
       });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to reorder files");
+    } catch {
+      toast.error("Couldn't reorder the files. Please try again.");
     }
   };
 
@@ -66,8 +66,8 @@ export function AudioFileList({ bookId, audioFiles, bookInfo, savedProgress }: A
         bookId,
         orderedFileIds: newOrder.map((f) => f._id),
       });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to reorder files");
+    } catch {
+      toast.error("Couldn't reorder the files. Please try again.");
     }
   };
 

@@ -181,8 +181,8 @@ export function ReviewsList({ bookId }: ReviewsListProps) {
       // Reset pagination to refetch fresh data
       setCursor(null);
       setAllReviews([]);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete review");
+    } catch {
+      toast.error("Couldn't delete the review. Please try again.");
     } finally {
       setIsDeleting(false);
     }

@@ -112,8 +112,8 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
           form.reset();
           onOpenChange(false);
         })
-        .catch((err: Error) => {
-          toast.error(`User created but failed to configure: ${err.message}`);
+        .catch(() => {
+          toast.error("User created but couldn't be configured. Please try again.");
           setPendingClerkId(null);
         });
     }
@@ -139,15 +139,15 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
       }
 
       if (!response.ok) {
-        toast.error(data.error || "Failed to create user");
+        toast.error("Couldn't create the user. Please try again.");
         return;
       }
 
       // Wait for Clerk webhook to create user in Convex
       toast.info("User created in Clerk, waiting for sync...");
       setPendingClerkId(data.clerkId);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create user");
+    } catch {
+      toast.error("Couldn't create the user. Please try again.");
     }
   };
 

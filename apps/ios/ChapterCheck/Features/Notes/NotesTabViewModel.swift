@@ -139,6 +139,16 @@ final class NotesTabViewModel {
         tearDownSubscriptions()
     }
 
+    func refresh() async {
+        unsubscribe()
+        isLoading = true
+        error = nil
+        subscribe()
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     func recoverFromOffline() {
         guard isShowingOfflineData else { return }
         logger.info("Network restored — switching to live notes data")

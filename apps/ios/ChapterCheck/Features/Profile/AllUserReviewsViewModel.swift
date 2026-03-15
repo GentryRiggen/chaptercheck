@@ -45,6 +45,17 @@ final class AllUserReviewsViewModel {
         cancellables.removeAll()
     }
 
+    func refresh() async {
+        guard let userId = currentUserId else { return }
+        unsubscribe()
+        isLoading = true
+        error = nil
+        subscribe(userId: userId)
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     func loadNextPage() {
         guard !isLoadingMore, hasMore, currentCursor != nil, let userId = currentUserId else { return }
         isLoadingMore = true

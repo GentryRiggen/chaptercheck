@@ -49,6 +49,17 @@ final class AuthorDetailViewModel {
         cancellables.removeAll()
     }
 
+    func refresh() async {
+        guard let authorId = currentAuthorId else { return }
+        unsubscribe()
+        isLoading = true
+        error = nil
+        subscribe(authorId: authorId)
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     // MARK: - Private
 
     private func subscribeToAuthor(authorId: String) {

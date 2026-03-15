@@ -43,8 +43,8 @@ export function ShelfDeleteDialog({
       await deleteShelf({ shelfId });
       onOpenChange(false);
       onDeleted();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete shelf");
+    } catch {
+      toast.error("Couldn't delete the shelf. Please try again.");
       setDeleting(false);
     }
   };

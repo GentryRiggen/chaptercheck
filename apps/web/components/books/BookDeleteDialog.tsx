@@ -42,8 +42,8 @@ export function BookDeleteDialog({
       await deleteBook({ bookId });
       onOpenChange(false);
       onDeleted();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete book");
+    } catch {
+      toast.error("Couldn't delete the book. Please try again.");
       setDeleting(false);
     }
   };

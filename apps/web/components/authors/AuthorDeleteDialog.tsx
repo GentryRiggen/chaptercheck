@@ -45,8 +45,8 @@ export function AuthorDeleteDialog({
       await deleteAuthor({ authorId });
       onOpenChange(false);
       onDeleted();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete author");
+    } catch {
+      toast.error("Couldn't delete the author. Please try again.");
       setDeleting(false);
     }
   };

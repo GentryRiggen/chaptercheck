@@ -33,6 +33,10 @@ final class DownloadManager {
     /// Set by MainView on book completion; BookDetailView reads this to show a confirmationDialog.
     var pendingDeletePromptBookId: String?
 
+    /// Set when a book download fails. MainView observes this via `.onChange` to show a toast.
+    /// Contains the book title. Cleared by MainView after displaying the toast.
+    private(set) var downloadFailedBookTitle: String?
+
     // MARK: - Dependencies
 
     private let downloadService: DownloadService
@@ -150,6 +154,14 @@ final class DownloadManager {
             await MainActor.run {
                 self.activeBookIds.remove(bookId)
                 self.bookDownloadTasks.removeValue(forKey: bookId)
+
+                // Check if any files failed to download and signal via observable property
+                let hasFailures = audioFiles.contains { file in
+                    self.fileStatuses[file._id] == .failed
+                }
+                if hasFailures {
+                    self.downloadFailedBookTitle = book.title
+                }
             }
         }
 
@@ -254,6 +266,11 @@ final class DownloadManager {
             await downloadService.deleteAudioFile(audioFileId: audioFileId, bookId: bookId)
             await refreshState()
         }
+    }
+
+    /// Clears `downloadFailedBookTitle` after the view has consumed and displayed the error.
+    func clearDownloadFailure() {
+        downloadFailedBookTitle = nil
     }
 
     // MARK: - Cancel / Delete

@@ -44,8 +44,8 @@ export function AudioFileDeleteDialog({
       toast.success("Audio file deleted");
       onOpenChange(false);
       onDeleted?.();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete audio file");
+    } catch {
+      toast.error("Couldn't delete the audio file. Please try again.");
       setDeleting(false);
     }
   };

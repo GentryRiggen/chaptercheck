@@ -17,6 +17,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast } from "sonner";
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 
@@ -209,6 +210,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       }
     };
     const handleWaiting = () => setIsLoading(true);
+    const handleError = () => {
+      toast.error("Couldn't load the audio. Please try again.");
+      setIsLoading(false);
+    };
 
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateDuration);
@@ -217,10 +222,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     audio.addEventListener("play", handlePlay);
     audio.addEventListener("canplay", handleCanPlay);
     audio.addEventListener("waiting", handleWaiting);
+    audio.addEventListener("error", handleError);
 
     // Auto-play when audio is loaded
-    audio.play().catch((err) => {
-      console.error("Auto-play failed:", err);
+    audio.play().catch(() => {
+      // Auto-play may be blocked by the browser — not an error to surface
     });
 
     return () => {
@@ -232,6 +238,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("waiting", handleWaiting);
+      audio.removeEventListener("error", handleError);
       audioRef.current = null;
     };
   }, [audioUrl, saveProgress]);
@@ -342,8 +349,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
           audioFileId: track.audioFileId,
         });
         setAudioUrl(streamUrl);
-      } catch (err) {
-        console.error("Failed to load audio:", err);
+      } catch {
+        toast.error("Couldn't load the audio. Please try again.");
         setIsLoading(false);
       }
     },

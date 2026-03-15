@@ -6,6 +6,7 @@ import type { ShelfFormValues } from "@chaptercheck/shared/validations/shelf";
 import { useMutation } from "convex/react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { handleMutationError } from "@/lib/handle-mutation-error";
 
 import { ShelfForm } from "./ShelfForm";
 
@@ -30,24 +31,33 @@ export function ShelfDialog({ open, onOpenChange, shelf, onCreated }: ShelfDialo
   const isEdit = !!shelf;
 
   const handleSubmit = async (values: ShelfFormValues) => {
-    if (isEdit) {
-      await updateShelf({
-        shelfId: shelf._id,
-        name: values.name,
-        description: values.description || undefined,
-        isOrdered: values.isOrdered,
-        isPublic: values.isPublic,
-      });
-    } else {
-      const shelfId = await createShelf({
-        name: values.name,
-        description: values.description || undefined,
-        isOrdered: values.isOrdered,
-        isPublic: values.isPublic,
-      });
-      onCreated?.(shelfId);
+    try {
+      if (isEdit) {
+        await updateShelf({
+          shelfId: shelf._id,
+          name: values.name,
+          description: values.description || undefined,
+          isOrdered: values.isOrdered,
+          isPublic: values.isPublic,
+        });
+      } else {
+        const shelfId = await createShelf({
+          name: values.name,
+          description: values.description || undefined,
+          isOrdered: values.isOrdered,
+          isPublic: values.isPublic,
+        });
+        onCreated?.(shelfId);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      handleMutationError(
+        err,
+        isEdit
+          ? "Couldn't save the shelf. Please try again."
+          : "Couldn't create the shelf. Please try again."
+      );
     }
-    onOpenChange(false);
   };
 
   return (

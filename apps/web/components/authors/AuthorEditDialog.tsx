@@ -7,6 +7,7 @@ import type { AuthorFormValues } from "@chaptercheck/shared/validations/author";
 import { useMutation } from "convex/react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { handleMutationError } from "@/lib/handle-mutation-error";
 
 import { AuthorForm } from "./AuthorForm";
 
@@ -28,13 +29,17 @@ export function AuthorEditDialog({ author, open, onOpenChange }: AuthorEditDialo
   const { imageUrl } = useImageUrl(author.imageR2Key);
 
   const handleSubmit = async (values: AuthorFormValues) => {
-    await updateAuthor({
-      authorId: author._id,
-      name: values.name,
-      bio: values.bio || undefined,
-      imageR2Key: values.imageR2Key,
-    });
-    onOpenChange(false);
+    try {
+      await updateAuthor({
+        authorId: author._id,
+        name: values.name,
+        bio: values.bio || undefined,
+        imageR2Key: values.imageR2Key,
+      });
+      onOpenChange(false);
+    } catch (err) {
+      handleMutationError(err, "Couldn't save your changes. Please try again.");
+    }
   };
 
   return (

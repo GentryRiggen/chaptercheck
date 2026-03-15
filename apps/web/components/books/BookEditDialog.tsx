@@ -7,6 +7,7 @@ import type { BookFormValues } from "@chaptercheck/shared/validations/book";
 import { useMutation } from "convex/react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { handleMutationError } from "@/lib/handle-mutation-error";
 
 import { BookForm } from "./BookForm";
 
@@ -35,21 +36,25 @@ export function BookEditDialog({ book, open, onOpenChange }: BookEditDialogProps
   const { imageUrl } = useImageUrl(book.coverImageR2Key);
 
   const handleSubmit = async (values: BookFormValues) => {
-    await updateBook({
-      bookId: book._id,
-      title: values.title,
-      subtitle: values.subtitle || undefined,
-      description: values.description || undefined,
-      isbn: values.isbn || undefined,
-      publishedYear: values.publishedYear ?? undefined,
-      language: values.language || undefined,
-      coverImageR2Key: values.coverImageR2Key,
-      seriesId: values.seriesId as Id<"series"> | undefined,
-      seriesOrder: values.seriesOrder ?? undefined,
-      authorIds: values.authorIds as Id<"authors">[] | undefined,
-      genreIds: values.genreIds as Id<"genres">[] | undefined,
-    });
-    onOpenChange(false);
+    try {
+      await updateBook({
+        bookId: book._id,
+        title: values.title,
+        subtitle: values.subtitle || undefined,
+        description: values.description || undefined,
+        isbn: values.isbn || undefined,
+        publishedYear: values.publishedYear ?? undefined,
+        language: values.language || undefined,
+        coverImageR2Key: values.coverImageR2Key,
+        seriesId: values.seriesId as Id<"series"> | undefined,
+        seriesOrder: values.seriesOrder ?? undefined,
+        authorIds: values.authorIds as Id<"authors">[] | undefined,
+        genreIds: values.genreIds as Id<"genres">[] | undefined,
+      });
+      onOpenChange(false);
+    } catch (err) {
+      handleMutationError(err, "Couldn't save your changes. Please try again.");
+    }
   };
 
   return (

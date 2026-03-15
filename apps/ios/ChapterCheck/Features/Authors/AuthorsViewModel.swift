@@ -104,6 +104,16 @@ final class AuthorsViewModel {
         searchDebounceTask?.cancel()
     }
 
+    func refresh() async {
+        unsubscribe()
+        isLoading = true
+        error = nil
+        subscribe()
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     /// Transition from offline data to live Convex subscriptions.
     func recoverFromOffline() {
         guard isShowingOfflineData else { return }
@@ -197,7 +207,7 @@ final class AuthorsViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("author search FAILED: \(error)")
-                        self?.error = error.localizedDescription
+                        self?.error = userFacingMessage(from: error, fallback: "Unable to load authors")
                         self?.isLoading = false
                         self?.authObserver.needsResubscription()
                     }
@@ -227,7 +237,7 @@ final class AuthorsViewModel {
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
                         self?.logger.error("authorList FAILED: \(error)")
-                        self?.error = error.localizedDescription
+                        self?.error = userFacingMessage(from: error, fallback: "Unable to load authors")
                         self?.isLoading = false
                         self?.isLoadingMore = false
                         self?.authObserver.needsResubscription()

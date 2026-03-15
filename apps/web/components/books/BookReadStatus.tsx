@@ -59,8 +59,8 @@ export function BookReadStatus({ bookId }: BookReadStatusProps) {
       await markAsRead({ bookId });
       toast.success("Unmarked as read");
       setUnmarkDialogOpen(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update");
+    } catch {
+      toast.error("Couldn't update. Please try again.");
     } finally {
       setIsUnmarking(false);
     }

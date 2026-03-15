@@ -122,7 +122,7 @@ struct EditProfileView: View {
                             do {
                                 try await UserRepository().updateProfilePrivacy(isPrivate: newValue)
                             } catch {
-                                errorMessage = "Failed to update privacy setting."
+                                errorMessage = "Couldn't update privacy setting. Please try again."
                                 isProfilePrivate = !newValue
                             }
                         }

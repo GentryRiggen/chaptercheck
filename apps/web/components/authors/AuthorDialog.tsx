@@ -7,6 +7,7 @@ import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { handleMutationError } from "@/lib/handle-mutation-error";
 
 import { AuthorForm } from "./AuthorForm";
 
@@ -29,15 +30,19 @@ export function AuthorDialog({
   const createAuthor = useMutation(api.authors.mutations.createAuthor);
 
   const handleSubmit = async (values: AuthorFormValues) => {
-    const authorId = await createAuthor({
-      name: values.name,
-      bio: values.bio || undefined,
-      imageR2Key: values.imageR2Key,
-    });
-    onOpenChange(false);
-    onCreated?.(authorId);
-    if (navigateOnCreate && !onCreated) {
-      router.push(`/authors/${authorId}`);
+    try {
+      const authorId = await createAuthor({
+        name: values.name,
+        bio: values.bio || undefined,
+        imageR2Key: values.imageR2Key,
+      });
+      onOpenChange(false);
+      onCreated?.(authorId);
+      if (navigateOnCreate && !onCreated) {
+        router.push(`/authors/${authorId}`);
+      }
+    } catch (err) {
+      handleMutationError(err, "Couldn't create the author. Please try again.");
     }
   };
 

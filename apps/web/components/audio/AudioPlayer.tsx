@@ -43,8 +43,8 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
           audioFileId: audioFile._id,
         });
         setAudioUrl(streamUrl);
-      } catch (err) {
-        console.error("Failed to load audio:", err);
+      } catch {
+        toast.error("Couldn't load the audio. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -96,8 +96,8 @@ export function AudioPlayer({ audioFile, onDelete }: AudioPlayerProps) {
       await deleteAudioFile({ audioFileId: audioFile._id });
       toast.success("Audio file deleted");
       onDelete?.();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete audio file");
+    } catch {
+      toast.error("Couldn't delete the audio file. Please try again.");
     }
   };
 

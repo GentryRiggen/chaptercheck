@@ -545,6 +545,25 @@ final class AudioPlayerManager {
         play(book: book, audioFile: audioFile, allFiles: audioFiles, startPosition: 0, rate: playbackRate)
     }
 
+    /// Clear the current error without stopping playback.
+    func clearError() {
+        error = nil
+    }
+
+    /// Retry playback using the last known track, clearing any current error.
+    ///
+    /// Uses the `currentBook` and `currentAudioFile` already stored on the manager.
+    /// Seeks back to `currentPosition` so the user resumes from where they were.
+    func retryLastTrack() {
+        guard let audioFile = currentAudioFile else { return }
+        error = nil
+        isLoading = true
+        let resumePosition = currentPosition
+        Task {
+            await loadAndPlay(audioFile: audioFile, startPosition: resumePosition)
+        }
+    }
+
     /// Stop playback and clear all state.
     func stop() {
         saveProgressNow(forceRemoteSync: true)
@@ -639,7 +658,7 @@ final class AudioPlayerManager {
                     self.loadCoverArtwork()
 
                 case .failed:
-                    self.error = "Failed to load audio. Please try again."
+                    self.error = "Couldn't load the audio. Please try again."
                     self.isLoading = false
                     self.logger.error("Player item failed: \(item.error?.localizedDescription ?? "unknown")")
                     if let playerError = item.error {
