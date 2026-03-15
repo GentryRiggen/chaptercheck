@@ -10,6 +10,7 @@ struct ProfileView: View {
     let userId: String
 
     @State private var viewModel = ProfileViewModel()
+    @State private var selectedStatDestination: AppDestination?
     @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
@@ -24,6 +25,20 @@ struct ProfileView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $selectedStatDestination) { destination in
+            switch destination {
+            case .allReadingHistory(let id):
+                AllReadingHistoryView(userId: id)
+            case .allUserReviews(let id):
+                AllUserReviewsView(userId: id)
+            case .followers(let id):
+                FollowListView(userId: id, mode: .followers)
+            case .following(let id):
+                FollowListView(userId: id, mode: .following)
+            default:
+                EmptyView()
+            }
+        }
         .onAppear { viewModel.subscribe(userId: userId) }
         .onDisappear { viewModel.unsubscribe() }
     }
@@ -179,9 +194,19 @@ struct ProfileView: View {
         Section {
             VStack(spacing: 0) {
                 HStack {
-                    statCell(value: stats.booksReadInt, label: "Books Read")
+                    Button {
+                        selectedStatDestination = .allReadingHistory(userId: userId)
+                    } label: {
+                        statCell(value: stats.booksReadInt, label: "Books Read", navigates: true)
+                    }
+                    .buttonStyle(.plain)
                     Divider()
-                    statCell(value: stats.reviewsWrittenInt, label: "Reviews")
+                    Button {
+                        selectedStatDestination = .allUserReviews(userId: userId)
+                    } label: {
+                        statCell(value: stats.reviewsWrittenInt, label: "Reviews", navigates: true)
+                    }
+                    .buttonStyle(.plain)
                     Divider()
                     statCell(value: stats.shelvesCountInt, label: "Shelves")
                 }
@@ -192,13 +217,17 @@ struct ProfileView: View {
                 Divider()
 
                 HStack {
-                    NavigationLink(value: AppDestination.followers(userId: userId)) {
-                        statCell(value: viewModel.followersCount, label: "Followers")
+                    Button {
+                        selectedStatDestination = .followers(userId: userId)
+                    } label: {
+                        statCell(value: viewModel.followersCount, label: "Followers", navigates: true)
                     }
                     .buttonStyle(.plain)
                     Divider()
-                    NavigationLink(value: AppDestination.following(userId: userId)) {
-                        statCell(value: viewModel.followingCount, label: "Following")
+                    Button {
+                        selectedStatDestination = .following(userId: userId)
+                    } label: {
+                        statCell(value: viewModel.followingCount, label: "Following", navigates: true)
                     }
                     .buttonStyle(.plain)
                 }
@@ -209,14 +238,23 @@ struct ProfileView: View {
         }
     }
 
-    private func statCell(value: Int, label: String) -> some View {
+    private func statCell(value: Int, label: String, navigates: Bool = false) -> some View {
         VStack(spacing: 4) {
             Text("\(value)")
                 .font(.title2)
                 .fontWeight(.bold)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(navigates ? Color.accentColor : .primary)
+            HStack(spacing: 2) {
+                Text(label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if navigates {
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.tertiary)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
     }
