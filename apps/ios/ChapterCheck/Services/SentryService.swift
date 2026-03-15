@@ -56,7 +56,13 @@ enum SentryService {
             options.enableCrashHandler = true
             options.enableAutoSessionTracking = true
 
-            // Reduce noise: silence the Sentry console output in production.
+            // Only capture HTTP errors from our own backend (Convex).
+            // Third-party services (Clerk, Apple, etc.) produce transient 5xx
+            // errors that are not actionable and create noise.
+            options.enableCaptureFailedRequests = true
+            if let host = URL(string: AppEnvironment.convexUrl)?.host {
+                options.failedRequestTargets = [host]
+            }
         }
     }
 
