@@ -9,6 +9,9 @@ struct ChapterCheckApp: App {
     private let networkMonitor = NetworkMonitor.shared
 
     init() {
+        // Sentry must be initialized before any other SDKs so that crashes
+        // during Clerk/Convex setup are captured correctly.
+        SentryService.start()
         Clerk.configure(publishableKey: AppEnvironment.clerkPublishableKey)
     }
 

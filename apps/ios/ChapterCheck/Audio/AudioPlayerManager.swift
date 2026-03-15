@@ -605,6 +605,11 @@ final class AudioPlayerManager {
             self.error = "Unable to load audio. Please try again."
             isLoading = false
             logger.error("Failed to load stream URL: \(error.localizedDescription)")
+            SentryService.capture(
+                error,
+                context: "AudioPlayerManager.loadStream",
+                extras: ["audioFileId": audioFile._id, "bookId": currentBook?._id ?? "unknown"]
+            )
         }
     }
 
@@ -637,6 +642,26 @@ final class AudioPlayerManager {
                     self.error = "Failed to load audio. Please try again."
                     self.isLoading = false
                     self.logger.error("Player item failed: \(item.error?.localizedDescription ?? "unknown")")
+                    if let playerError = item.error {
+                        SentryService.capture(
+                            playerError,
+                            context: "AudioPlayerManager.playerItem.failed",
+                            extras: [
+                                "audioFileId": self.currentAudioFile?._id ?? "unknown",
+                                "bookId": self.currentBook?._id ?? "unknown"
+                            ]
+                        )
+                    } else {
+                        SentryService.capture(
+                            message: "AVPlayerItem entered failed state with no error object",
+                            level: .error,
+                            context: "AudioPlayerManager.playerItem.failed",
+                            extras: [
+                                "audioFileId": self.currentAudioFile?._id ?? "unknown",
+                                "bookId": self.currentBook?._id ?? "unknown"
+                            ]
+                        )
+                    }
 
                 default:
                     break

@@ -407,6 +407,11 @@ actor DownloadService {
             saveManifestToDisk()
 
             logger.error("Download failed for '\(audioFileId)': \(error.localizedDescription)")
+            SentryService.capture(
+                error,
+                context: "DownloadService.performDownload",
+                extras: ["audioFileId": audioFileId, "bookId": bookId]
+            )
             continuation.finish()
         }
 

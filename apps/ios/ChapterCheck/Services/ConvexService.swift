@@ -122,8 +122,15 @@ final class ConvexService: ObservableObject {
             NotificationCenter.default.post(name: .convexReconnected, object: nil)
             webSocketRecoveryTask?.cancel()
             webSocketRecoveryTask = nil
+            SentryService.addBreadcrumb(message: "Convex WebSocket connected", category: "convex")
         } else if wasConnected && !nowConnected {
             logger.info("WebSocket disconnected (state: \(String(describing: state)))")
+            SentryService.addBreadcrumb(
+                message: "Convex WebSocket disconnected",
+                category: "convex",
+                level: .warning,
+                data: ["state": String(describing: state)]
+            )
             startWebSocketRecoveryWatchdog()
         }
     }
@@ -149,6 +156,13 @@ final class ConvexService: ObservableObject {
     private func handleClientError(_ error: Error, context: String) {
         guard isAuthError(error) else { return }
         logger.error("Auth error in \(context): \(error.localizedDescription)")
+
+        SentryService.addBreadcrumb(
+            message: "Convex auth error in \(context)",
+            category: "convex",
+            level: .warning,
+            data: ["context": context, "error": error.localizedDescription]
+        )
 
         guard networkMonitor.isConnected, Clerk.shared.session != nil else { return }
 
@@ -279,6 +293,12 @@ final class ConvexService: ObservableObject {
         lastResetAt = now
         isResetting = true
         logger.notice("Resetting app session: \(reason, privacy: .public)")
+        SentryService.addBreadcrumb(
+            message: "App session reset: \(reason)",
+            category: "convex",
+            level: .warning,
+            data: ["reason": reason]
+        )
 
         tokenRefreshTask?.cancel()
         tokenRefreshTask = nil
