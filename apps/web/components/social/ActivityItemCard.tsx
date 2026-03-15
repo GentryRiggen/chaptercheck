@@ -10,7 +10,7 @@ import { StarRating } from "@/components/books/StarRating";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 
-interface ActivityItem {
+export interface ActivityItem {
   _id: string;
   type: "review" | "shelf_add" | "public_note";
   timestamp: number;

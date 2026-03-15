@@ -2,16 +2,69 @@
 
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { useAuthReady } from "@chaptercheck/shared/hooks/useAuthReady";
+import { useDebounce } from "@chaptercheck/shared/hooks/useDebounce";
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { Activity, Loader2, LogIn, UserPlus } from "lucide-react";
+import {
+  Activity,
+  BookmarkPlus,
+  Loader2,
+  LogIn,
+  MessageSquareText,
+  Search,
+  Star,
+  UserPlus,
+  X,
+} from "lucide-react";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useMemo, useState } from "react";
 
-import { ActivityItemCard } from "@/components/social/ActivityItemCard";
+import { type ActivityItem, ActivityItemCard } from "@/components/social/ActivityItemCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageTitle } from "@/hooks/usePageTitle";
+
+type ActivityType = "all" | "review" | "shelf_add" | "public_note";
+
+const ACTIVITY_TYPE_FILTERS: { value: ActivityType; label: string; icon: React.ElementType }[] = [
+  { value: "all", label: "All", icon: Activity },
+  { value: "review", label: "Reviews", icon: Star },
+  { value: "shelf_add", label: "Shelf Adds", icon: BookmarkPlus },
+  { value: "public_note", label: "Notes", icon: MessageSquareText },
+];
+
+function useFilteredActivity(
+  items: ActivityItem[] | undefined,
+  searchQuery: string,
+  typeFilter: ActivityType
+): ActivityItem[] | undefined {
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  return useMemo(() => {
+    if (!items) return undefined;
+
+    let filtered = items;
+
+    if (typeFilter !== "all") {
+      filtered = filtered.filter((item) => item.type === typeFilter);
+    }
+
+    const trimmed = debouncedSearch.trim().toLowerCase();
+    if (trimmed) {
+      filtered = filtered.filter(
+        (item) =>
+          item.book.title.toLowerCase().includes(trimmed) ||
+          (item.user.name && item.user.name.toLowerCase().includes(trimmed)) ||
+          (item.reviewText && item.reviewText.toLowerCase().includes(trimmed)) ||
+          (item.noteText && item.noteText.toLowerCase().includes(trimmed)) ||
+          (item.shelfName && item.shelfName.toLowerCase().includes(trimmed))
+      );
+    }
+
+    return filtered;
+  }, [items, debouncedSearch, typeFilter]);
+}
 
 export default function SocialPage() {
   return (
@@ -25,6 +78,10 @@ function SocialPageContent() {
   usePageTitle("Social");
   const { shouldSkipQuery, isAuthLoading } = useAuthReady();
   const { isSignedIn } = useAuth();
+  const [searchInput, setSearchInput] = useState("");
+  const [typeFilter, setTypeFilter] = useState<ActivityType>("all");
+
+  const hasActiveFilters = searchInput.trim().length > 0 || typeFilter !== "all";
 
   if (!isSignedIn && !isAuthLoading) {
     return (
@@ -51,6 +108,56 @@ function SocialPageContent() {
       <main className="mx-auto max-w-2xl px-3 py-4 pb-24 sm:px-6 sm:py-6 lg:px-8">
         <h1 className="mb-6 text-2xl font-bold">Social</h1>
 
+        {/* Search and filters */}
+        <div className="mb-4 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by book, person, or content..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-9 pr-9"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto">
+            {ACTIVITY_TYPE_FILTERS.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                onClick={() => setTypeFilter(value)}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  typeFilter === value
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border/50 bg-card/50 text-muted-foreground hover:bg-card/80 hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3 w-3" />
+                {label}
+              </button>
+            ))}
+            {hasActiveFilters && (
+              <button
+                onClick={() => {
+                  setSearchInput("");
+                  setTypeFilter("all");
+                }}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/50 bg-card/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-card/80 hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
         <Tabs defaultValue="following">
           <TabsList className="mb-4 w-full">
             <TabsTrigger value="following" className="flex-1">
@@ -62,11 +169,21 @@ function SocialPageContent() {
           </TabsList>
 
           <TabsContent value="following">
-            <FollowingFeed shouldSkipQuery={shouldSkipQuery} isAuthLoading={isAuthLoading} />
+            <FollowingFeed
+              shouldSkipQuery={shouldSkipQuery}
+              isAuthLoading={isAuthLoading}
+              searchQuery={searchInput}
+              typeFilter={typeFilter}
+            />
           </TabsContent>
 
           <TabsContent value="discover">
-            <DiscoverFeed shouldSkipQuery={shouldSkipQuery} isAuthLoading={isAuthLoading} />
+            <DiscoverFeed
+              shouldSkipQuery={shouldSkipQuery}
+              isAuthLoading={isAuthLoading}
+              searchQuery={searchInput}
+              typeFilter={typeFilter}
+            />
           </TabsContent>
         </Tabs>
       </main>
@@ -74,14 +191,16 @@ function SocialPageContent() {
   );
 }
 
-function FollowingFeed({
-  shouldSkipQuery,
-  isAuthLoading,
-}: {
+interface FeedProps {
   shouldSkipQuery: boolean;
   isAuthLoading: boolean;
-}) {
+  searchQuery: string;
+  typeFilter: ActivityType;
+}
+
+function FollowingFeed({ shouldSkipQuery, isAuthLoading, searchQuery, typeFilter }: FeedProps) {
   const activityFeed = useQuery(api.follows.queries.getActivityFeed, shouldSkipQuery ? "skip" : {});
+  const filteredFeed = useFilteredActivity(activityFeed, searchQuery, typeFilter);
 
   const isLoading = !shouldSkipQuery && activityFeed === undefined;
 
@@ -108,26 +227,31 @@ function FollowingFeed({
     );
   }
 
+  if (filteredFeed && filteredFeed.length === 0) {
+    return (
+      <div className="rounded-xl border border-border/50 bg-card/50 p-8 text-center">
+        <Search className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+        <p className="mb-1 font-medium text-foreground">No matching activity</p>
+        <p className="text-sm text-muted-foreground">Try a different search term or filter.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      {activityFeed.map((item) => (
+      {filteredFeed?.map((item) => (
         <ActivityItemCard key={item._id} item={item} />
       ))}
     </div>
   );
 }
 
-function DiscoverFeed({
-  shouldSkipQuery,
-  isAuthLoading,
-}: {
-  shouldSkipQuery: boolean;
-  isAuthLoading: boolean;
-}) {
+function DiscoverFeed({ shouldSkipQuery, isAuthLoading, searchQuery, typeFilter }: FeedProps) {
   const communityActivity = useQuery(
     api.follows.queries.getCommunityActivity,
     shouldSkipQuery ? "skip" : {}
   );
+  const filteredFeed = useFilteredActivity(communityActivity, searchQuery, typeFilter);
 
   const isLoading = !shouldSkipQuery && communityActivity === undefined;
 
@@ -151,9 +275,19 @@ function DiscoverFeed({
     );
   }
 
+  if (filteredFeed && filteredFeed.length === 0) {
+    return (
+      <div className="rounded-xl border border-border/50 bg-card/50 p-8 text-center">
+        <Search className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+        <p className="mb-1 font-medium text-foreground">No matching activity</p>
+        <p className="text-sm text-muted-foreground">Try a different search term or filter.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      {communityActivity.map((item) => (
+      {filteredFeed?.map((item) => (
         <ActivityItemCard key={item._id} item={item} />
       ))}
     </div>
