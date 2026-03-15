@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Plus,
   Settings,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -25,6 +26,7 @@ import { LibraryBookCard } from "@/components/books/LibraryBookCard";
 import { StarRating } from "@/components/books/StarRating";
 import { ShelfCard } from "@/components/shelves/ShelfCard";
 import { ShelfDialog } from "@/components/shelves/ShelfDialog";
+import { FollowButton } from "@/components/social/FollowButton";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -109,11 +111,37 @@ export default function UserProfilePage() {
 
           {/* Info */}
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-2xl font-bold sm:text-3xl">{profile.name || "Anonymous User"}</h1>
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <h1 className="text-2xl font-bold sm:text-3xl">{profile.name || "Anonymous User"}</h1>
+              {!profile.isOwnProfile && userId && <FollowButton targetUserId={userId} />}
+            </div>
+
+            {/* Follower / Following counts */}
+            <div className="mt-3 flex items-center justify-center gap-4 text-sm sm:justify-start sm:gap-6">
+              <Link
+                href={`/users/${userId}/followers`}
+                className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Users className="h-4 w-4" />
+                <span>
+                  <span className="font-medium text-foreground">{profile.followersCount}</span>{" "}
+                  {profile.followersCount === 1 ? "follower" : "followers"}
+                </span>
+              </Link>
+              <Link
+                href={`/users/${userId}/following`}
+                className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <span>
+                  <span className="font-medium text-foreground">{profile.followingCount}</span>{" "}
+                  following
+                </span>
+              </Link>
+            </div>
 
             {/* Stats row - only show if profile is public or own profile */}
             {profile.stats && (
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground sm:justify-start sm:gap-6">
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground sm:justify-start sm:gap-6">
                 <div className="flex items-center gap-1.5">
                   <Book className="h-4 w-4" />
                   <span>

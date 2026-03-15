@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { BookOpen, Home, Menu, Users } from "lucide-react";
+import { Activity, BookOpen, Home, Menu, StickyNote, Users, UserSearch } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -31,6 +31,9 @@ export function Navigation() {
         { href: "/", label: "Home", icon: Home },
         { href: "/books", label: "Books", icon: BookOpen },
         { href: "/authors", label: "Authors", icon: Users },
+        { href: "/social", label: "Social", icon: Activity },
+        { href: "/notes", label: "Notes", icon: StickyNote },
+        { href: "/people", label: "People", icon: UserSearch },
       ]
     : [{ href: "/", label: "Home", icon: Home }];
 
