@@ -578,7 +578,7 @@ struct NowPlayingView: View {
             .overlay(
                 Capsule()
                     .strokeBorder(
-                        Color.white.opacity(0.15),
+                        Color.primary.opacity(0.15),
                         lineWidth: 0.75
                     )
             )
@@ -598,7 +598,7 @@ struct NowPlayingView: View {
                 .overlay(
                     Circle()
                         .strokeBorder(
-                            Color.white.opacity(0.15),
+                            Color.primary.opacity(0.15),
                             lineWidth: 0.75
                         )
                 )

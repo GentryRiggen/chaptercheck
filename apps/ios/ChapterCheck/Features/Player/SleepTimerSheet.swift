@@ -129,6 +129,10 @@ struct SleepTimerSheet: View {
     private func formatMinutesLabel(_ minutes: Double) -> String {
         if minutes >= 60 {
             let hours = Int(minutes) / 60
+            let remainingMinutes = Int(minutes) % 60
+            if remainingMinutes > 0 {
+                return "\(hours)h \(remainingMinutes)m"
+            }
             return "\(hours)h"
         }
         return "\(Int(minutes))m"
