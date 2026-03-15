@@ -39,6 +39,7 @@ struct BookReadStatusView: View {
                     .foregroundStyle(status.color)
                 Text(status.label)
                     .fontWeight(.medium)
+                    .fixedSize()
 
                 if status == .finished, let rating = userData?.ratingInt {
                     RatingView(rating: Double(rating), size: 13)
@@ -91,7 +92,7 @@ struct BookReadStatusView: View {
     private var accessibilityLabel: String {
         if let status = currentStatus {
             if status == .finished, let rating = userData?.ratingInt {
-                return "\(status.label), rated \(rating) out of 3 stars"
+                return "\(status.label), rated \(rating) out of 5 stars"
             }
             return status.label
         }
