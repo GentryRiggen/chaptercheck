@@ -9,6 +9,32 @@ enum SocialTab: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum ActivityTypeFilter: String, CaseIterable, Identifiable {
+    case all = "All"
+    case review = "Reviews"
+    case shelfAdd = "Shelf Adds"
+    case publicNote = "Notes"
+    var id: String { rawValue }
+
+    var systemImage: String {
+        switch self {
+        case .all: "list.bullet"
+        case .review: "star"
+        case .shelfAdd: "bookmark"
+        case .publicNote: "text.quote"
+        }
+    }
+
+    var matchesType: ((ActivityItemType) -> Bool) {
+        switch self {
+        case .all: { _ in true }
+        case .review: { $0 == .review }
+        case .shelfAdd: { $0 == .shelfAdd }
+        case .publicNote: { $0 == .publicNote }
+        }
+    }
+}
+
 @Observable
 @MainActor
 final class SocialViewModel {
@@ -21,6 +47,43 @@ final class SocialViewModel {
     var following: [FollowedUser] = []
     var isLoading = true
     var error: String?
+
+    // MARK: - Search & Filter
+
+    var searchText = ""
+    var typeFilter: ActivityTypeFilter = .all
+
+    var hasActiveFilters: Bool {
+        !searchText.trimmingCharacters(in: .whitespaces).isEmpty || typeFilter != .all
+    }
+
+    var filteredActivityFeed: [ActivityItem] {
+        filterItems(activityFeed)
+    }
+
+    var filteredCommunityActivity: [ActivityItem] {
+        filterItems(communityActivity)
+    }
+
+    func clearFilters() {
+        searchText = ""
+        typeFilter = .all
+    }
+
+    private func filterItems(_ items: [ActivityItem]) -> [ActivityItem] {
+        var result = items
+
+        if typeFilter != .all {
+            result = result.filter { typeFilter.matchesType($0.type) }
+        }
+
+        let trimmed = searchText.trimmingCharacters(in: .whitespaces)
+        if !trimmed.isEmpty {
+            result = result.filter { $0.matchesSearchText(trimmed) }
+        }
+
+        return result
+    }
 
     // MARK: - Computed
 

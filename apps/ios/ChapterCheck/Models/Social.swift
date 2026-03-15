@@ -37,6 +37,15 @@ struct ActivityItem: Decodable, Identifiable {
     let sourceText: String?
 
     var id: String { _id }
+
+    func matchesSearchText(_ text: String) -> Bool {
+        let lowered = text.lowercased()
+        return book.title.lowercased().contains(lowered)
+            || (user.name?.lowercased().contains(lowered) ?? false)
+            || (reviewText?.lowercased().contains(lowered) ?? false)
+            || (noteText?.lowercased().contains(lowered) ?? false)
+            || (shelfName?.lowercased().contains(lowered) ?? false)
+    }
 }
 
 struct ActivityUser: Decodable, Hashable {

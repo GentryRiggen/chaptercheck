@@ -15,10 +15,11 @@ struct SocialView: View {
             }
         }
         .navigationTitle("Social")
+        .searchable(text: $viewModel.searchText, prompt: "Search by book, person, or content")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink(value: AppDestination.userSearch) {
-                    Image(systemName: "magnifyingglass")
+                    Image(systemName: "person.badge.plus")
                 }
                 .disabled(viewModel.isOffline)
             }
@@ -47,6 +48,9 @@ struct SocialView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
+
+                // Activity type filter chips
+                filterChips
 
                 // Tab content
                 switch viewModel.selectedTab {
@@ -100,8 +104,10 @@ struct SocialView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
                 .padding(.top, 40)
+        } else if viewModel.filteredActivityFeed.isEmpty {
+            noMatchingActivity
         } else {
-            feedList(items: viewModel.activityFeed)
+            feedList(items: viewModel.filteredActivityFeed)
         }
     }
 
@@ -115,9 +121,22 @@ struct SocialView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
                 .padding(.top, 40)
+        } else if viewModel.filteredCommunityActivity.isEmpty {
+            noMatchingActivity
         } else {
-            feedList(items: viewModel.communityActivity)
+            feedList(items: viewModel.filteredCommunityActivity)
         }
+    }
+
+    // MARK: - No Results
+
+    private var noMatchingActivity: some View {
+        ContentUnavailableView(
+            "No Matching Activity",
+            systemImage: "magnifyingglass",
+            description: Text("Try a different search term or filter.")
+        )
+        .padding(.top, 20)
     }
 
     // MARK: - Shared Feed List
@@ -133,6 +152,57 @@ struct SocialView: View {
                         .padding(.horizontal)
                 }
             }
+        }
+    }
+
+    // MARK: - Filter Chips
+
+    private var filterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ActivityTypeFilter.allCases) { filter in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.typeFilter = filter
+                        }
+                    } label: {
+                        Label(filter.rawValue, systemImage: filter.systemImage)
+                            .font(.caption.weight(.medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background {
+                                Capsule().fill(
+                                    viewModel.typeFilter == filter
+                                        ? Color.accentColor.opacity(0.15)
+                                        : Color(.tertiarySystemFill)
+                                )
+                            }
+                            .foregroundStyle(
+                                viewModel.typeFilter == filter
+                                    ? Color.accentColor
+                                    : .secondary
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if viewModel.hasActiveFilters {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.clearFilters()
+                        }
+                    } label: {
+                        Label("Clear", systemImage: "xmark")
+                            .font(.caption.weight(.medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(Color(.tertiarySystemFill)))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
         }
     }
 
