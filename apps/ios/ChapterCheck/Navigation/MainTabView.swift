@@ -41,6 +41,25 @@ private struct NavigateToDestinationKey: EnvironmentKey {
     static let defaultValue = NavigateToDestinationAction()
 }
 
+// MARK: - Push Destination Environment Key
+
+/// Pushes a destination onto the active tab's NavigationStack path directly.
+struct PushDestinationAction {
+    private let action: (AppDestination) -> Void
+
+    init(_ action: @escaping (AppDestination) -> Void = { _ in }) {
+        self.action = action
+    }
+
+    func callAsFunction(_ destination: AppDestination) {
+        action(destination)
+    }
+}
+
+private struct PushDestinationKey: EnvironmentKey {
+    static let defaultValue = PushDestinationAction()
+}
+
 // MARK: - Show Settings Environment Key
 
 /// Callable wrapper for presenting the settings sheet from child views.
@@ -74,6 +93,11 @@ extension EnvironmentValues {
     var showSettings: ShowSettingsAction {
         get { self[ShowSettingsKey.self] }
         set { self[ShowSettingsKey.self] = newValue }
+    }
+
+    var pushDestination: PushDestinationAction {
+        get { self[PushDestinationKey.self] }
+        set { self[PushDestinationKey.self] = newValue }
     }
 }
 
@@ -190,6 +214,9 @@ struct MainView: View {
         .environment(\.showNowPlaying, ShowNowPlayingAction { isNowPlayingPresented = true })
         .environment(\.navigateToDestination, navigateAction)
         .environment(\.showSettings, ShowSettingsAction { isSettingsPresented = true })
+        .environment(\.pushDestination, PushDestinationAction { destination in
+            activePathBinding.wrappedValue.append(destination)
+        })
         .task {
             await downloadManager.initialize()
             audioPlayer.downloadManager = downloadManager

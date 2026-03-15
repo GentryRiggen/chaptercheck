@@ -37,11 +37,9 @@ struct FollowListView: View {
                     ForEach(users) { user in
                         UserAvatarRow(user: user)
                     }
-
-                    Color.clear
-                        .frame(height: 80)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    Spacer().frame(height: 80)
                 }
             }
         }

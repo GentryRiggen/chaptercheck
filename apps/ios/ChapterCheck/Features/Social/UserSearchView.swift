@@ -2,6 +2,7 @@ import SwiftUI
 
 struct UserSearchView: View {
     @State private var viewModel = UserSearchViewModel()
+    @State private var isSearchPresented = true
 
     var body: some View {
         List {
@@ -19,7 +20,7 @@ struct UserSearchView: View {
         .listStyle(.plain)
         .navigationTitle("Find People")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $viewModel.searchText, prompt: "Search by name")
+        .searchable(text: $viewModel.searchText, isPresented: $isSearchPresented, prompt: "Search by name")
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.onSearchTextChanged()
         }

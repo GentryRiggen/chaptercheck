@@ -7,13 +7,18 @@ struct FollowButton: View {
 
     @State private var isFollowing = false
     @State private var isLoading = true
+    @State private var showUnfollowConfirmation = false
     @State private var cancellable: AnyCancellable?
     @State private var authObserver = ConvexAuthObserver()
     private let socialRepository = SocialRepository()
 
     var body: some View {
         Button {
-            Task { await toggleFollow() }
+            if isFollowing {
+                showUnfollowConfirmation = true
+            } else {
+                Task { await toggleFollow() }
+            }
         } label: {
             Text(isFollowing ? "Following" : "Follow")
                 .font(.subheadline.weight(.semibold))
@@ -28,6 +33,11 @@ struct FollowButton: View {
         .buttonStyle(.plain)
         .opacity(isLoading ? 0.5 : 1)
         .disabled(isLoading)
+        .confirmationDialog("Unfollow this person?", isPresented: $showUnfollowConfirmation, titleVisibility: .visible) {
+            Button("Unfollow", role: .destructive) {
+                Task { await toggleFollow() }
+            }
+        }
         .onAppear { startSubscription() }
         .onDisappear {
             authObserver.cancel()

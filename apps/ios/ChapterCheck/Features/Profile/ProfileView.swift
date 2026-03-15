@@ -10,8 +10,8 @@ struct ProfileView: View {
     let userId: String
 
     @State private var viewModel = ProfileViewModel()
-    @State private var selectedStatDestination: AppDestination?
     @Environment(ThemeManager.self) private var themeManager
+    @Environment(\.pushDestination) private var pushDestination
 
     var body: some View {
         Group {
@@ -25,20 +25,6 @@ struct ProfileView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(item: $selectedStatDestination) { destination in
-            switch destination {
-            case .allReadingHistory(let id):
-                AllReadingHistoryView(userId: id)
-            case .allUserReviews(let id):
-                AllUserReviewsView(userId: id)
-            case .followers(let id):
-                FollowListView(userId: id, mode: .followers)
-            case .following(let id):
-                FollowListView(userId: id, mode: .following)
-            default:
-                EmptyView()
-            }
-        }
         .onAppear { viewModel.subscribe(userId: userId) }
         .onDisappear { viewModel.unsubscribe() }
     }
@@ -144,10 +130,9 @@ struct ProfileView: View {
                 }
             }
 
-            Color.clear
-                .frame(height: 80)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+        }
+        .safeAreaInset(edge: .bottom) {
+            Spacer().frame(height: 80)
         }
     }
 
@@ -193,16 +178,16 @@ struct ProfileView: View {
     private func statsSection(_ stats: UserProfileStats) -> some View {
         Section {
             VStack(spacing: 0) {
-                HStack {
+                HStack(spacing: 0) {
                     Button {
-                        selectedStatDestination = .allReadingHistory(userId: userId)
+                        pushDestination(.allReadingHistory(userId: userId))
                     } label: {
                         statCell(value: stats.booksReadInt, label: "Books Read", navigates: true)
                     }
                     .buttonStyle(.plain)
                     Divider()
                     Button {
-                        selectedStatDestination = .allUserReviews(userId: userId)
+                        pushDestination(.allUserReviews(userId: userId))
                     } label: {
                         statCell(value: stats.reviewsWrittenInt, label: "Reviews", navigates: true)
                     }
@@ -212,20 +197,20 @@ struct ProfileView: View {
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
+                .padding(.vertical, 12)
 
                 Divider()
 
-                HStack {
+                HStack(spacing: 0) {
                     Button {
-                        selectedStatDestination = .followers(userId: userId)
+                        pushDestination(.followers(userId: userId))
                     } label: {
                         statCell(value: viewModel.followersCount, label: "Followers", navigates: true)
                     }
                     .buttonStyle(.plain)
                     Divider()
                     Button {
-                        selectedStatDestination = .following(userId: userId)
+                        pushDestination(.following(userId: userId))
                     } label: {
                         statCell(value: viewModel.followingCount, label: "Following", navigates: true)
                     }
@@ -233,25 +218,24 @@ struct ProfileView: View {
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
+                .padding(.vertical, 12)
             }
         }
     }
 
     private func statCell(value: Int, label: String, navigates: Bool = false) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             Text("\(value)")
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundStyle(navigates ? Color.accentColor : .primary)
-            HStack(spacing: 2) {
+            HStack(spacing: 3) {
                 Text(label)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if navigates {
                     Image(systemName: "chevron.right")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(.tertiary)
                 }
             }
