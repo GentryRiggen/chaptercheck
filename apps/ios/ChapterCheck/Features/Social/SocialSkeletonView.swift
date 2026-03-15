@@ -3,14 +3,29 @@ import SwiftUI
 struct SocialSkeletonView: View {
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Section header
-                SkeletonView(shape: .rectangle, width: 120, height: 18, cornerRadius: 4)
+            VStack(spacing: 16) {
+                // Segmented picker placeholder
+                SkeletonView(shape: .rectangle, height: 32, cornerRadius: 8)
                     .padding(.horizontal)
 
+                // Filter chips placeholder
+                HStack(spacing: 8) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        SkeletonView(shape: .rectangle, width: 80, height: 28, cornerRadius: 14)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
+
                 // Activity items
-                ForEach(0..<4, id: \.self) { _ in
-                    activityItemSkeleton
+                VStack(spacing: 0) {
+                    ForEach(0..<5, id: \.self) { index in
+                        activityItemSkeleton
+                        if index < 4 {
+                            Divider()
+                                .padding(.horizontal)
+                        }
+                    }
                 }
 
                 Spacer().frame(height: 80)
@@ -22,19 +37,25 @@ struct SocialSkeletonView: View {
 
     private var activityItemSkeleton: some View {
         HStack(alignment: .top, spacing: 12) {
-            SkeletonView(shape: .circle, width: 32, height: 32)
+            // Book cover
+            SkeletonView(shape: .rectangle, width: 56, height: 56, cornerRadius: 6)
 
-            VStack(alignment: .leading, spacing: 8) {
-                SkeletonView(shape: .rectangle, width: 200, height: 14, cornerRadius: 4)
-
-                HStack(spacing: 10) {
-                    SkeletonView(shape: .rectangle, width: 40, height: 60, cornerRadius: 4)
-                    SkeletonView(shape: .rectangle, width: 140, height: 14, cornerRadius: 4)
+            VStack(alignment: .leading, spacing: 6) {
+                // User avatar + action text
+                HStack(spacing: 6) {
+                    SkeletonView(shape: .circle, width: 20, height: 20)
+                    SkeletonView(shape: .rectangle, width: 160, height: 12, cornerRadius: 3)
                 }
 
-                SkeletonView(shape: .rectangle, width: 60, height: 10, cornerRadius: 3)
+                // Book title
+                SkeletonView(shape: .rectangle, width: 180, height: 14, cornerRadius: 4)
+
+                // Timestamp
+                SkeletonView(shape: .rectangle, width: 50, height: 10, cornerRadius: 3)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
+        .padding(.vertical, 10)
     }
 }
