@@ -145,7 +145,8 @@ struct ProfileView: View {
     // MARK: - Sub-views
 
     private func profileHeader(_ profile: UserProfile) -> some View {
-        VStack(spacing: 10) {
+        HStack(spacing: 14) {
+            // Avatar
             if let imageUrl = profile.imageUrl, let url = URL(string: imageUrl) {
                 AsyncImage(url: url) { phase in
                     switch phase {
@@ -157,96 +158,115 @@ struct ProfileView: View {
                         avatarPlaceholder
                     }
                 }
-                .frame(width: 70, height: 70)
+                .frame(width: 56, height: 56)
                 .clipShape(Circle())
             } else {
                 avatarPlaceholder
             }
 
-            Text(profile.displayName)
-                .font(.title3)
-                .fontWeight(.semibold)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(profile.displayName)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+
+                if profile.isProfilePrivate {
+                    Label("Private", systemImage: "lock")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let stats = profile.stats {
+                    Text(memberSinceAndBooks(profile: profile, stats: stats))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
 
             if !profile.isOwnProfile {
                 FollowButton(userId: userId)
             }
-
-            if profile.isProfilePrivate {
-                Label("Private Profile", systemImage: "lock")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
+    }
+
+    private func memberSinceAndBooks(profile: UserProfile, stats: UserProfileStats) -> String {
+        let year = Calendar.current.component(.year, from: Date(timeIntervalSince1970: profile.createdAt / 1000))
+        let currentYear = Calendar.current.component(.year, from: Date())
+        let yearStr = year == currentYear ? "this year" : "since \(year)"
+        return "Joined \(yearStr) · \(stats.booksReadInt) books read"
     }
 
     private func statsSection(_ stats: UserProfileStats) -> some View {
         Section {
-            VStack(spacing: 0) {
-                HStack(spacing: 0) {
-                    Button {
-                        pushDestination(.allReadingHistory(userId: userId))
-                    } label: {
-                        statCell(value: stats.booksReadInt, label: "Books Read", navigates: true)
-                    }
-                    .buttonStyle(.plain)
-                    Divider()
-                    Button {
-                        pushDestination(.allUserReviews(userId: userId))
-                    } label: {
-                        statCell(value: stats.reviewsWrittenInt, label: "Reviews", navigates: true)
-                    }
-                    .buttonStyle(.plain)
-                    Divider()
-                    statCell(value: stats.shelvesCountInt, label: "Shelves")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    statPill(
+                        value: stats.booksReadInt,
+                        label: "Books",
+                        icon: "book.closed.fill",
+                        action: { pushDestination(.allReadingHistory(userId: userId)) }
+                    )
+                    statPill(
+                        value: stats.reviewsWrittenInt,
+                        label: "Reviews",
+                        icon: "star.fill",
+                        action: { pushDestination(.allUserReviews(userId: userId)) }
+                    )
+                    statPill(
+                        value: stats.shelvesCountInt,
+                        label: "Shelves",
+                        icon: "books.vertical.fill",
+                        action: nil
+                    )
+                    statPill(
+                        value: viewModel.followersCount,
+                        label: "Followers",
+                        icon: "person.2.fill",
+                        action: { pushDestination(.followers(userId: userId)) }
+                    )
+                    statPill(
+                        value: viewModel.followingCount,
+                        label: "Following",
+                        icon: "heart.fill",
+                        action: { pushDestination(.following(userId: userId)) }
+                    )
                 }
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-
-                Divider()
-
-                HStack(spacing: 0) {
-                    Button {
-                        pushDestination(.followers(userId: userId))
-                    } label: {
-                        statCell(value: viewModel.followersCount, label: "Followers", navigates: true)
-                    }
-                    .buttonStyle(.plain)
-                    Divider()
-                    Button {
-                        pushDestination(.following(userId: userId))
-                    } label: {
-                        statCell(value: viewModel.followingCount, label: "Following", navigates: true)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
             }
+            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
         }
     }
 
-    private func statCell(value: Int, label: String, navigates: Bool = false) -> some View {
-        VStack(spacing: 6) {
-            Text("\(value)")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundStyle(navigates ? Color.accentColor : .primary)
-            HStack(spacing: 3) {
+    private func statPill(value: Int, label: String, icon: String, action: (() -> Void)?) -> some View {
+        let content = HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(action != nil ? Color.accentColor : .secondary)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("\(value)")
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.primary)
                 Text(label)
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
-                if navigates {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.tertiary)
-                }
             }
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 10))
+
+        return Group {
+            if let action {
+                Button(action: action) { content }
+                    .buttonStyle(.plain)
+            } else {
+                content
+            }
+        }
     }
 
     private func profileShelfCard(_ shelf: Shelf) -> some View {
@@ -326,10 +346,10 @@ struct ProfileView: View {
     private var avatarPlaceholder: some View {
         Circle()
             .fill(themeManager.accentGradient)
-            .frame(width: 70, height: 70)
+            .frame(width: 56, height: 56)
             .overlay {
                 Image(systemName: "person.fill")
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundStyle(.white)
             }
     }
