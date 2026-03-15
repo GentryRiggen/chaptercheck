@@ -144,6 +144,7 @@ struct NotesTabView: View {
             }
             .padding(.top)
         }
+        .refreshable { await viewModel.refresh() }
     }
 
     // MARK: - Stats Ribbon

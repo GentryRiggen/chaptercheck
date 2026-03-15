@@ -70,6 +70,7 @@ struct AuthorDetailView: View {
             }
             .padding(.top)
         }
+        .refreshable { await viewModel.refresh() }
     }
 
     // MARK: - Header

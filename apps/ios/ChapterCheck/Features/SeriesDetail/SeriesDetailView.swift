@@ -79,6 +79,7 @@ struct SeriesDetailView: View {
             }
             .padding(.top)
         }
+        .refreshable { await viewModel.refresh() }
     }
 
     // MARK: - Books

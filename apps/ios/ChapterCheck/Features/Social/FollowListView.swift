@@ -38,6 +38,7 @@ struct FollowListView: View {
                         UserAvatarRow(user: user)
                     }
                 }
+                .refreshable { await refresh() }
                 .safeAreaInset(edge: .bottom) {
                     Spacer().frame(height: 80)
                 }
@@ -49,6 +50,17 @@ struct FollowListView: View {
         .onDisappear {
             authObserver.cancel()
             cancellable?.cancel()
+        }
+    }
+
+    private func refresh() async {
+        authObserver.cancel()
+        cancellable?.cancel()
+        cancellable = nil
+        isLoading = true
+        startSubscription()
+        while isLoading && !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
         }
     }
 

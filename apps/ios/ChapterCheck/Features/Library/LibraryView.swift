@@ -180,6 +180,7 @@ struct LibraryView: View {
             Spacer()
                 .frame(height: 80)
         }
+        .refreshable { await viewModel.refresh() }
     }
 }
 

@@ -72,6 +72,12 @@ final class BookDetailViewModel {
     var currentUser: UserWithPermissions?
     var wantToReadStatus = WantToReadStatus(isOnWantToRead: false, shelfId: nil)
     var bookGenres: [BookGenre] = []
+    var shelvesForBook: [ShelfForBook] = []
+
+    /// Whether the book is on at least one of the user's shelves (including Want to Read).
+    var isOnAnyShelf: Bool {
+        shelvesForBook.contains(where: { $0.containsBook }) || wantToReadStatus.isOnWantToRead
+    }
 
     var isLoading = true
     var error: String?
@@ -229,6 +235,7 @@ final class BookDetailViewModel {
                 subscribeToProgress(bookId: bookId)
                 subscribeToUserData(bookId: bookId)
                 subscribeToWantToReadStatus(bookId: bookId)
+                subscribeToShelvesForBook(bookId: bookId)
                 subscribeToRatingStats(bookId: bookId)
                 subscribeToReviews(bookId: bookId)
                 subscribeToAllGenres()
@@ -279,6 +286,7 @@ final class BookDetailViewModel {
                 subscribeToProgress(bookId: bookId)
                 subscribeToUserData(bookId: bookId)
                 subscribeToWantToReadStatus(bookId: bookId)
+                subscribeToShelvesForBook(bookId: bookId)
                 subscribeToRatingStats(bookId: bookId)
                 subscribeToReviews(bookId: bookId)
                 subscribeToAllGenres()
@@ -556,6 +564,18 @@ final class BookDetailViewModel {
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] status in
                     self?.wantToReadStatus = status
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToShelvesForBook(bookId: String) {
+        shelfRepository.subscribeToMyShelvesForBook(bookId: bookId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] shelves in
+                    self?.shelvesForBook = shelves
                 }
             )
             .store(in: &cancellables)

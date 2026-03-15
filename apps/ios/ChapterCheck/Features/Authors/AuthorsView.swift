@@ -108,6 +108,7 @@ struct AuthorsView: View {
             Spacer()
                 .frame(height: 80)
         }
+        .refreshable { await viewModel.refresh() }
     }
 
     // MARK: - Sort Menu

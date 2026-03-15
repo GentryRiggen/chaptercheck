@@ -143,6 +143,7 @@ struct HomeView: View {
             }
             .padding(.top)
         }
+        .refreshable { await viewModel.refresh() }
     }
 
     // MARK: - Welcome (empty listening state)

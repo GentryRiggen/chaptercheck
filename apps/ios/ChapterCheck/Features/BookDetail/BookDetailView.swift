@@ -52,7 +52,7 @@ struct BookDetailView: View {
                 Button {
                     isAddToShelfPresented = true
                 } label: {
-                    Image(systemName: "bookmark")
+                    Image(systemName: viewModel.isOnAnyShelf ? "bookmark.fill" : "bookmark")
                 }
                 .disabled(viewModel.isOffline)
             }
@@ -377,6 +377,7 @@ struct BookDetailView: View {
             }
             .padding(.top)
         }
+        .refreshable { await viewModel.refresh() }
     }
 
     // MARK: - Audio Section (Collapsible)

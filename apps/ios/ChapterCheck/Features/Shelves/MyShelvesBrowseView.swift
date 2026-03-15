@@ -79,6 +79,7 @@ struct MyShelvesBrowseView: View {
             Spacer()
                 .frame(height: 80)
         }
+        .refreshable { await viewModel.refresh() }
     }
 
     private var emptyState: some View {

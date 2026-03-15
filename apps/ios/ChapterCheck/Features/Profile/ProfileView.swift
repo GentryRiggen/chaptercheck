@@ -136,6 +136,7 @@ struct ProfileView: View {
             }
 
         }
+        .refreshable { await viewModel.refresh() }
         .safeAreaInset(edge: .bottom) {
             Spacer().frame(height: 80)
         }

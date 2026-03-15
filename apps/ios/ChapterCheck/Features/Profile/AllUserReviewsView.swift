@@ -57,6 +57,7 @@ struct AllUserReviewsView: View {
 
         }
         .listStyle(.insetGrouped)
+        .refreshable { await viewModel.refresh() }
         .contentMargins(.bottom, 80)
     }
 

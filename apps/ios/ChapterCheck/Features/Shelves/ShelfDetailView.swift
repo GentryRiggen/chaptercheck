@@ -135,6 +135,7 @@ struct ShelfDetailView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
         }
+        .refreshable { await viewModel.refresh() }
     }
 
     // MARK: - Book ForEach
