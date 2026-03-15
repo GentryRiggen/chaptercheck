@@ -194,6 +194,10 @@ struct MainView: View {
             await downloadManager.initialize()
             audioPlayer.downloadManager = downloadManager
 
+            // Expose to CarPlay scene delegate
+            SharedState.audioPlayer = audioPlayer
+            SharedState.downloadManager = downloadManager
+
             if networkMonitor.isConnected {
                 subscribeToPreferences()
                 await OfflineProgressQueue.shared.flush()

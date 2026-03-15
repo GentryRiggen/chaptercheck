@@ -80,6 +80,7 @@
 		71121D53A1F82FAC60D386FD /* ReviewsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19A8419F7D720FE5CC0C68B /* ReviewsListView.swift */; };
 		749485E2350B61EBCC6A3638 /* CrossBookNoteRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6003E7BA2AA7D0CA0095CB /* CrossBookNoteRow.swift */; };
 		760343BE4A8E1E7C223B3261 /* AllUserReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE090000D4AF02CB2608DCB /* AllUserReviewsView.swift */; };
+		782FD0AD4489FFD85D82A72B /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B139F9AA4A5CDA36AF2B570 /* SharedState.swift */; };
 		7979FF730E90284C5A1F2E27 /* SeriesDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ED7B0E4066D3B887B24C8B4 /* SeriesDetailViewModel.swift */; };
 		7A2930740C96103CD498DBE8 /* Social.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFBBBC2E3295536B070F9A32 /* Social.swift */; };
 		809775B59575EB5278EA5543 /* AuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6DDE8C025AE19E72BA356F1 /* AuthGateView.swift */; };
@@ -87,6 +88,7 @@
 		88181A453F3259FDD55F0781 /* BookUserDataRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED3B2700B4EF5F3ED45E3763 /* BookUserDataRepository.swift */; };
 		89EBA98735C2710D1FA6EF77 /* ConvexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A687255BED3850C59E66E9 /* ConvexService.swift */; };
 		8A65E3132AE2232A228F5383 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FDA38AA9049E067DD7F8C7 /* Environment.swift */; };
+		8C0DB73DD3BAA1CFF30ECEAD /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E87A69950FF4FBF4B75BCBE6 /* CarPlaySceneDelegate.swift */; };
 		8C87AE52A1C4166F8C2409E5 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3519F098CDE48B2CFB41A4 /* NowPlayingView.swift */; };
 		8CDCE213A1C3C73177B6BCD1 /* AuthorRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F61ADA691407A8306FB641 /* AuthorRepository.swift */; };
 		8D01892C79C9A93F89A69FB4 /* AudioUploadQueueItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E9C3D1B7A2F9907720D775 /* AudioUploadQueueItem.swift */; };
@@ -129,6 +131,7 @@
 		BFC6D99406FF667B67E5FB93 /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = D4387DEBBC5B211CE0D3F8E3 /* ClerkKit */; };
 		BFEF22E11405E2A8D10602C1 /* StreamURLCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840E3752314AD70DCD3CF0D2 /* StreamURLCache.swift */; };
 		C05C54A9860BEE09C587C3D2 /* BookNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AD70160AB4FB3230042C3B /* BookNote.swift */; };
+		C209723CC2B5BE5FF8BC02FA /* CarPlay.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1AA4174111655413B2368B3 /* CarPlay.framework */; };
 		C20A39488F2454992E85CCE1 /* AudioPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E1FB2AA73F3411E34E14C8 /* AudioPlayerManager.swift */; };
 		C377BE223C39BC7F261F4B38 /* SliderSeekUndoBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 327608733C08484A8A17A512 /* SliderSeekUndoBanner.swift */; };
 		C3E2CD97E38308A2E004F163 /* OpenLibraryRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CDF40C377EF042A143AFC35 /* OpenLibraryRepository.swift */; };
@@ -185,6 +188,7 @@
 /* Begin PBXFileReference section */
 		02CE2E1CDD25DBB212743925 /* ContinueListeningSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueListeningSection.swift; sourceTree = "<group>"; };
 		06A3B31A69EFE47BC15F52A5 /* OfflineBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineBanner.swift; sourceTree = "<group>"; };
+		083E562C56AA51B1B36325F9 /* ChapterCheck.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChapterCheck.entitlements; sourceTree = "<group>"; };
 		0849415E420346D4324CBC81 /* SentryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryService.swift; sourceTree = "<group>"; };
 		0A2483BD58770AC337B213B4 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		1277AE5AAB42ECE08E81020B /* TimeFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatting.swift; sourceTree = "<group>"; };
@@ -213,6 +217,7 @@
 		38034A136F8D2C48B9D92E69 /* SocialRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRepository.swift; sourceTree = "<group>"; };
 		38670312B41265DB820BD573 /* AudioUploadQueueSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioUploadQueueSheet.swift; sourceTree = "<group>"; };
 		3A4931C9B1B39494950B0E5A /* HeroListeningCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroListeningCard.swift; sourceTree = "<group>"; };
+		3B139F9AA4A5CDA36AF2B570 /* SharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedState.swift; sourceTree = "<group>"; };
 		3D84322FC5E35F80999202B9 /* OpenLibraryBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenLibraryBook.swift; sourceTree = "<group>"; };
 		3E7DF8071D10D2D6E6C1B81B /* AllUserReviewsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllUserReviewsViewModel.swift; sourceTree = "<group>"; };
 		3E952FD16545CAD18A1F7E0E /* Author.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Author.swift; sourceTree = "<group>"; };
@@ -291,6 +296,7 @@
 		9CBE871E195EA8761847795A /* SocialSkeletonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialSkeletonView.swift; sourceTree = "<group>"; };
 		9EE23323E4BD1BC9D14AF654 /* ShelfRowSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfRowSection.swift; sourceTree = "<group>"; };
 		A165A4A64941E347365EADF2 /* AudioFileRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFileRow.swift; sourceTree = "<group>"; };
+		A1AA4174111655413B2368B3 /* CarPlay.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CarPlay.framework; path = System/Library/Frameworks/CarPlay.framework; sourceTree = SDKROOT; };
 		A38CC3D10F461AAEA449F625 /* NotesSkeletonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesSkeletonView.swift; sourceTree = "<group>"; };
 		A5DF3A03E2DCC7B5C7D3C46C /* AddBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookView.swift; sourceTree = "<group>"; };
 		A6DDE8C025AE19E72BA356F1 /* AuthGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthGateView.swift; sourceTree = "<group>"; };
@@ -340,6 +346,7 @@
 		E0078BF6B63C318AE15ADBFD /* GenreRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenreRepository.swift; sourceTree = "<group>"; };
 		E1B7E8D8338166DFB86BD92D /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		E252609AA082F238BB5B3D72 /* BookGridCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookGridCard.swift; sourceTree = "<group>"; };
+		E87A69950FF4FBF4B75BCBE6 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
 		ECDD05971F1BDD2B6095A952 /* PreferencesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesRepository.swift; sourceTree = "<group>"; };
 		ED3B2700B4EF5F3ED45E3763 /* BookUserDataRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookUserDataRepository.swift; sourceTree = "<group>"; };
 		F2374A2C380BE1BB06CE53A4 /* ListeningCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeningCard.swift; sourceTree = "<group>"; };
@@ -365,6 +372,7 @@
 				BFC6D99406FF667B67E5FB93 /* ClerkKit in Frameworks */,
 				B17CC825C1BA4071C41FEAAB /* CropViewController in Frameworks */,
 				6994D983889CBA05C0902053 /* Sentry in Frameworks */,
+				C209723CC2B5BE5FF8BC02FA /* CarPlay.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -480,6 +488,15 @@
 			path = AddBook;
 			sourceTree = "<group>";
 		};
+		3A4DE28961C889D9F958CC1C /* CarPlay */ = {
+			isa = PBXGroup;
+			children = (
+				E87A69950FF4FBF4B75BCBE6 /* CarPlaySceneDelegate.swift */,
+				3B139F9AA4A5CDA36AF2B570 /* SharedState.swift */,
+			);
+			path = CarPlay;
+			sourceTree = "<group>";
+		};
 		421DAE368481EB7F836FAC48 /* BookDetail */ = {
 			isa = PBXGroup;
 			children = (
@@ -528,6 +545,14 @@
 				F4910E3E5E28BB013846B979 /* UserRepository.swift */,
 			);
 			path = Repositories;
+			sourceTree = "<group>";
+		};
+		62687E983C500DC2C9F36F86 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A1AA4174111655413B2368B3 /* CarPlay.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		66857CC5C706ECE0321F1281 /* Player */ = {
@@ -593,6 +618,7 @@
 			isa = PBXGroup;
 			children = (
 				DE731AFAB04978A854D1EAD8 /* ChapterCheck */,
+				62687E983C500DC2C9F36F86 /* Frameworks */,
 				CB75CDF9EEA891D28BFC88E0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -704,10 +730,12 @@
 			isa = PBXGroup;
 			children = (
 				4D2645436FEA7A13D48FCE91 /* Assets.xcassets */,
+				083E562C56AA51B1B36325F9 /* ChapterCheck.entitlements */,
 				56AED035572F521017E2AF6E /* Info.plist */,
 				6FB5DCAA7166AA060EEFEF45 /* App */,
 				0C172CEF55CD0D750F4ECCA2 /* Audio */,
 				1C5644C6EFA5B4181870297D /* Auth */,
+				3A4DE28961C889D9F958CC1C /* CarPlay */,
 				10A1CD54E33267EA401163BF /* Config */,
 				B26893F7340982BDCC576FAE /* Features */,
 				E6AAFC5198B34D8B522C3C7C /* Models */,
@@ -912,6 +940,7 @@
 				CDBFD4B006F51C3CF6223325 /* BookRowSection.swift in Sources */,
 				E3F8FCA796897BB8C085BC67 /* BookUserData.swift in Sources */,
 				88181A453F3259FDD55F0781 /* BookUserDataRepository.swift in Sources */,
+				8C0DB73DD3BAA1CFF30ECEAD /* CarPlaySceneDelegate.swift in Sources */,
 				5B62E83E2B25ED79934F9956 /* ChangeEmailView.swift in Sources */,
 				5C7A481B5A830651A4A56972 /* ChapterCheckApp.swift in Sources */,
 				F6BD2D6E405FC178B9EFE2B7 /* ClerkConvexAuthProvider.swift in Sources */,
@@ -992,6 +1021,7 @@
 				7979FF730E90284C5A1F2E27 /* SeriesDetailViewModel.swift in Sources */,
 				A50D25449BF328A1F81202CB /* SeriesRepository.swift in Sources */,
 				CB06A06F653E338C7B18765A /* SettingsView.swift in Sources */,
+				782FD0AD4489FFD85D82A72B /* SharedState.swift in Sources */,
 				C63F88E3285C32FC4C0431F0 /* Shelf.swift in Sources */,
 				B89A67ECD0FE8AC80AB8395D /* ShelfCard.swift in Sources */,
 				E2BAF8941EDD40223B924458 /* ShelfDetailView.swift in Sources */,
@@ -1104,13 +1134,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = ChapterCheck/ChapterCheck.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChapterCheck/Info.plist;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -1190,13 +1221,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = ChapterCheck/ChapterCheck.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChapterCheck/Info.plist;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
