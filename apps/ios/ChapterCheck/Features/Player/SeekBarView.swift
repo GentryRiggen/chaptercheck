@@ -17,6 +17,8 @@ extension VerticalAlignment {
 struct SeekBarView: View {
     @Environment(AudioPlayerManager.self) private var audioPlayer
 
+    var onSpeedPillTapped: (() -> Void)?
+
     @State private var isDragging = false
     @State private var sliderValue: Double = 0
 
@@ -79,17 +81,23 @@ struct SeekBarView: View {
                         .monospacedDigit()
 
                     if let realTime = realTimeRemainingLabel {
-                        HStack(spacing: 4) {
-                            Image(systemName: "hare.fill")
-                                .font(.system(size: 9))
-                            Text(realTime)
-                                .font(.caption2.weight(.medium))
-                                .monospacedDigit()
+                        Button {
+                            Haptics.selection()
+                            onSpeedPillTapped?()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "hare.fill")
+                                    .font(.system(size: 9))
+                                Text(realTime)
+                                    .font(.caption2.weight(.medium))
+                                    .monospacedDigit()
+                            }
+                            .foregroundStyle(.tint)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(.tint.opacity(0.12), in: Capsule())
                         }
-                        .foregroundStyle(.tint)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(.tint.opacity(0.12), in: Capsule())
+                        .buttonStyle(.plain)
                         .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .trailing)))
                     }
                 }

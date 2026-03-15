@@ -382,7 +382,7 @@ struct NowPlayingView: View {
 
     private var seekBarSection: some View {
         HStack(alignment: .seekBarTrackCenter, spacing: 12) {
-            SeekBarView()
+            SeekBarView(onSpeedPillTapped: { isAudioSettingsPresented = true })
 
             addNoteButton
         }
