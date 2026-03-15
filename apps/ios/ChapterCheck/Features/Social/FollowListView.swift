@@ -35,15 +35,7 @@ struct FollowListView: View {
             } else {
                 List {
                     ForEach(users) { user in
-                        NavigationLink(value: AppDestination.profile(userId: user._id)) {
-                            HStack(spacing: 12) {
-                                userAvatar(user)
-                                Text(user.name ?? "Anonymous")
-                                    .font(.body)
-                                Spacer()
-                                FollowButton(userId: user._id)
-                            }
-                        }
+                        UserAvatarRow(user: user)
                     }
 
                     Color.clear
@@ -60,35 +52,6 @@ struct FollowListView: View {
             authObserver.cancel()
             cancellable?.cancel()
         }
-    }
-
-    private func userAvatar(_ user: FollowedUser) -> some View {
-        Group {
-            if let imageUrl = user.imageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    default:
-                        avatarPlaceholder(for: user)
-                    }
-                }
-            } else {
-                avatarPlaceholder(for: user)
-            }
-        }
-        .frame(width: 36, height: 36)
-        .clipShape(Circle())
-    }
-
-    private func avatarPlaceholder(for user: FollowedUser) -> some View {
-        Circle()
-            .fill(Color(.tertiarySystemFill))
-            .overlay {
-                Text(String((user.name ?? "?").prefix(1)).uppercased())
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
     }
 
     private func startSubscription() {

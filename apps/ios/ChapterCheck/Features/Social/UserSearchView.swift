@@ -1,32 +1,14 @@
-import Combine
-import ConvexMobile
 import SwiftUI
 
 struct UserSearchView: View {
-    @State private var searchText = ""
-    @State private var results: [FollowedUser] = []
-    @State private var cancellable: AnyCancellable?
-    @State private var isSearching = false
-    @State private var isAuthenticated = false
-    @State private var authObserver = ConvexAuthObserver()
-    private let userRepository = UserRepository()
+    @State private var viewModel = UserSearchViewModel()
 
     var body: some View {
         List {
-            if results.isEmpty && !searchText.isEmpty && !isSearching {
-                ContentUnavailableView.search(text: searchText)
+            if viewModel.isSearchActive {
+                searchResultsSection
             } else {
-                ForEach(results) { user in
-                    NavigationLink(value: AppDestination.profile(userId: user._id)) {
-                        HStack(spacing: 12) {
-                            userAvatar(user)
-                            Text(user.name ?? "Anonymous")
-                                .font(.body)
-                            Spacer()
-                            FollowButton(userId: user._id)
-                        }
-                    }
-                }
+                defaultContent
             }
 
             Color.clear
@@ -34,89 +16,100 @@ struct UserSearchView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
         }
+        .listStyle(.plain)
         .navigationTitle("Find People")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $searchText, prompt: "Search by name")
-        .onChange(of: searchText) { _, newValue in
-            if isAuthenticated {
-                performSearch(query: newValue)
-            }
+        .searchable(text: $viewModel.searchText, prompt: "Search by name")
+        .onChange(of: viewModel.searchText) { _, _ in
+            viewModel.onSearchTextChanged()
         }
-        .onAppear {
-            authObserver.start(
-                onAuthenticated: {
-                    isAuthenticated = true
-                    if !searchText.isEmpty {
-                        performSearch(query: searchText)
-                    }
-                },
-                onUnauthenticated: {
-                    isAuthenticated = false
-                    cancellable?.cancel()
-                    cancellable = nil
+        .onAppear { viewModel.subscribe() }
+        .onDisappear { viewModel.unsubscribe() }
+    }
+
+    // MARK: - Default Content (No Search)
+
+    @ViewBuilder
+    private var defaultContent: some View {
+        if viewModel.isLoadingFollowing {
+            Section {
+                ForEach(0..<3, id: \.self) { _ in
+                    skeletonRow
                 }
-            )
-        }
-        .onDisappear {
-            authObserver.cancel()
-            cancellable?.cancel()
+            }
+        } else if viewModel.following.isEmpty {
+            Section {
+                VStack(spacing: 12) {
+                    Image(systemName: "person.2")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.tertiary)
+                    Text("Find readers to follow")
+                        .font(.headline)
+                    Text("Search by name to discover people and see their reading activity in your feed.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        } else {
+            Section {
+                ForEach(viewModel.following) { user in
+                    UserAvatarRow(user: user)
+                }
+            } header: {
+                Text("Following")
+            }
         }
     }
 
-    private func performSearch(query: String) {
-        cancellable?.cancel()
+    // MARK: - Search Results
 
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            results = []
-            isSearching = false
-            return
-        }
-
-        isSearching = true
-
-        guard let publisher: AnyPublisher<[FollowedUser], ClientError> = userRepository.subscribeToUserSearch(query: trimmed) else {
-            isSearching = false
-            return
-        }
-
-        cancellable = publisher
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in isSearching = false },
-                receiveValue: { users in
-                    results = users
-                    isSearching = false
+    @ViewBuilder
+    private var searchResultsSection: some View {
+        if viewModel.isSearching {
+            Section {
+                ForEach(0..<3, id: \.self) { _ in
+                    skeletonRow
                 }
-            )
-    }
-
-    private func userAvatar(_ user: FollowedUser) -> some View {
-        Group {
-            if let imageUrl = user.imageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    default:
-                        avatarPlaceholder(for: user)
-                    }
+            }
+        } else if viewModel.searchResults.isEmpty {
+            Section {
+                ContentUnavailableView.search(text: viewModel.searchText)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        } else {
+            Section {
+                ForEach(viewModel.searchResults) { user in
+                    UserAvatarRow(user: user)
                 }
-            } else {
-                avatarPlaceholder(for: user)
+            } header: {
+                Text("\(viewModel.searchResults.count) results")
             }
         }
-        .frame(width: 36, height: 36)
-        .clipShape(Circle())
     }
 
-    private func avatarPlaceholder(for user: FollowedUser) -> some View {
-        Circle()
-            .fill(Color(.tertiarySystemFill))
-            .overlay {
-                Text(String((user.name ?? "?").prefix(1)).uppercased())
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+    // MARK: - Skeleton
+
+    private var skeletonRow: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(.tertiarySystemFill))
+                .frame(width: 40, height: 40)
+            VStack(alignment: .leading, spacing: 6) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color(.tertiarySystemFill))
+                    .frame(width: 140, height: 14)
             }
+            Spacer()
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.tertiarySystemFill))
+                .frame(width: 80, height: 32)
+        }
+        .redacted(reason: .placeholder)
     }
 }
