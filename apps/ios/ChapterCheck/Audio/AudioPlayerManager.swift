@@ -657,6 +657,7 @@ final class AudioPlayerManager {
                     self.lastSavedPosition = self.currentPosition
 
                     self.startProgressSaving()
+                    self.scheduleInitialProgressSync()
                     self.updateNowPlayingFull()
                     self.loadCoverArtwork()
 
@@ -788,6 +789,20 @@ final class AudioPlayerManager {
                 await MainActor.run { [weak self] in
                     self?.saveProgressIfChanged()
                 }
+            }
+        }
+    }
+
+    /// Force an immediate remote sync shortly after playback starts so the book
+    /// appears in Continue Listening without waiting for the 20-second coalesce window.
+    private func scheduleInitialProgressSync() {
+        let bookId = currentBook?._id
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            await MainActor.run { [weak self] in
+                guard let self, self.currentBook?._id == bookId else { return }
+                self.saveProgressNow(forceRemoteSync: true)
             }
         }
     }
