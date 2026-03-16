@@ -18,6 +18,7 @@ struct HomeSkeletonView: View {
                 Spacer().frame(height: 80)
             }
             .padding(.top, 4)
+            .padding(.horizontal)
         }
         .scrollDisabled(true)
     }
@@ -27,7 +28,6 @@ struct HomeSkeletonView: View {
     private var greetingSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             SkeletonView(shape: .rectangle, width: 170, height: 22, cornerRadius: 6)
-                .padding(.horizontal)
 
             HStack(spacing: 12) {
                 ForEach(0..<3, id: \.self) { _ in
@@ -44,7 +44,6 @@ struct HomeSkeletonView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
             }
-            .padding(.horizontal)
         }
     }
 
@@ -53,7 +52,6 @@ struct HomeSkeletonView: View {
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             SkeletonView(shape: .rectangle, width: 180, height: 18, cornerRadius: 4)
-                .padding(.horizontal)
 
             HStack(spacing: 14) {
                 SkeletonView(shape: .rectangle, width: 80, height: 120, cornerRadius: 8)
@@ -75,7 +73,6 @@ struct HomeSkeletonView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(.fill.quaternary)
             )
-            .padding(.horizontal)
         }
     }
 
@@ -92,7 +89,6 @@ struct HomeSkeletonView: View {
                     .frame(width: 140)
                 }
             }
-            .padding(.horizontal)
         }
         .scrollDisabled(true)
     }
@@ -102,22 +98,17 @@ struct HomeSkeletonView: View {
     private var shelfSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             SkeletonView(shape: .rectangle, width: 150, height: 18, cornerRadius: 4)
-                .padding(.horizontal)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        VStack(alignment: .leading, spacing: 8) {
-                            SkeletonView(shape: .rectangle, width: 120, height: 180, cornerRadius: 10)
-                            SkeletonView(shape: .rectangle, width: 80, height: 12, cornerRadius: 4)
-                            SkeletonView(shape: .rectangle, width: 50, height: 10, cornerRadius: 3)
-                        }
-                        .frame(width: 120)
+            HStack(spacing: 12) {
+                ForEach(0..<3, id: \.self) { _ in
+                    VStack(alignment: .leading, spacing: 8) {
+                        SkeletonView(shape: .rectangle, width: 120, height: 180, cornerRadius: 10)
+                        SkeletonView(shape: .rectangle, width: 80, height: 12, cornerRadius: 4)
+                        SkeletonView(shape: .rectangle, width: 50, height: 10, cornerRadius: 3)
                     }
+                    .frame(width: 120)
                 }
-                .padding(.horizontal)
             }
-            .scrollDisabled(true)
         }
     }
 
@@ -126,22 +117,17 @@ struct HomeSkeletonView: View {
     private var bookRowSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             SkeletonView(shape: .rectangle, width: 110, height: 18, cornerRadius: 4)
-                .padding(.horizontal)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        VStack(alignment: .leading, spacing: 6) {
-                            SkeletonView(shape: .rectangle, width: 140, height: 210, cornerRadius: 8)
-                            SkeletonView(shape: .rectangle, width: 100, height: 12, cornerRadius: 4)
-                            SkeletonView(shape: .rectangle, width: 70, height: 10, cornerRadius: 3)
-                        }
-                        .frame(width: 140)
+            HStack(spacing: 12) {
+                ForEach(0..<3, id: \.self) { _ in
+                    VStack(alignment: .leading, spacing: 6) {
+                        SkeletonView(shape: .rectangle, width: 140, height: 210, cornerRadius: 8)
+                        SkeletonView(shape: .rectangle, width: 100, height: 12, cornerRadius: 4)
+                        SkeletonView(shape: .rectangle, width: 70, height: 10, cornerRadius: 3)
                     }
+                    .frame(width: 140)
                 }
-                .padding(.horizontal)
             }
-            .scrollDisabled(true)
         }
     }
 }
