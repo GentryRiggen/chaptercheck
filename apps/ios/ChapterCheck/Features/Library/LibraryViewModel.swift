@@ -3,34 +3,295 @@ import ConvexMobile
 import Foundation
 import os
 
-/// View model for the library (book browsing) screen.
+// MARK: - Library Category
+
+/// The four browseable categories in the Library tab.
+enum LibraryCategory: String, CaseIterable, Identifiable {
+    case books
+    case authors
+    case series
+    case shelves
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .books: "Books"
+        case .authors: "Authors"
+        case .series: "Series"
+        case .shelves: "Shelves"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .books: "book.closed"
+        case .authors: "person.2"
+        case .series: "books.vertical"
+        case .shelves: "tray.2"
+        }
+    }
+}
+
+// MARK: - Author Sort
+
+/// Sort options for the Authors tab, mirroring `AuthorsViewModel.AuthorSortOption`.
+enum AuthorSortOption: String, CaseIterable, Identifiable {
+    case nameAsc = "name_asc"
+    case nameDesc = "name_desc"
+    case recent = "recent"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .nameAsc: "A-Z"
+        case .nameDesc: "Z-A"
+        case .recent: "Recent"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .nameAsc: "arrow.up"
+        case .nameDesc: "arrow.down"
+        case .recent: "clock"
+        }
+    }
+}
+
+// MARK: - Search Sort Options
+
+/// Sort options for book results in unified search. Includes "Relevance" (search rank order).
+enum SearchBookSort: String, CaseIterable, Identifiable {
+    case relevance
+    case titleAsc = "title_asc"
+    case titleDesc = "title_desc"
+    case topRated = "top_rated"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .relevance: "Relevance"
+        case .titleAsc: "A-Z"
+        case .titleDesc: "Z-A"
+        case .topRated: "Top Rated"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .relevance: "sparkle.magnifyingglass"
+        case .titleAsc: "arrow.up"
+        case .titleDesc: "arrow.down"
+        case .topRated: "star.fill"
+        }
+    }
+}
+
+/// Sort options for author results in unified search. Includes "Relevance" (search rank order).
+enum SearchAuthorSort: String, CaseIterable, Identifiable {
+    case relevance
+    case nameAsc = "name_asc"
+    case nameDesc = "name_desc"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .relevance: "Relevance"
+        case .nameAsc: "A-Z"
+        case .nameDesc: "Z-A"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .relevance: "sparkle.magnifyingglass"
+        case .nameAsc: "arrow.up"
+        case .nameDesc: "arrow.down"
+        }
+    }
+}
+
+// MARK: - Series Sort
+
+enum SeriesSortOption: String, CaseIterable, Identifiable {
+    case recent = "recent"
+    case nameAsc = "name_asc"
+    case nameDesc = "name_desc"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .recent: "Recent"
+        case .nameAsc: "A-Z"
+        case .nameDesc: "Z-A"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .recent: "clock"
+        case .nameAsc: "arrow.up"
+        case .nameDesc: "arrow.down"
+        }
+    }
+}
+
+// MARK: - Shelf Sort
+
+enum ShelfSortOption: String, CaseIterable, Identifiable {
+    case recentlyUpdated = "recently_updated"
+    case nameAsc = "name_asc"
+    case mostBooks = "most_books"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .recentlyUpdated: "Recently Updated"
+        case .nameAsc: "A-Z"
+        case .mostBooks: "Most Books"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .recentlyUpdated: "clock"
+        case .nameAsc: "arrow.up"
+        case .mostBooks: "number"
+        }
+    }
+}
+
+// MARK: - LibraryViewModel
+
+/// View model for the unified Library discovery hub.
 ///
-/// Supports three modes:
-/// 1. **Browse mode** (default): Paginated list with sort options, using cursor-based pagination.
-/// 2. **Search mode**: Activated when `searchText` is non-empty. Uses a debounced (300ms)
-///    subscription to the search query. Non-paginated.
-/// 3. **Genre filter mode**: Activated when `selectedGenreIds` is non-empty and search is inactive.
-///    Uses a non-paginated subscription returning up to 50 results.
+/// Supports four browseable categories (Books, Authors, Series, Shelves) and
+/// a cross-cutting unified search mode activated whenever `searchText` is non-empty.
 ///
-/// Mode priority: search > genre filter > browse.
-/// When `searchText`, `sortOption`, or `selectedGenreIds` changes, the current subscription
-/// is cancelled and a new one is created.
+/// Mode priority: unified search (when `searchText` non-empty) > category browse.
+/// Within the Books category, genre filter mode overrides paginated browse (matching
+/// the original LibraryViewModel behaviour).
 @Observable
 @MainActor
 final class LibraryViewModel {
 
-    // MARK: - Public State
+    // MARK: - Navigation / Category
+
+    var selectedCategory: LibraryCategory = .books
+
+    // MARK: - Shared Search State
+
+    /// Drives both per-category book search (legacy path, no longer activated —
+    /// non-empty text goes straight to unified search) and the unified search
+    /// subscription across all categories.
+    var searchText: String = ""
+
+    // MARK: - Book State (preserved from original)
 
     var books: [BookWithDetails] = []
-    var isLoading = true
+    var isBookLoading = true
     var isLoadingMore = false
-    var searchText: String = ""
-    var sortOption: SortOption = .titleAsc
+    var bookSortOption: SortOption = .titleAsc
     var selectedGenreIds: Set<String> = []
-    var error: String?
+    var bookError: String?
+    var hasMoreBooks = true
 
-    /// Whether more pages are available for infinite scroll.
-    var hasMore = true
+    var isGenreFilterActive: Bool { !selectedGenreIds.isEmpty }
+
+    // MARK: - Author State
+
+    var authors: [AuthorWithCounts] = []
+    var isAuthorLoading = true
+    var isLoadingMoreAuthors = false
+    var authorSortOption: AuthorSortOption = .nameAsc
+    var authorError: String?
+    var hasMoreAuthors = true
+
+    // MARK: - Series State
+
+    var seriesList: [SeriesWithPreview] = []
+    var isSeriesLoading = false
+    var seriesSortOption: SeriesSortOption = .recent
+    var seriesError: String?
+
+    var sortedSeriesList: [SeriesWithPreview] {
+        switch seriesSortOption {
+        case .recent:
+            seriesList
+        case .nameAsc:
+            seriesList.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case .nameDesc:
+            seriesList.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedDescending }
+        }
+    }
+
+    // MARK: - Shelves State
+
+    var shelves: [Shelf] = []
+    var isShelvesLoading = true
+    var shelfSortOption: ShelfSortOption = .recentlyUpdated
+    var shelvesError: String?
+
+    var sortedShelves: [Shelf] {
+        switch shelfSortOption {
+        case .recentlyUpdated:
+            shelves // already sorted by updatedAt desc from backend
+        case .nameAsc:
+            shelves.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case .mostBooks:
+            shelves.sorted { $0.bookCountInt > $1.bookCountInt }
+        }
+    }
+
+    // MARK: - Unified Search State
+
+    var unifiedBooks: [BookWithDetails] = []
+    var unifiedAuthors: [AuthorWithCounts] = []
+    var unifiedSeries: [SearchSeries] = []
+    var isUnifiedSearchLoading = false
+    var unifiedSearchError: String?
+
+    /// Sort for unified search book results. Defaults to relevance (search order).
+    var searchBookSort: SearchBookSort = .relevance
+    /// Sort for unified search author results.
+    var searchAuthorSort: SearchAuthorSort = .relevance
+    /// Category filter for search results. nil = show all categories.
+    var searchFilterCategory: LibraryCategory?
+
+    var isUnifiedSearchMode: Bool { !searchText.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    var hasUnifiedResults: Bool {
+        switch searchFilterCategory {
+        case nil: !unifiedBooks.isEmpty || !unifiedAuthors.isEmpty || !unifiedSeries.isEmpty
+        case .books: !unifiedBooks.isEmpty
+        case .authors: !unifiedAuthors.isEmpty
+        case .series: !unifiedSeries.isEmpty
+        case .shelves: false // no shelf search results currently
+        }
+    }
+
+    var sortedUnifiedBooks: [BookWithDetails] {
+        switch searchBookSort {
+        case .relevance: unifiedBooks
+        case .titleAsc: unifiedBooks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .titleDesc: unifiedBooks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedDescending }
+        case .topRated: unifiedBooks.sorted { ($0.averageRating ?? 0) > ($1.averageRating ?? 0) }
+        }
+    }
+
+    var sortedUnifiedAuthors: [AuthorWithCounts] {
+        switch searchAuthorSort {
+        case .relevance: unifiedAuthors
+        case .nameAsc: unifiedAuthors.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case .nameDesc: unifiedAuthors.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedDescending }
+        }
+    }
 
     // MARK: - Dependencies
 
@@ -41,19 +302,32 @@ final class LibraryViewModel {
 
     private let logger = Logger(subsystem: "com.chaptercheck", category: "LibraryViewModel")
     private let bookRepository = BookRepository()
+    private let authorRepository = AuthorRepository()
+    private let searchRepository = SearchRepository()
+    private let shelfRepository = ShelfRepository()
     private let authObserver = ConvexAuthObserver()
-    private var cancellables = Set<AnyCancellable>()
 
-    // MARK: - Pagination State
+    private var bookCancellables = Set<AnyCancellable>()
+    private var authorCancellables = Set<AnyCancellable>()
+    private var seriesCancellables = Set<AnyCancellable>()
+    private var shelfCancellables = Set<AnyCancellable>()
+    private var unifiedCancellables = Set<AnyCancellable>()
 
-    private var currentCursor: String?
-    private var isSearchMode: Bool { !searchText.trimmingCharacters(in: .whitespaces).isEmpty }
-    var isGenreFilterActive: Bool { !selectedGenreIds.isEmpty }
+    // MARK: - Pagination Cursors
+
+    private var bookCursor: String?
+    private var authorCursor: String?
 
     // MARK: - Debounce
 
     private var searchDebounceTask: Task<Void, Never>?
     private static let searchDebounceDelay: Duration = .milliseconds(300)
+
+    // MARK: - Convenience aliases (preserve original LibraryView read paths)
+
+    var isLoading: Bool { isBookLoading }
+    var error: String? { bookError }
+    var hasMore: Bool { hasMoreBooks }
 
     // MARK: - Lifecycle
 
@@ -67,44 +341,99 @@ final class LibraryViewModel {
         isShowingOfflineData = false
         authObserver.start(
             onAuthenticated: { [weak self] in
-                guard let self, cancellables.isEmpty else { return }
-                logger.info("subscribe() called, isSearchMode=\(self.isSearchMode), sort=\(self.sortOption.rawValue)")
-                loadFirstPage()
+                guard let self else { return }
+                logger.info("subscribe() — category=\(self.selectedCategory.rawValue)")
+                // Books are always loaded eagerly (default category).
+                if bookCancellables.isEmpty { loadBooksFirstPage() }
+                // Lazily bootstrap whichever non-books category is already selected.
+                switch selectedCategory {
+                case .books: break
+                case .authors: if authorCancellables.isEmpty { loadAuthorsFirstPage() }
+                case .series: if seriesCancellables.isEmpty { loadSeries() }
+                case .shelves: if shelfCancellables.isEmpty { loadShelves() }
+                }
             },
             onUnauthenticated: { [weak self] in
-                self?.cancellables.removeAll()
+                self?.bookCancellables.removeAll()
+                self?.authorCancellables.removeAll()
+                self?.seriesCancellables.removeAll()
+                self?.shelfCancellables.removeAll()
+                self?.unifiedCancellables.removeAll()
             }
         )
     }
 
     func unsubscribe() {
         authObserver.cancel()
-        cancellables.removeAll()
+        bookCancellables.removeAll()
+        authorCancellables.removeAll()
+        seriesCancellables.removeAll()
+        shelfCancellables.removeAll()
+        unifiedCancellables.removeAll()
         searchDebounceTask?.cancel()
     }
 
+    /// Pull-to-refresh for the currently visible category.
     func refresh() async {
-        unsubscribe()
-        isLoading = true
-        error = nil
-        subscribe()
-        while isLoading && !Task.isCancelled {
-            try? await Task.sleep(for: .milliseconds(50))
+        switch selectedCategory {
+        case .books:
+            bookCancellables.removeAll()
+            isBookLoading = true
+            bookError = nil
+            loadBooksFirstPage()
+            while isBookLoading && !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        case .authors:
+            authorCancellables.removeAll()
+            isAuthorLoading = true
+            authorError = nil
+            loadAuthorsFirstPage()
+            while isAuthorLoading && !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        case .series:
+            seriesCancellables.removeAll()
+            isSeriesLoading = true
+            seriesError = nil
+            loadSeries()
+            while isSeriesLoading && !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        case .shelves:
+            shelfCancellables.removeAll()
+            isShelvesLoading = true
+            shelvesError = nil
+            loadShelves()
+            while isShelvesLoading && !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
         }
     }
 
-    /// Transition from offline data to live Convex subscriptions.
+    /// Called when the user taps a category pill. Lazily starts subscriptions.
+    func onCategoryChanged() {
+        guard !isUnifiedSearchMode else { return }
+        switch selectedCategory {
+        case .books: break
+        case .authors: if authorCancellables.isEmpty { loadAuthorsFirstPage() }
+        case .series: if seriesCancellables.isEmpty { loadSeries() }
+        case .shelves: if shelfCancellables.isEmpty { loadShelves() }
+        }
+    }
+
+    /// Recover from offline to live Convex subscriptions.
     func recoverFromOffline() {
         guard isShowingOfflineData else { return }
         isShowingOfflineData = false
 
         authObserver.start(
             onAuthenticated: { [weak self] in
-                guard let self, cancellables.isEmpty else { return }
-                loadFirstPage()
+                guard let self, bookCancellables.isEmpty else { return }
+                loadBooksFirstPage()
             },
             onUnauthenticated: { [weak self] in
-                self?.cancellables.removeAll()
+                self?.bookCancellables.removeAll()
             }
         )
         authObserver.needsResubscription()
@@ -112,191 +441,347 @@ final class LibraryViewModel {
 
     // MARK: - Search
 
-    /// Called when the search text changes. Debounces the query by 300ms
-    /// before creating a new subscription.
+    /// Called when `searchText` changes. Non-empty text activates unified search
+    /// across all categories. Clearing the text cancels unified search and returns
+    /// each category to its browse subscription.
     func onSearchTextChanged() {
         searchDebounceTask?.cancel()
 
-        if isSearchMode {
+        if isUnifiedSearchMode {
+            isUnifiedSearchLoading = true
             searchDebounceTask = Task {
                 try? await Task.sleep(for: Self.searchDebounceDelay)
                 guard !Task.isCancelled else { return }
-                performSearch()
+                performUnifiedSearch()
             }
         } else {
-            // Cleared search, go back to browse mode
-            resetAndReload()
+            unifiedCancellables.removeAll()
+            unifiedBooks = []
+            unifiedAuthors = []
+            unifiedSeries = []
+            isUnifiedSearchLoading = false
+            unifiedSearchError = nil
+            searchBookSort = .relevance
+            searchAuthorSort = .relevance
+            searchFilterCategory = nil
         }
     }
 
-    // MARK: - Sort
+    // MARK: - Book Sort / Genre Filter (original API preserved)
 
-    /// Called when the sort option changes. Resets pagination and reloads.
     func onSortChanged() {
-        resetAndReload()
+        bookCancellables.removeAll()
+        searchDebounceTask?.cancel()
+        loadBooksFirstPage()
     }
 
-    // MARK: - Genre Filter
-
-    /// Called when the selected genre IDs change. Switches to genre filter mode
-    /// (or back to browse mode when the selection is cleared), unless a search
-    /// is already active — in that case the genre filter takes effect only after
-    /// the search field is cleared.
     func onGenreFilterChanged() {
-        if !isSearchMode {
-            resetAndReload()
-        }
+        guard !isUnifiedSearchMode else { return }
+        bookCancellables.removeAll()
+        searchDebounceTask?.cancel()
+        loadBooksFirstPage()
     }
 
-    // MARK: - Pagination
+    // MARK: - Author Sort
 
-    /// Load the next page of results. Called when the last item appears on screen.
-    /// No-op in search mode or genre filter mode (both are non-paginated).
-    func loadNextPage() {
-        guard !isSearchMode, !isGenreFilterActive, !isLoadingMore, hasMore, currentCursor != nil else { return }
+    func onAuthorSortChanged() {
+        authorCancellables.removeAll()
+        loadAuthorsFirstPage()
+    }
+
+    // MARK: - Retry
+
+    func retryBooks() {
+        bookCancellables.removeAll()
+        bookError = nil
+        loadBooksFirstPage()
+    }
+
+    func retryAuthors() {
+        authorCancellables.removeAll()
+        authorError = nil
+        loadAuthorsFirstPage()
+    }
+
+    func retrySeries() {
+        seriesCancellables.removeAll()
+        seriesError = nil
+        loadSeries()
+    }
+
+    func retryShelves() {
+        shelfCancellables.removeAll()
+        shelvesError = nil
+        loadShelves()
+    }
+
+    // MARK: - Book Pagination
+
+    /// Called when the last book card appears on screen. No-op in genre filter mode.
+    func loadNextBookPage() {
+        guard !isUnifiedSearchMode,
+              !isGenreFilterActive,
+              !isLoadingMore,
+              hasMoreBooks,
+              bookCursor != nil else { return }
         isLoadingMore = true
-        subscribeToPage(cursor: currentCursor)
+        subscribeToBookPage(cursor: bookCursor)
     }
 
-    // MARK: - Private
+    // MARK: - Author Pagination
 
-    private func loadFirstPage() {
-        cancellables.removeAll()
+    /// Called when the last author card appears on screen.
+    func loadNextAuthorPage() {
+        guard !isUnifiedSearchMode,
+              !isLoadingMoreAuthors,
+              hasMoreAuthors,
+              authorCursor != nil else { return }
+        isLoadingMoreAuthors = true
+        subscribeToAuthorPage(cursor: authorCursor)
+    }
+
+    // MARK: - Private: Books
+
+    private func loadBooksFirstPage() {
+        bookCancellables.removeAll()
         books = []
-        currentCursor = nil
-        hasMore = true
-        isLoading = true
-        error = nil
+        bookCursor = nil
+        hasMoreBooks = true
+        isBookLoading = true
+        bookError = nil
 
-        if isSearchMode {
-            performSearch()
-        } else if isGenreFilterActive {
+        if isGenreFilterActive {
             performGenreFilter()
         } else {
-            subscribeToPage(cursor: nil)
+            subscribeToBookPage(cursor: nil)
         }
-    }
-
-    private func resetAndReload() {
-        cancellables.removeAll()
-        searchDebounceTask?.cancel()
-        loadFirstPage()
-    }
-
-    private func performSearch() {
-        cancellables.removeAll()
-        books = []
-        isLoading = true
-        error = nil
-        hasMore = false
-
-        let query = searchText.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else {
-            isLoading = false
-            return
-        }
-
-        let pub = bookRepository.subscribeToBookSearch(query: query)
-        logger.info("performSearch: query='\(query)', publisher=\(pub != nil ? "created" : "nil")")
-
-        pub?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { [weak self] completion in
-                    if case .failure(let error) = completion {
-                        self?.logger.error("search FAILED: \(error)")
-                        self?.error = userFacingMessage(from: error, fallback: "Unable to load your library")
-                        self?.isLoading = false
-                        self?.authObserver.needsResubscription()
-                    }
-                },
-                receiveValue: { [weak self] results in
-                    self?.logger.info("search: received \(results.count) results")
-                    self?.books = results
-                    self?.isLoading = false
-                }
-            )
-            .store(in: &cancellables)
     }
 
     private func performGenreFilter() {
-        hasMore = false
+        hasMoreBooks = false
         let genreIds = Array(selectedGenreIds)
 
-        let pub = bookRepository.subscribeToFilteredBooks(genreIds: genreIds, sort: sortOption.rawValue)
-        logger.info("performGenreFilter: genreCount=\(genreIds.count), sort=\(self.sortOption.rawValue), publisher=\(pub != nil ? "created" : "nil")")
-
-        pub?
+        bookRepository.subscribeToFilteredBooks(genreIds: genreIds, sort: bookSortOption.rawValue)?
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        self?.logger.error("genreFilter FAILED: \(error)")
-                        self?.error = userFacingMessage(from: error, fallback: "Unable to load your library")
-                        self?.isLoading = false
+                        self?.logger.error("genreFilter FAILED: \(error.localizedDescription)")
+                        self?.bookError = userFacingMessage(from: error, fallback: "Unable to load your library")
+                        self?.isBookLoading = false
                         self?.authObserver.needsResubscription()
                     }
                 },
                 receiveValue: { [weak self] results in
-                    self?.logger.info("genreFilter: received \(results.count) results")
                     self?.books = results
-                    self?.isLoading = false
+                    self?.isBookLoading = false
                 }
             )
-            .store(in: &cancellables)
+            .store(in: &bookCancellables)
     }
 
-    private func subscribeToPage(cursor: String?) {
-        logger.info("subscribeToPage: sort=\(self.sortOption.rawValue), cursor=\(cursor ?? "nil")")
+    private func subscribeToBookPage(cursor: String?) {
+        logger.info("subscribeToBookPage: sort=\(self.bookSortOption.rawValue), cursor=\(cursor ?? "nil")")
 
-        let pub = bookRepository.subscribeToBookList(
-            sort: sortOption.rawValue,
+        bookRepository.subscribeToBookList(
+            sort: bookSortOption.rawValue,
             numItems: 20,
             cursor: cursor
-        )
-        logger.info("subscribeToPage: publisher=\(pub != nil ? "created" : "nil")")
-
-        pub?
+        )?
         .receive(on: DispatchQueue.main)
         .sink(
             receiveCompletion: { [weak self] completion in
                 if case .failure(let error) = completion {
-                    self?.logger.error("bookList FAILED: \(error)")
-                    self?.error = userFacingMessage(from: error, fallback: "Unable to load your library")
-                    self?.isLoading = false
+                    self?.logger.error("bookList FAILED: \(error.localizedDescription)")
+                    self?.bookError = userFacingMessage(from: error, fallback: "Unable to load your library")
+                    self?.isBookLoading = false
                     self?.isLoadingMore = false
                     self?.authObserver.needsResubscription()
                 }
             },
             receiveValue: { [weak self] result in
                 guard let self else { return }
-
-                self.logger.info("bookList: received page with \(result.page.count) books, isDone=\(result.isDone)")
-
                 if cursor == nil {
-                    // First page -- replace
                     self.books = result.page
                 } else {
-                    // Subsequent page -- append new items, deduplicating
                     let existingIds = Set(self.books.map(\._id))
                     let newItems = result.page.filter { !existingIds.contains($0._id) }
                     self.books.append(contentsOf: newItems)
                 }
-
-                self.currentCursor = result.isDone ? nil : result.continueCursor
-                self.hasMore = !result.isDone
-                self.isLoading = false
+                self.bookCursor = result.isDone ? nil : result.continueCursor
+                self.hasMoreBooks = !result.isDone
+                self.isBookLoading = false
                 self.isLoadingMore = false
             }
         )
-        .store(in: &cancellables)
+        .store(in: &bookCancellables)
+    }
+
+    // MARK: - Private: Authors
+
+    private func loadAuthorsFirstPage() {
+        authorCancellables.removeAll()
+        authors = []
+        authorCursor = nil
+        hasMoreAuthors = true
+        isAuthorLoading = true
+        authorError = nil
+        subscribeToAuthorPage(cursor: nil)
+    }
+
+    private func subscribeToAuthorPage(cursor: String?) {
+        logger.info("subscribeToAuthorPage: sort=\(self.authorSortOption.rawValue), cursor=\(cursor ?? "nil")")
+
+        authorRepository.subscribeToAuthorList(
+            sort: authorSortOption.rawValue,
+            numItems: 20,
+            cursor: cursor
+        )?
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                if case .failure(let error) = completion {
+                    self?.logger.error("authorList FAILED: \(error.localizedDescription)")
+                    self?.authorError = userFacingMessage(from: error, fallback: "Unable to load authors")
+                    self?.isAuthorLoading = false
+                    self?.isLoadingMoreAuthors = false
+                    self?.authObserver.needsResubscription()
+                }
+            },
+            receiveValue: { [weak self] result in
+                guard let self else { return }
+                if cursor == nil {
+                    self.authors = result.page
+                } else {
+                    let existingIds = Set(self.authors.map(\._id))
+                    let newItems = result.page.filter { !existingIds.contains($0._id) }
+                    self.authors.append(contentsOf: newItems)
+                }
+                self.authorCursor = result.isDone ? nil : result.continueCursor
+                self.hasMoreAuthors = !result.isDone
+                self.isAuthorLoading = false
+                self.isLoadingMoreAuthors = false
+            }
+        )
+        .store(in: &authorCancellables)
+    }
+
+    // MARK: - Private: Series
+
+    private func loadSeries() {
+        isSeriesLoading = true
+        seriesError = nil
+        seriesCancellables.removeAll()
+
+        guard authObserver.isAuthenticated else {
+            isSeriesLoading = false
+            return
+        }
+
+        let pub: AnyPublisher<[SeriesWithPreview], ClientError> = ConvexService.shared.subscribe(
+            to: "series/queries:listSeriesWithPreviews",
+            with: [:]
+        )
+
+        pub
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.logger.error("series browse FAILED: \(error.localizedDescription)")
+                        self?.seriesError = userFacingMessage(from: error, fallback: "Unable to load series")
+                        self?.isSeriesLoading = false
+                        self?.authObserver.needsResubscription()
+                    }
+                },
+                receiveValue: { [weak self] series in
+                    self?.seriesList = series
+                    self?.isSeriesLoading = false
+                }
+            )
+            .store(in: &seriesCancellables)
+    }
+
+    // MARK: - Private: Shelves
+
+    private func loadShelves() {
+        isShelvesLoading = true
+        shelvesError = nil
+        shelfCancellables.removeAll()
+
+        shelfRepository.subscribeToMyShelves()
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.logger.error("shelves FAILED: \(error.localizedDescription)")
+                        self?.shelvesError = userFacingMessage(from: error, fallback: "Unable to load bookshelves")
+                        self?.isShelvesLoading = false
+                        self?.authObserver.needsResubscription()
+                    }
+                },
+                receiveValue: { [weak self] shelves in
+                    self?.shelves = shelves
+                    self?.isShelvesLoading = false
+                }
+            )
+            .store(in: &shelfCancellables)
+    }
+
+    // MARK: - Private: Unified Search
+
+    private func performUnifiedSearch() {
+        unifiedCancellables.removeAll()
+        unifiedSearchError = nil
+
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else {
+            isUnifiedSearchLoading = false
+            return
+        }
+
+        guard authObserver.isAuthenticated else {
+            isUnifiedSearchLoading = false
+            return
+        }
+
+        guard let pub = searchRepository.subscribeToUnifiedSearch(query: query) else {
+            isUnifiedSearchLoading = false
+            return
+        }
+
+        logger.info("performUnifiedSearch: query='\(query)'")
+
+        pub
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.logger.error("unified search FAILED: \(error.localizedDescription)")
+                        self?.unifiedSearchError = userFacingMessage(
+                            from: error,
+                            fallback: "Search isn't available right now"
+                        )
+                        self?.isUnifiedSearchLoading = false
+                        self?.authObserver.needsResubscription()
+                    }
+                },
+                receiveValue: { [weak self] result in
+                    self?.logger.info("unified search: \(result.books.count) books, \(result.authors.count) authors, \(result.series?.count ?? 0) series")
+                    self?.unifiedBooks = result.books
+                    self?.unifiedAuthors = result.authors
+                    self?.unifiedSeries = result.series ?? []
+                    self?.isUnifiedSearchLoading = false
+                }
+            )
+            .store(in: &unifiedCancellables)
     }
 
     // MARK: - Offline
 
     private func loadOfflineBooks() {
         guard let dm = downloadManager else {
-            isLoading = false
+            isBookLoading = false
             return
         }
 
@@ -306,7 +791,7 @@ final class LibraryViewModel {
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
 
         books = offlineBooks
-        hasMore = false
-        isLoading = false
+        hasMoreBooks = false
+        isBookLoading = false
     }
 }

@@ -73,25 +73,17 @@ struct ProfileView: View {
                             .padding(.horizontal, 16)
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                    } header: {
-                        HStack {
-                            Text("Shelves")
-                            Spacer()
-                            if profile.isOwnProfile {
-                                NavigationLink(value: AppDestination.browseShelves) {
-                                    HStack(spacing: 2) {
-                                        Text("See All")
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption2)
-                                            .fontWeight(.semibold)
-                                    }
+
+
+                        if profile.isOwnProfile {
+                            NavigationLink(value: AppDestination.browseShelves) {
+                                Text("Show All")
                                     .font(.subheadline)
-                                    .fontWeight(.regular)
                                     .foregroundStyle(Color.accentColor)
-                                    .textCase(.none)
-                                }
                             }
                         }
+                    } header: {
+                        Text("Shelves")
                     }
                 }
 

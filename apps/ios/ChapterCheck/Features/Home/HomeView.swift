@@ -135,9 +135,6 @@ struct HomeView: View {
                     )
                 }
 
-                // Browse quick links
-                browseSection
-
                 Spacer()
                     .frame(height: 80)
             }
@@ -182,69 +179,6 @@ struct HomeView: View {
 
     // MARK: - Browse Quick Links
 
-    private var browseSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Browse")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-
-            NavigationLink(value: AppDestination.browseLibrary()) {
-                HStack {
-                    Label("All Books", systemImage: "books.vertical")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isOffline)
-            .opacity(viewModel.isOffline ? 0.4 : 1)
-
-            Divider()
-                .padding(.leading, 52)
-
-            NavigationLink(value: AppDestination.browseAuthors) {
-                HStack {
-                    Label("All Authors", systemImage: "person.2")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isOffline)
-            .opacity(viewModel.isOffline ? 0.4 : 1)
-
-            Divider()
-                .padding(.leading, 52)
-
-            NavigationLink(value: AppDestination.browseShelves) {
-                HStack {
-                    Label("My Bookshelves", systemImage: "tray.full")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isOffline)
-            .opacity(viewModel.isOffline ? 0.4 : 1)
-        }
-    }
 }
 
 #Preview {
