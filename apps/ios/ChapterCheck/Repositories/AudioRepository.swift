@@ -27,6 +27,20 @@ final class AudioRepository {
         )
     }
 
+    // MARK: - One-Shot Queries
+
+    /// Fetch audio files for a book once (non-reactive).
+    ///
+    /// Used when the caller needs audio files on-demand without maintaining a live subscription,
+    /// for example when opening the `BookNoteComposerSheet` for an audio-anchored note from
+    /// a context that doesn't already hold an audio file subscription.
+    func fetchAudioFiles(bookId: String) async throws -> [AudioFile] {
+        try await convex.query(
+            "audioFiles/queries:getAudioFilesForBook",
+            with: ["bookId": bookId]
+        )
+    }
+
     // MARK: - Actions
 
     /// Response shape returned by the `generateStreamUrl` Convex action.

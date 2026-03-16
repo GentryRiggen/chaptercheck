@@ -4,14 +4,34 @@ struct NotesTabView: View {
     @State private var viewModel = NotesTabViewModel()
     @State private var showBookPicker = false
     @State private var selectedBookForNewNote: BookWithDetails?
-    @State private var previewNote: BookNote?
+    @State private var previewNote: CrossBookNote?
     @State private var editingNote: CrossBookNote?
     @State private var showComposerForSelectedBook = false
+    /// Set when editing an audio-anchored note — holds the fetched context and original note.
+    @State private var audioNoteEditContext: (context: BookNoteComposerContext, note: CrossBookNote)?
+    @State private var isFetchingAudioFiles = false
+    @State private var showTagFilter = false
     @Environment(TagProvider.self) private var tagProvider
+    @Environment(\.pushDestination) private var pushDestination
 
     private let networkMonitor = NetworkMonitor.shared
 
     var body: some View {
+        content
+            .noteSheets(
+                viewModel: viewModel,
+                showBookPicker: $showBookPicker,
+                selectedBookForNewNote: $selectedBookForNewNote,
+                showComposerForSelectedBook: $showComposerForSelectedBook,
+                previewNote: $previewNote,
+                editingNote: $editingNote,
+                audioNoteEditContext: $audioNoteEditContext,
+                showTagFilter: $showTagFilter,
+                pushDestination: pushDestination
+            )
+    }
+
+    private var content: some View {
         Group {
             if viewModel.isLoading {
                 NotesSkeletonView()
@@ -53,67 +73,49 @@ struct NotesTabView: View {
         }
         .onChange(of: tagProvider.tags) { _, tags in
             viewModel.allTags = tags
-            // Prune selected tag IDs that no longer exist
             let validIds = Set(tags.map(\._id))
             viewModel.selectedTagIds = viewModel.selectedTagIds.intersection(validIds)
         }
-        .sheet(isPresented: $showBookPicker, onDismiss: {
-            // Delay to let SwiftUI finish the dismiss animation before presenting the next sheet
-            if selectedBookForNewNote != nil {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    showComposerForSelectedBook = true
-                }
-            }
-        }) {
-            BookPickerSheet { book in
-                selectedBookForNewNote = book
-            }
-        }
-        .sheet(isPresented: $showComposerForSelectedBook, onDismiss: {
-            selectedBookForNewNote = nil
-        }) {
-            if let book = selectedBookForNewNote {
-                FreeformNoteComposerSheet(
-                    bookId: book._id,
-                    tags: viewModel.allTags,
-                    onSave: { noteText, entryType, sourceText, tagIds, isPublic in
-                        try await viewModel.createNote(
-                            bookId: book._id,
-                            noteText: noteText,
-                            entryType: entryType,
-                            sourceText: sourceText,
-                            tagIds: tagIds,
-                            isPublic: isPublic
-                        )
-                    },
-                    onCreateTag: { name in
-                        try await viewModel.createTag(name: name)
+    }
+
+    // MARK: - Edit Note
+
+    /// Route edit taps to the appropriate composer based on whether the note has audio clip data.
+    ///
+    /// Audio-anchored notes need `BookNoteComposerSheet` so the clip metadata (audioFileId,
+    /// startSeconds, endSeconds) is preserved on save. Audio files are fetched on-demand since
+    /// `NotesTabView` does not maintain a per-book audio file subscription.
+    private func editNote(_ note: CrossBookNote) {
+        if note.isAudioAnchored {
+            Task {
+                isFetchingAudioFiles = true
+                defer { isFetchingAudioFiles = false }
+                do {
+                    let audioFiles = try await viewModel.fetchAudioFiles(for: note.bookId)
+                    let bookNote = note.asBookNote
+                    guard let audioFileId = bookNote.audioFileId else {
+                        editingNote = note
+                        return
                     }
-                )
-            }
-        }
-        .sheet(item: $previewNote) { note in
-            BookNotePreviewSheet(note: note)
-        }
-        .sheet(item: $editingNote) { note in
-            FreeformNoteComposerSheet(
-                bookId: note.bookId,
-                tags: viewModel.allTags,
-                existingNote: note.asBookNote,
-                onSave: { noteText, entryType, sourceText, tagIds, isPublic in
-                    try await viewModel.updateNote(
-                        noteId: note._id,
-                        noteText: noteText,
-                        entryType: entryType,
-                        sourceText: sourceText,
-                        tagIds: tagIds,
-                        isPublic: isPublic
+                    let startSecs = bookNote.startSeconds ?? 0
+                    let endSecs = bookNote.endSeconds ?? 0
+                    let context = BookNoteComposerContext(
+                        bookId: note.bookId,
+                        audioFiles: audioFiles,
+                        anchorSeconds: (startSecs + endSecs) / 2,
+                        initialAudioFileId: audioFileId,
+                        initialStartSeconds: startSecs,
+                        initialEndSeconds: endSecs,
+                        existingNote: bookNote
                     )
-                },
-                onCreateTag: { name in
-                    try await viewModel.createTag(name: name)
+                    audioNoteEditContext = (context: context, note: note)
+                } catch {
+                    // Fallback: open freeform editor so the user can still edit note text
+                    editingNote = note
                 }
-            )
+            }
+        } else {
+            editingNote = note
         }
     }
 
@@ -139,8 +141,7 @@ struct NotesTabView: View {
 
                 statsRibbon
                 entryTypeChips
-                tagFilterChips
-                sortHeader
+                sortAndFilterHeader
 
                 if viewModel.sortMode == .byBook {
                     groupedByBookContent
@@ -233,69 +234,28 @@ struct NotesTabView: View {
         }
     }
 
-    // MARK: - Tag Filter Chips
+    // MARK: - Sort & Filter Header
 
-    private var tagFilterChips: some View {
-        Group {
-            if !viewModel.allTags.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        Button {
-                            viewModel.selectedTagIds = []
-                        } label: {
-                            Text("All Tags")
-                                .font(.caption.weight(.medium))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(
-                                    Capsule()
-                                        .fill(viewModel.selectedTagIds.isEmpty ? AnyShapeStyle(.tint.opacity(0.18)) : AnyShapeStyle(Color(.secondarySystemFill)))
-                                )
-                        }
-                        .buttonStyle(.plain)
-
-                        ForEach(viewModel.allTags) { tag in
-                            Button {
-                                if viewModel.selectedTagIds.contains(tag._id) {
-                                    viewModel.selectedTagIds.remove(tag._id)
-                                } else {
-                                    viewModel.selectedTagIds.insert(tag._id)
-                                }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Circle()
-                                        .fill(tag.displayColor)
-                                        .frame(width: 8, height: 8)
-                                    Text(tag.name)
-                                        .font(.caption.weight(.medium))
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(
-                                    viewModel.selectedTagIds.contains(tag._id)
-                                        ? tag.displayColor.opacity(0.18)
-                                        : Color(.secondarySystemFill),
-                                    in: Capsule()
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-            }
-        }
-    }
-
-    // MARK: - Sort Header
-
-    private var sortHeader: some View {
+    private var sortAndFilterHeader: some View {
         HStack {
             Text("\(viewModel.filteredNotes.count) notes")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             Spacer()
+
+            if !viewModel.allTags.isEmpty {
+                Button {
+                    showTagFilter = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                        Text(viewModel.selectedTagIds.isEmpty ? "Tags" : "Tags (\(viewModel.selectedTagIds.count))")
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.tint)
+                }
+            }
 
             Menu {
                 Picker("Sort", selection: $viewModel.sortMode) {
@@ -320,8 +280,8 @@ struct NotesTabView: View {
                 CrossBookNoteRow(
                     note: note,
                     showBookContext: true,
-                    onTapNote: { previewNote = note.asBookNote },
-                    onEdit: { editingNote = note },
+                    onTapNote: { previewNote = note },
+                    onEdit: { editNote(note) },
                     onDelete: { Task { await viewModel.deleteNote(noteId: note._id) } }
                 )
             }
@@ -335,42 +295,35 @@ struct NotesTabView: View {
             ForEach(viewModel.groupedByBook, id: \.book._id) { group in
                 VStack(alignment: .leading, spacing: 8) {
                     // Section header
-                    NavigationLink(value: AppDestination.book(id: group.book._id)) {
-                        HStack(spacing: 10) {
-                            BookCoverView(r2Key: group.book.coverImageR2Key, displayMode: .square(40))
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                    HStack(spacing: 10) {
+                        BookCoverView(r2Key: group.book.coverImageR2Key, displayMode: .square(40))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(group.book.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .lineLimit(1)
-                                if let author = group.book.primaryAuthorName {
-                                    Text(author)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(group.book.title)
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
+                            if let author = group.book.primaryAuthorName {
+                                Text(author)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
-
-                            Spacer()
-
-                            Text("\(group.notes.count)")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.secondary)
-
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
                         }
+
+                        Spacer()
+
+                        Text("\(group.notes.count)")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
                     .padding(.horizontal)
 
                     ForEach(group.notes) { note in
                         CrossBookNoteRow(
                             note: note,
                             showBookContext: false,
-                            onTapNote: { previewNote = note.asBookNote },
-                            onEdit: { editingNote = note },
+                            onTapNote: { previewNote = note },
+                            onEdit: { editNote(note) },
                             onDelete: { Task { await viewModel.deleteNote(noteId: note._id) } }
                         )
                     }
@@ -379,4 +332,145 @@ struct NotesTabView: View {
         }
     }
 
+}
+
+// MARK: - Sheet Modifier
+
+/// Extracted to a separate modifier to avoid "unable to type-check this expression"
+/// errors in the main `body` — Swift's type checker struggles with many chained `.sheet` calls.
+private struct NoteSheetsModifier: ViewModifier {
+    @Bindable var viewModel: NotesTabViewModel
+    @Binding var showBookPicker: Bool
+    @Binding var selectedBookForNewNote: BookWithDetails?
+    @Binding var showComposerForSelectedBook: Bool
+    @Binding var previewNote: CrossBookNote?
+    @Binding var editingNote: CrossBookNote?
+    @Binding var audioNoteEditContext: (context: BookNoteComposerContext, note: CrossBookNote)?
+    @Binding var showTagFilter: Bool
+    var pushDestination: PushDestinationAction
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $showBookPicker, onDismiss: {
+                if selectedBookForNewNote != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showComposerForSelectedBook = true
+                    }
+                }
+            }) {
+                BookPickerSheet { book in
+                    selectedBookForNewNote = book
+                }
+            }
+            .sheet(isPresented: $showComposerForSelectedBook, onDismiss: {
+                selectedBookForNewNote = nil
+            }) {
+                if let book = selectedBookForNewNote {
+                    FreeformNoteComposerSheet(
+                        bookId: book._id,
+                        tags: viewModel.allTags,
+                        onSave: { noteText, entryType, sourceText, tagIds, isPublic in
+                            try await viewModel.createNote(
+                                bookId: book._id,
+                                noteText: noteText,
+                                entryType: entryType,
+                                sourceText: sourceText,
+                                tagIds: tagIds,
+                                isPublic: isPublic
+                            )
+                        },
+                        onCreateTag: { name in
+                            try await viewModel.createTag(name: name)
+                        }
+                    )
+                }
+            }
+            .sheet(item: $previewNote) { note in
+                BookNotePreviewSheet(
+                    note: note.asBookNote,
+                    bookTitle: note.book.title,
+                    bookCoverR2Key: note.book.coverImageR2Key,
+                    bookAuthorName: note.book.primaryAuthorName,
+                    onNavigateToBook: {
+                        pushDestination(.book(id: note.bookId))
+                    }
+                )
+            }
+            .sheet(item: $editingNote) { note in
+                FreeformNoteComposerSheet(
+                    bookId: note.bookId,
+                    tags: viewModel.allTags,
+                    existingNote: note.asBookNote,
+                    onSave: { noteText, entryType, sourceText, tagIds, isPublic in
+                        try await viewModel.updateNote(
+                            noteId: note._id,
+                            noteText: noteText,
+                            entryType: entryType,
+                            sourceText: sourceText,
+                            tagIds: tagIds,
+                            isPublic: isPublic
+                        )
+                    },
+                    onCreateTag: { name in
+                        try await viewModel.createTag(name: name)
+                    }
+                )
+            }
+            .sheet(isPresented: Binding(
+                get: { audioNoteEditContext != nil },
+                set: { if !$0 { audioNoteEditContext = nil } }
+            )) {
+                if let (context, note) = audioNoteEditContext {
+                    BookNoteComposerSheet(
+                        context: context,
+                        tags: viewModel.allTags,
+                        onSave: { payload in
+                            try await viewModel.updateNote(
+                                noteId: note._id,
+                                audioFileId: payload.audioFileId,
+                                tagIds: payload.tagIds.isEmpty ? nil : payload.tagIds,
+                                startSeconds: payload.startSeconds,
+                                endSeconds: payload.endSeconds,
+                                noteText: payload.noteText
+                            )
+                        },
+                        onCreateTag: { name in
+                            try await viewModel.createTag(name: name)
+                        }
+                    )
+                }
+            }
+            .sheet(isPresented: $showTagFilter) {
+                TagFilterSheet(
+                    tags: viewModel.allTags,
+                    selectedTagIds: $viewModel.selectedTagIds
+                )
+            }
+    }
+}
+
+private extension View {
+    func noteSheets(
+        viewModel: NotesTabViewModel,
+        showBookPicker: Binding<Bool>,
+        selectedBookForNewNote: Binding<BookWithDetails?>,
+        showComposerForSelectedBook: Binding<Bool>,
+        previewNote: Binding<CrossBookNote?>,
+        editingNote: Binding<CrossBookNote?>,
+        audioNoteEditContext: Binding<(context: BookNoteComposerContext, note: CrossBookNote)?>,
+        showTagFilter: Binding<Bool>,
+        pushDestination: PushDestinationAction
+    ) -> some View {
+        modifier(NoteSheetsModifier(
+            viewModel: viewModel,
+            showBookPicker: showBookPicker,
+            selectedBookForNewNote: selectedBookForNewNote,
+            showComposerForSelectedBook: showComposerForSelectedBook,
+            previewNote: previewNote,
+            editingNote: editingNote,
+            audioNoteEditContext: audioNoteEditContext,
+            showTagFilter: showTagFilter,
+            pushDestination: pushDestination
+        ))
+    }
 }

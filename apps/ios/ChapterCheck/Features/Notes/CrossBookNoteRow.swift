@@ -26,11 +26,8 @@ struct CrossBookNoteRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             if showBookContext {
-                NavigationLink(value: AppDestination.book(id: note.book._id)) {
-                    BookCoverView(r2Key: note.book.coverImageR2Key, displayMode: .square(40))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
+                BookCoverView(r2Key: note.book.coverImageR2Key, displayMode: .square(40))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
             } else {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(accentColor)
@@ -76,49 +73,35 @@ struct CrossBookNoteRow: View {
                 }
 
                 if showBookContext {
-                    NavigationLink(value: AppDestination.book(id: note.book._id)) {
-                        HStack(spacing: 4) {
-                            Text(note.book.title)
-                                .fontWeight(.medium)
-                            if let author = note.book.primaryAuthorName {
-                                Text("·")
-                                Text(author)
-                            }
+                    HStack(spacing: 4) {
+                        Text(note.book.title)
+                            .fontWeight(.medium)
+                        if let author = note.book.primaryAuthorName {
+                            Text("·")
+                            Text(author)
                         }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
                     }
-                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 }
             }
-
-            Menu {
-                Button(action: onEdit) {
-                    Label("Edit", systemImage: "pencil")
-                }
-                Button(role: .destructive) {
-                    showDeleteConfirmation = true
-                } label: {
-                    Label {
-                        Text("Delete")
-                    } icon: {
-                        Image(systemName: "trash")
-                            .foregroundStyle(.red)
-                    }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(width: 28, height: 28)
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
         .contentShape(RoundedRectangle(cornerRadius: 18))
         .onTapGesture(perform: onTapNote)
+        .contextMenu {
+            Button(action: onEdit) {
+                Label("Edit", systemImage: "pencil")
+            }
+            Button(role: .destructive) {
+                showDeleteConfirmation = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
         .alert("Delete Note", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive, action: onDelete)

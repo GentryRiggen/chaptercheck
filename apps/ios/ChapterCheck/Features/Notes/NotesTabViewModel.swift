@@ -34,6 +34,7 @@ final class NotesTabViewModel {
     private let networkMonitor = NetworkMonitor.shared
     private let logger = Logger(subsystem: "com.chaptercheck", category: "NotesTabViewModel")
     private let notesRepository = BookNotesRepository()
+    private let audioRepository = AudioRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
 
@@ -264,6 +265,36 @@ final class NotesTabViewModel {
             sourceText: sourceText,
             isPublic: isPublic
         )
+    }
+
+    /// Update an audio-anchored note, preserving the clip metadata (audioFileId, start/end seconds).
+    func updateNote(
+        noteId: String,
+        audioFileId: String?,
+        tagIds: [String]?,
+        startSeconds: Double?,
+        endSeconds: Double?,
+        noteText: String?,
+        entryType: String? = nil,
+        sourceText: String? = nil,
+        isPublic: Bool? = nil
+    ) async throws {
+        try await notesRepository.updateNote(
+            noteId: noteId,
+            audioFileId: audioFileId,
+            tagIds: tagIds ?? [],
+            startSeconds: startSeconds,
+            endSeconds: endSeconds,
+            noteText: noteText,
+            entryType: entryType,
+            sourceText: sourceText,
+            isPublic: isPublic
+        )
+    }
+
+    /// Fetch audio files for a book once (non-reactive), used when opening the audio note editor.
+    func fetchAudioFiles(for bookId: String) async throws -> [AudioFile] {
+        try await audioRepository.fetchAudioFiles(bookId: bookId)
     }
 
     func createTag(name: String) async throws -> String {

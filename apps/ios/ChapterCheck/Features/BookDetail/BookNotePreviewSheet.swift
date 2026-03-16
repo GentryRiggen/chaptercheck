@@ -2,6 +2,10 @@ import SwiftUI
 
 struct BookNotePreviewSheet: View {
     let note: BookNote
+    var bookTitle: String?
+    var bookCoverR2Key: String?
+    var bookAuthorName: String?
+    var onNavigateToBook: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(DownloadManager.self) private var downloadManager
@@ -12,15 +16,19 @@ struct BookNotePreviewSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 18) {
-                headerSection
-                if note.isAudioAnchored {
-                    playbackSection
-                    detailSection
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if let bookTitle {
+                        bookContextSection(title: bookTitle)
+                    }
+                    headerSection
+                    if note.isAudioAnchored {
+                        playbackSection
+                        detailSection
+                    }
                 }
-                Spacer(minLength: 0)
+                .padding(20)
             }
-            .padding(20)
             .navigationTitle(note.isAudioAnchored ? "Note Clip" : note.entryTypeLabel)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -31,7 +39,7 @@ struct BookNotePreviewSheet: View {
                 }
             }
         }
-        .presentationDetents([note.isAudioAnchored ? .height(340) : .medium])
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .onChange(of: clipPreviewPlayer.currentTime) { _, newValue in
             guard !isScrubbing else { return }
@@ -190,6 +198,40 @@ struct BookNotePreviewSheet: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private func bookContextSection(title: String) -> some View {
+        Button {
+            dismiss()
+            onNavigateToBook?()
+        } label: {
+            HStack(spacing: 12) {
+                if let bookCoverR2Key {
+                    BookCoverView(r2Key: bookCoverR2Key, displayMode: .square(44))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    if let bookAuthorName {
+                        Text(bookAuthorName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(12)
+            .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
     }
 
     private func togglePreview() async {

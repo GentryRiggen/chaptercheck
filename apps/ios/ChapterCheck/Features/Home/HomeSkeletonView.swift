@@ -31,14 +31,14 @@ struct HomeSkeletonView: View {
 
             HStack(spacing: 12) {
                 ForEach(0..<3, id: \.self) { _ in
-                    HStack(spacing: 12) {
+                    HStack(spacing: 8) {
                         SkeletonView(shape: .rectangle, width: 36, height: 36, cornerRadius: 10)
                         VStack(alignment: .leading, spacing: 3) {
                             SkeletonView(shape: .rectangle, width: 40, height: 14, cornerRadius: 4)
                             SkeletonView(shape: .rectangle, width: 55, height: 10, cornerRadius: 3)
                         }
                     }
-                    .padding(.horizontal, 14)
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(.fill.quaternary)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -79,18 +79,17 @@ struct HomeSkeletonView: View {
     // MARK: - Secondary Listening Cards
 
     private var listeningCardsSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(0..<3, id: \.self) { _ in
-                    VStack(alignment: .leading, spacing: 8) {
-                        SkeletonView(shape: .rectangle, width: 140, height: 210, cornerRadius: 8)
-                        SkeletonView(shape: .rectangle, width: 100, height: 12, cornerRadius: 4)
-                    }
-                    .frame(width: 140)
+        HStack(spacing: 12) {
+            ForEach(0..<3, id: \.self) { _ in
+                VStack(alignment: .leading, spacing: 8) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.fill.tertiary)
+                        .aspectRatio(2 / 3, contentMode: .fit)
+                    SkeletonView(shape: .rectangle, width: 80, height: 12, cornerRadius: 4)
                 }
+                .frame(maxWidth: .infinity)
             }
         }
-        .scrollDisabled(true)
     }
 
     // MARK: - Shelves Row
@@ -102,11 +101,13 @@ struct HomeSkeletonView: View {
             HStack(spacing: 12) {
                 ForEach(0..<3, id: \.self) { _ in
                     VStack(alignment: .leading, spacing: 8) {
-                        SkeletonView(shape: .rectangle, width: 120, height: 180, cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(.fill.tertiary)
+                            .aspectRatio(2 / 3, contentMode: .fit)
                         SkeletonView(shape: .rectangle, width: 80, height: 12, cornerRadius: 4)
                         SkeletonView(shape: .rectangle, width: 50, height: 10, cornerRadius: 3)
                     }
-                    .frame(width: 120)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
@@ -121,11 +122,13 @@ struct HomeSkeletonView: View {
             HStack(spacing: 12) {
                 ForEach(0..<3, id: \.self) { _ in
                     VStack(alignment: .leading, spacing: 6) {
-                        SkeletonView(shape: .rectangle, width: 140, height: 210, cornerRadius: 8)
-                        SkeletonView(shape: .rectangle, width: 100, height: 12, cornerRadius: 4)
-                        SkeletonView(shape: .rectangle, width: 70, height: 10, cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(.fill.tertiary)
+                            .aspectRatio(2 / 3, contentMode: .fit)
+                        SkeletonView(shape: .rectangle, width: 80, height: 12, cornerRadius: 4)
+                        SkeletonView(shape: .rectangle, width: 60, height: 10, cornerRadius: 3)
                     }
-                    .frame(width: 140)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
