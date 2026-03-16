@@ -12,6 +12,9 @@ struct NowPlayingView: View {
     @Environment(\.navigateToDestination) private var navigateToDestination
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.showToast) private var showToast
+    @Environment(CurrentUserProvider.self) private var currentUserProvider
+    @Environment(GenreProvider.self) private var genreProvider
+    @Environment(TagProvider.self) private var tagProvider
 
     @State private var isPartSelectorPresented = false
     @State private var isAudioSettingsPresented = false
@@ -112,7 +115,7 @@ struct NowPlayingView: View {
                 Capsule()
                     .fill(.tertiary)
                     .frame(width: 36, height: 5)
-                    .padding(.top, 8)
+                    .padding(.top, 16)
                     .padding(.bottom, 4)
             }
             .buttonStyle(.plain)
@@ -213,6 +216,10 @@ struct NowPlayingView: View {
         .onAppear {
             isPlayingAnimated = audioPlayer.isPlaying
             detailsViewModel.showToast = { toast in showToast(toast) }
+            // Sync shared provider values into the ViewModel immediately
+            detailsViewModel.currentUser = currentUserProvider.currentUser
+            detailsViewModel.allGenres = genreProvider.allGenres
+            detailsViewModel.noteTags = tagProvider.tags
             // Handle streaming event that fired before this sheet was presented
             handleStreamingEvent()
             // Subscribe details ViewModel to current book
@@ -249,6 +256,15 @@ struct NowPlayingView: View {
             if let newId {
                 detailsViewModel.subscribe(bookId: newId)
             }
+        }
+        .onChange(of: currentUserProvider.currentUser?.id) { _, _ in
+            detailsViewModel.currentUser = currentUserProvider.currentUser
+        }
+        .onChange(of: genreProvider.allGenres) { _, genres in
+            detailsViewModel.allGenres = genres
+        }
+        .onChange(of: tagProvider.tags) { _, tags in
+            detailsViewModel.noteTags = tags
         }
         .sheet(isPresented: $isReviewSheetPresented) {
             if let book = audioPlayer.currentBook {
@@ -360,6 +376,14 @@ struct NowPlayingView: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
+                }
+
+                if let deviceName = audioPlayer.outputDeviceName {
+                    Label(deviceName, systemImage: "airplayaudio")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.top, 2)
                 }
             }
 

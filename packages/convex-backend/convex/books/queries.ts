@@ -5,11 +5,9 @@ import { type Doc } from "../_generated/dataModel";
 import { query, type QueryCtx } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
 import { isBookFinished } from "../lib/bookUserData";
+import { batchEnrichBooks, type EnrichedBook } from "../lib/enrichment";
 
-export type EnrichedBook = Doc<"books"> & {
-  authors: Array<Doc<"authors"> & { role?: string }>;
-  series: { _id: Doc<"series">["_id"]; name: string } | null;
-};
+export type { EnrichedBook };
 
 export function createBookEnricher(ctx: QueryCtx): (book: Doc<"books">) => Promise<EnrichedBook> {
   const authorCache = new Map<string, Doc<"authors"> | null>();
@@ -95,8 +93,7 @@ export const listBooks = query({
     }
     const results = await q.paginate(args.paginationOpts);
 
-    const enrichBook = createBookEnricher(ctx);
-    const booksWithDetails = await Promise.all(results.page.map((book) => enrichBook(book)));
+    const booksWithDetails = await batchEnrichBooks(ctx, results.page);
 
     return {
       ...results,
@@ -149,10 +146,7 @@ export const searchBooks = query({
     }
     const cappedBooks = mergedBooks.slice(0, 50);
 
-    const enrichBook = createBookEnricher(ctx);
-    const booksWithDetails = await Promise.all(cappedBooks.map((book) => enrichBook(book)));
-
-    return booksWithDetails;
+    return await batchEnrichBooks(ctx, cappedBooks);
   },
 });
 
@@ -219,10 +213,7 @@ export const filterBooksByGenres = query({
 
     const capped = books.slice(0, 50);
 
-    const enrichBook = createBookEnricher(ctx);
-    const booksWithDetails = await Promise.all(capped.map((book) => enrichBook(book)));
-
-    return booksWithDetails;
+    return await batchEnrichBooks(ctx, capped);
   },
 });
 
@@ -241,10 +232,7 @@ export const getTopRatedBooks = query({
       .filter((q) => q.gt(q.field("ratingCount"), 0))
       .take(limit);
 
-    const enrichBook = createBookEnricher(ctx);
-    const booksWithDetails = await Promise.all(books.map((book) => enrichBook(book)));
-
-    return booksWithDetails;
+    return await batchEnrichBooks(ctx, books);
   },
 });
 
@@ -290,10 +278,7 @@ export const getRecentBooks = query({
     const limit = args.limit ?? 6;
     const books = await ctx.db.query("books").order("desc").take(limit);
 
-    const enrichBook = createBookEnricher(ctx);
-    const booksWithDetails = await Promise.all(books.map((book) => enrichBook(book)));
-
-    return booksWithDetails;
+    return await batchEnrichBooks(ctx, books);
   },
 });
 

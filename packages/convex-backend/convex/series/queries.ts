@@ -1,6 +1,9 @@
 import { v } from "convex/values";
+
+import { type Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
+import { batchEnrichBooks } from "../lib/enrichment";
 
 // Get a single series by ID
 export const getSeries = query({
@@ -45,51 +48,94 @@ export const listSeriesWithPreviews = query({
     await requireAuth(ctx);
     const allSeries = await ctx.db.query("series").order("desc").take(100);
 
-    return await Promise.all(
-      allSeries.map(async (series) => {
-        const books = await ctx.db
+    // 1. Fetch books for ALL series in parallel
+    const booksBySeries = await Promise.all(
+      allSeries.map((series) =>
+        ctx.db
           .query("books")
           .withIndex("by_series_and_order", (q) => q.eq("seriesId", series._id))
-          .collect();
+          .collect()
+      )
+    );
 
-        // Sort by seriesOrder (nulls last)
-        books.sort((a, b) => {
-          if (a.seriesOrder === undefined) return 1;
-          if (b.seriesOrder === undefined) return -1;
-          return a.seriesOrder - b.seriesOrder;
-        });
+    // Sort each series' books by seriesOrder (nulls last)
+    for (const books of booksBySeries) {
+      books.sort((a, b) => {
+        if (a.seriesOrder === undefined) return 1;
+        if (b.seriesOrder === undefined) return -1;
+        return a.seriesOrder - b.seriesOrder;
+      });
+    }
 
-        // Collect unique authors from all books (deduplicated by authorId)
-        const authorMap = new Map<string, { _id: string; name: string }>();
-        for (const book of books) {
-          const bookAuthors = await ctx.db
-            .query("bookAuthors")
-            .withIndex("by_book", (q) => q.eq("bookId", book._id))
-            .collect();
-          for (const ba of bookAuthors) {
-            if (!authorMap.has(ba.authorId)) {
-              const author = await ctx.db.get(ba.authorId);
-              if (author) {
-                authorMap.set(ba.authorId, {
-                  _id: author._id,
-                  name: author.name,
-                });
-              }
+    // 2. Collect all unique book IDs across all series
+    const allBookIds = new Set<Id<"books">>();
+    for (const books of booksBySeries) {
+      for (const book of books) {
+        allBookIds.add(book._id);
+      }
+    }
+
+    // 3. Fetch all bookAuthor rows for all books in parallel
+    const bookIdList = [...allBookIds];
+    const bookAuthorsByBookId = new Map<string, Array<{ authorId: Id<"authors"> }>>();
+
+    const allBookAuthorRows = await Promise.all(
+      bookIdList.map((bookId) =>
+        ctx.db
+          .query("bookAuthors")
+          .withIndex("by_book", (q) => q.eq("bookId", bookId))
+          .collect()
+      )
+    );
+
+    for (let i = 0; i < bookIdList.length; i++) {
+      bookAuthorsByBookId.set(bookIdList[i], allBookAuthorRows[i]);
+    }
+
+    // 4. Collect all unique author IDs and batch-fetch
+    const authorIds = new Set<Id<"authors">>();
+    for (const rows of allBookAuthorRows) {
+      for (const row of rows) {
+        authorIds.add(row.authorId);
+      }
+    }
+
+    const authorDocs = await Promise.all([...authorIds].map((id) => ctx.db.get(id)));
+    const authorMap = new Map<string, { _id: Id<"authors">; name: string }>();
+    for (const doc of authorDocs) {
+      if (doc) {
+        authorMap.set(doc._id, { _id: doc._id, name: doc.name });
+      }
+    }
+
+    // 5. Assemble results
+    return allSeries.map((series, i) => {
+      const books = booksBySeries[i];
+
+      // Collect unique authors for this series
+      const seriesAuthorMap = new Map<string, { _id: string; name: string }>();
+      for (const book of books) {
+        const bas = bookAuthorsByBookId.get(book._id) ?? [];
+        for (const ba of bas) {
+          if (!seriesAuthorMap.has(ba.authorId)) {
+            const author = authorMap.get(ba.authorId);
+            if (author) {
+              seriesAuthorMap.set(ba.authorId, author);
             }
           }
         }
+      }
 
-        return {
-          ...series,
-          bookCount: books.length,
-          previewCovers: books.slice(0, 4).map((b) => ({
-            _id: b._id,
-            coverImageR2Key: b.coverImageR2Key,
-          })),
-          authors: Array.from(authorMap.values()).slice(0, 3),
-        };
-      })
-    );
+      return {
+        ...series,
+        bookCount: books.length,
+        previewCovers: books.slice(0, 4).map((b) => ({
+          _id: b._id,
+          coverImageR2Key: b.coverImageR2Key,
+        })),
+        authors: Array.from(seriesAuthorMap.values()).slice(0, 3),
+      };
+    });
   },
 });
 
@@ -129,28 +175,6 @@ export const getBooksInSeriesWithAuthors = query({
       return a.seriesOrder - b.seriesOrder;
     });
 
-    // Enrich with authors
-    const booksWithAuthors = await Promise.all(
-      sortedBooks.map(async (book) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = await Promise.all(
-          bookAuthors.map(async (ba) => {
-            const author = await ctx.db.get(ba.authorId);
-            return author ? { ...author, role: ba.role } : null;
-          })
-        );
-
-        return {
-          ...book,
-          authors: authors.filter((a) => a !== null),
-        };
-      })
-    );
-
-    return booksWithAuthors;
+    return await batchEnrichBooks(ctx, sortedBooks);
   },
 });

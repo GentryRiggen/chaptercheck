@@ -1,4 +1,3 @@
-import Combine
 import SwiftUI
 
 /// A sheet for selecting genres to filter the library.
@@ -6,33 +5,25 @@ import SwiftUI
 /// Displays all available genres in a searchable list with checkmark accessories.
 /// Selection is reflected immediately via a `@Binding`, so the parent view model
 /// can react to changes as the user taps items — no explicit "apply" action is needed.
+///
+/// Genres are sourced from the shared `GenreProvider` via `@Environment`, avoiding
+/// a duplicate WebSocket subscription.
 struct GenreFilterSheet: View {
     @Binding var selectedGenreIds: Set<String>
 
-    @State private var allGenres: [Genre] = []
-    @State private var isLoading = true
-    @State private var error: String?
     @State private var searchText = ""
-    @State private var cancellables = Set<AnyCancellable>()
     @Environment(\.dismiss) private var dismiss
-
-    private let genreRepository = GenreRepository()
+    @Environment(GenreProvider.self) private var genreProvider
 
     private var filteredGenres: [Genre] {
-        if searchText.isEmpty { return allGenres }
-        return allGenres.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        if searchText.isEmpty { return genreProvider.allGenres }
+        return genreProvider.allGenres.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
     }
 
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading {
-                    LoadingView()
-                } else if let error {
-                    ErrorView(message: error) {
-                        subscribeToGenres()
-                    }
-                } else if allGenres.isEmpty {
+                if genreProvider.allGenres.isEmpty {
                     EmptyStateView(
                         icon: "tag",
                         title: "No Genres",
@@ -59,8 +50,6 @@ struct GenreFilterSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .onAppear { subscribeToGenres() }
-        .onDisappear { cancellables.removeAll() }
     }
 
     // MARK: - Genre List
@@ -93,29 +82,5 @@ struct GenreFilterSheet: View {
         } else {
             selectedGenreIds.insert(id)
         }
-    }
-
-    // MARK: - Subscription
-
-    private func subscribeToGenres() {
-        cancellables.removeAll()
-        isLoading = true
-        error = nil
-
-        genreRepository.subscribeToAllGenres()?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { completion in
-                    if case .failure(let err) = completion {
-                        error = err.localizedDescription
-                        isLoading = false
-                    }
-                },
-                receiveValue: { [self] genres in
-                    allGenres = genres
-                    isLoading = false
-                }
-            )
-            .store(in: &cancellables)
     }
 }

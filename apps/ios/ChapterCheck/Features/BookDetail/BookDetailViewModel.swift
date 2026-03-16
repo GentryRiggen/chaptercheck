@@ -65,10 +65,12 @@ final class BookDetailViewModel {
     var myGenreVoteIds: [String] = []
     var notes: [BookNote] = []
     var noteCategories: [NoteCategory] = []
+    /// Tags sourced from the shared `TagProvider` — updated externally by the view.
     var noteTags: [MemoryTag] = []
     var selectedNoteTagIds: Set<String> = []
     var notesFilterOption: BookNotesFilterOption = .all
     var reviewSortOption: ReviewSortOption = .recent
+    /// Current user sourced from the shared `CurrentUserProvider` — updated externally by the view.
     var currentUser: UserWithPermissions?
     var wantToReadStatus = WantToReadStatus(isOnWantToRead: false, shelfId: nil)
     var bookGenres: [BookGenre] = []
@@ -103,7 +105,6 @@ final class BookDetailViewModel {
     private let shelfRepository = ShelfRepository()
     let genreRepository = GenreRepository()
     private let bookNotesRepository = BookNotesRepository()
-    private let userRepository = UserRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
     private var currentBookId: String?
@@ -238,13 +239,10 @@ final class BookDetailViewModel {
                 subscribeToShelvesForBook(bookId: bookId)
                 subscribeToRatingStats(bookId: bookId)
                 subscribeToReviews(bookId: bookId)
-                subscribeToAllGenres()
                 subscribeToMyGenreVotes(bookId: bookId)
                 subscribeToBookGenres(bookId: bookId)
                 subscribeToNotes(bookId: bookId)
                 subscribeToNoteCategories()
-                subscribeToNoteTags()
-                subscribeToCurrentUser()
             },
             onUnauthenticated: { [weak self] in
                 self?.cancellables.removeAll()
@@ -289,12 +287,9 @@ final class BookDetailViewModel {
                 subscribeToShelvesForBook(bookId: bookId)
                 subscribeToRatingStats(bookId: bookId)
                 subscribeToReviews(bookId: bookId)
-                subscribeToAllGenres()
                 subscribeToMyGenreVotes(bookId: bookId)
                 subscribeToNotes(bookId: bookId)
                 subscribeToNoteCategories()
-                subscribeToNoteTags()
-                subscribeToCurrentUser()
             },
             onUnauthenticated: { [weak self] in
                 self?.cancellables.removeAll()
@@ -605,18 +600,6 @@ final class BookDetailViewModel {
             .store(in: &cancellables)
     }
 
-    private func subscribeToAllGenres() {
-        genreRepository.subscribeToAllGenres()?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in },
-                receiveValue: { [weak self] genres in
-                    self?.allGenres = genres
-                }
-            )
-            .store(in: &cancellables)
-    }
-
     private func subscribeToMyGenreVotes(bookId: String) {
         genreRepository.subscribeToMyGenreVotes(bookId: bookId)?
             .receive(on: DispatchQueue.main)
@@ -660,34 +643,6 @@ final class BookDetailViewModel {
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] categories in
                     self?.noteCategories = categories
-                }
-            )
-            .store(in: &cancellables)
-    }
-
-    private func subscribeToNoteTags() {
-        bookNotesRepository.subscribeToMyTags()?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in },
-                receiveValue: { [weak self] tags in
-                    guard let self else { return }
-                    noteTags = tags
-                    // Remove any selected tag IDs that no longer exist
-                    let existingIds = Set(tags.map(\._id))
-                    selectedNoteTagIds = selectedNoteTagIds.intersection(existingIds)
-                }
-            )
-            .store(in: &cancellables)
-    }
-
-    private func subscribeToCurrentUser() {
-        userRepository.subscribeToCurrentUser()?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in },
-                receiveValue: { [weak self] user in
-                    self?.currentUser = user
                 }
             )
             .store(in: &cancellables)

@@ -1,8 +1,8 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
-import { type Id } from "../_generated/dataModel";
-import { query } from "../_generated/server";
+import { type Doc, type Id } from "../_generated/dataModel";
+import { query, type QueryCtx } from "../_generated/server";
 import { getCurrentUser, requireAdmin, requireAuth } from "../lib/auth";
 
 type BookUserDataLike = {
@@ -17,6 +17,97 @@ function isBookFinished(data: BookUserDataLike): boolean {
 
 function getFinishedAt(data: BookUserDataLike): number {
   return data.readAt ?? data.createdAt;
+}
+
+/**
+ * Batch-fetch books, authors, and series for an array of bookUserData entries.
+ * Returns maps keyed by bookId for efficient assembly.
+ */
+async function batchFetchBookDetails(ctx: QueryCtx, bookIds: Id<"books">[]) {
+  if (bookIds.length === 0) {
+    return {
+      bookMap: new Map<string, Doc<"books">>(),
+      authorsMap: new Map<string, { _id: Id<"authors">; name: string }[]>(),
+      seriesMap: new Map<string, { _id: Id<"series">; name: string }>(),
+    };
+  }
+
+  // 1. Batch-fetch all books
+  const bookDocs = await Promise.all(bookIds.map((id) => ctx.db.get(id)));
+  const bookMap = new Map<string, Doc<"books">>();
+  for (const doc of bookDocs) {
+    if (doc) bookMap.set(doc._id, doc);
+  }
+
+  // 2. Batch-fetch bookAuthors for all books
+  const validBookIds = [...bookMap.keys()] as Id<"books">[];
+  const bookAuthorsByBook = await Promise.all(
+    validBookIds.map((bookId) =>
+      ctx.db
+        .query("bookAuthors")
+        .withIndex("by_book", (q) => q.eq("bookId", bookId))
+        .collect()
+    )
+  );
+
+  // 3. Collect unique author IDs and series IDs
+  const authorIds = new Set<Id<"authors">>();
+  const seriesIds = new Set<Id<"series">>();
+  for (const bas of bookAuthorsByBook) {
+    for (const ba of bas) {
+      authorIds.add(ba.authorId);
+    }
+  }
+  for (const book of bookMap.values()) {
+    if (book.seriesId) seriesIds.add(book.seriesId);
+  }
+
+  // 4. Batch-fetch all authors and series
+  const [authorDocs, seriesDocs] = await Promise.all([
+    Promise.all([...authorIds].map((id) => ctx.db.get(id))),
+    Promise.all([...seriesIds].map((id) => ctx.db.get(id))),
+  ]);
+
+  const authorDocMap = new Map<string, Doc<"authors">>();
+  for (const doc of authorDocs) {
+    if (doc) authorDocMap.set(doc._id, doc);
+  }
+
+  const seriesDocMap = new Map<string, Doc<"series">>();
+  for (const doc of seriesDocs) {
+    if (doc) seriesDocMap.set(doc._id, doc);
+  }
+
+  // 5. Build per-book author lists (Map keyed by bookId for safe pairing)
+  const bookAuthorsMap = new Map<string, Doc<"bookAuthors">[]>();
+  for (let i = 0; i < validBookIds.length; i++) {
+    bookAuthorsMap.set(validBookIds[i], bookAuthorsByBook[i]);
+  }
+
+  const authorsMap = new Map<string, { _id: Id<"authors">; name: string }[]>();
+  for (const [bookId, bas] of bookAuthorsMap) {
+    const authors: { _id: Id<"authors">; name: string }[] = [];
+    for (const ba of bas) {
+      const author = authorDocMap.get(ba.authorId);
+      if (author) {
+        authors.push({ _id: author._id, name: author.name });
+      }
+    }
+    authorsMap.set(bookId, authors);
+  }
+
+  // 6. Build series map (bookId -> series)
+  const seriesMap = new Map<string, { _id: Id<"series">; name: string }>();
+  for (const book of bookMap.values()) {
+    if (book.seriesId) {
+      const seriesDoc = seriesDocMap.get(book.seriesId);
+      if (seriesDoc) {
+        seriesMap.set(book._id, { _id: seriesDoc._id, name: seriesDoc.name });
+      }
+    }
+  }
+
+  return { bookMap, authorsMap, seriesMap };
 }
 
 /**
@@ -247,42 +338,25 @@ export const getUserPublicReviews = query({
       return bTime - aTime;
     });
 
-    // Enrich with book info
-    const reviewsWithBooks = await Promise.all(
-      reviews.map(async (review) => {
-        const book = await ctx.db.get(review.bookId);
+    // Batch-enrich with book info
+    const bookIds = reviews.map((r) => r.bookId);
+    const { bookMap, authorsMap } = await batchFetchBookDetails(ctx, bookIds);
 
-        // Get authors for the book
-        let authors: { _id: Id<"authors">; name: string }[] = [];
-        if (book) {
-          const bookAuthors = await ctx.db
-            .query("bookAuthors")
-            .withIndex("by_book", (q) => q.eq("bookId", book._id))
-            .collect();
-
-          authors = (
-            await Promise.all(
-              bookAuthors.map(async (ba) => {
-                const author = await ctx.db.get(ba.authorId);
-                return author ? { _id: author._id, name: author.name } : null;
-              })
-            )
-          ).filter((a): a is { _id: Id<"authors">; name: string } => a !== null);
-        }
-
-        return {
-          ...review,
-          book: book
-            ? {
-                _id: book._id,
-                title: book.title,
-                coverImageR2Key: book.coverImageR2Key,
-                authors,
-              }
-            : null,
-        };
-      })
-    );
+    const reviewsWithBooks = reviews.map((review) => {
+      const book = bookMap.get(review.bookId);
+      const authors = authorsMap.get(review.bookId) ?? [];
+      return {
+        ...review,
+        book: book
+          ? {
+              _id: book._id,
+              title: book.title,
+              coverImageR2Key: book.coverImageR2Key,
+              authors,
+            }
+          : null,
+      };
+    });
 
     return reviewsWithBooks;
   },
@@ -328,40 +402,24 @@ export const getUserReviewsPaginated = query({
     const paginatedReviews = reviews.slice(startIndex, endIndex);
     const hasMore = endIndex < reviews.length;
 
-    const reviewsWithBooks = await Promise.all(
-      paginatedReviews.map(async (review) => {
-        const book = await ctx.db.get(review.bookId);
+    const bookIds = paginatedReviews.map((r) => r.bookId);
+    const { bookMap, authorsMap } = await batchFetchBookDetails(ctx, bookIds);
 
-        let authors: { _id: Id<"authors">; name: string }[] = [];
-        if (book) {
-          const bookAuthors = await ctx.db
-            .query("bookAuthors")
-            .withIndex("by_book", (q) => q.eq("bookId", book._id))
-            .collect();
-
-          authors = (
-            await Promise.all(
-              bookAuthors.map(async (ba) => {
-                const author = await ctx.db.get(ba.authorId);
-                return author ? { _id: author._id, name: author.name } : null;
-              })
-            )
-          ).filter((a): a is { _id: Id<"authors">; name: string } => a !== null);
-        }
-
-        return {
-          ...review,
-          book: book
-            ? {
-                _id: book._id,
-                title: book.title,
-                coverImageR2Key: book.coverImageR2Key,
-                authors,
-              }
-            : null,
-        };
-      })
-    );
+    const reviewsWithBooks = paginatedReviews.map((review) => {
+      const book = bookMap.get(review.bookId);
+      const authors = authorsMap.get(review.bookId) ?? [];
+      return {
+        ...review,
+        book: book
+          ? {
+              _id: book._id,
+              title: book.title,
+              coverImageR2Key: book.coverImageR2Key,
+              authors,
+            }
+          : null,
+      };
+    });
 
     return {
       page: reviewsWithBooks,
@@ -411,32 +469,13 @@ export const getUserReadBooksPaginated = query({
     const paginatedData = readData.slice(startIndex, endIndex);
     const hasMore = endIndex < readData.length;
 
-    const booksWithDetails = await Promise.all(
-      paginatedData.map(async (data) => {
-        const book = await ctx.db.get(data.bookId);
+    const bookIds = paginatedData.map((d) => d.bookId);
+    const { bookMap, authorsMap, seriesMap } = await batchFetchBookDetails(ctx, bookIds);
+
+    const booksWithDetails = paginatedData
+      .map((data) => {
+        const book = bookMap.get(data.bookId);
         if (!book) return null;
-
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = (
-          await Promise.all(
-            bookAuthors.map(async (ba) => {
-              const author = await ctx.db.get(ba.authorId);
-              return author ? { _id: author._id, name: author.name } : null;
-            })
-          )
-        ).filter((a): a is { _id: Id<"authors">; name: string } => a !== null);
-
-        let series: { _id: Id<"series">; name: string } | null = null;
-        if (book.seriesId) {
-          const seriesDoc = await ctx.db.get(book.seriesId);
-          if (seriesDoc) {
-            series = { _id: seriesDoc._id, name: seriesDoc.name };
-          }
-        }
 
         return {
           _id: book._id,
@@ -445,8 +484,8 @@ export const getUserReadBooksPaginated = query({
           seriesOrder: book.seriesOrder,
           averageRating: book.averageRating,
           ratingCount: book.ratingCount,
-          authors,
-          series,
+          authors: authorsMap.get(book._id) ?? [],
+          series: seriesMap.get(book._id) ?? null,
           readAt: data.finishedAt ?? data.readAt,
           userRating: data.rating,
           userReviewText: data.reviewText,
@@ -454,12 +493,10 @@ export const getUserReadBooksPaginated = query({
           isReadPrivate: data.isReadPrivate,
         };
       })
-    );
-
-    const filtered = booksWithDetails.filter((b) => b !== null);
+      .filter((b) => b !== null);
 
     return {
-      page: filtered,
+      page: booksWithDetails,
       isDone: !hasMore,
       continueCursor: hasMore ? String(endIndex) : String(startIndex),
     };
@@ -528,32 +565,13 @@ export const getUserBooksByStatusPaginated = query({
     const paginatedData = filteredData.slice(startIndex, endIndex);
     const hasMore = endIndex < filteredData.length;
 
-    const booksWithDetails = await Promise.all(
-      paginatedData.map(async (data) => {
-        const book = await ctx.db.get(data.bookId);
+    const bookIds = paginatedData.map((d) => d.bookId);
+    const { bookMap, authorsMap, seriesMap } = await batchFetchBookDetails(ctx, bookIds);
+
+    const booksWithDetails = paginatedData
+      .map((data) => {
+        const book = bookMap.get(data.bookId);
         if (!book) return null;
-
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = (
-          await Promise.all(
-            bookAuthors.map(async (ba) => {
-              const author = await ctx.db.get(ba.authorId);
-              return author ? { _id: author._id, name: author.name } : null;
-            })
-          )
-        ).filter((a): a is { _id: Id<"authors">; name: string } => a !== null);
-
-        let series: { _id: Id<"series">; name: string } | null = null;
-        if (book.seriesId) {
-          const seriesDoc = await ctx.db.get(book.seriesId);
-          if (seriesDoc) {
-            series = { _id: seriesDoc._id, name: seriesDoc.name };
-          }
-        }
 
         return {
           _id: book._id,
@@ -562,8 +580,8 @@ export const getUserBooksByStatusPaginated = query({
           seriesOrder: book.seriesOrder,
           averageRating: book.averageRating,
           ratingCount: book.ratingCount,
-          authors,
-          series,
+          authors: authorsMap.get(book._id) ?? [],
+          series: seriesMap.get(book._id) ?? null,
           readAt: data.finishedAt ?? data.readAt,
           userRating: data.rating,
           userReviewText: data.reviewText,
@@ -572,12 +590,10 @@ export const getUserBooksByStatusPaginated = query({
           status: data.status ?? (data.isRead ? "finished" : undefined),
         };
       })
-    );
-
-    const filtered = booksWithDetails.filter((b) => b !== null);
+      .filter((b) => b !== null);
 
     return {
-      page: filtered,
+      page: booksWithDetails,
       isDone: !hasMore,
       continueCursor: hasMore ? String(endIndex) : String(startIndex),
     };
@@ -619,35 +635,14 @@ export const getUserReadBooks = query({
       return bTime - aTime;
     });
 
-    // Enrich with book details
-    const booksWithDetails = await Promise.all(
-      readData.map(async (data) => {
-        const book = await ctx.db.get(data.bookId);
+    // Batch-enrich with book details
+    const bookIds = readData.map((d) => d.bookId);
+    const { bookMap, authorsMap, seriesMap } = await batchFetchBookDetails(ctx, bookIds);
+
+    return readData
+      .map((data) => {
+        const book = bookMap.get(data.bookId);
         if (!book) return null;
-
-        // Get authors
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = (
-          await Promise.all(
-            bookAuthors.map(async (ba) => {
-              const author = await ctx.db.get(ba.authorId);
-              return author ? { _id: author._id, name: author.name } : null;
-            })
-          )
-        ).filter((a): a is { _id: Id<"authors">; name: string } => a !== null);
-
-        // Get series if exists
-        let series: { _id: Id<"series">; name: string } | null = null;
-        if (book.seriesId) {
-          const seriesDoc = await ctx.db.get(book.seriesId);
-          if (seriesDoc) {
-            series = { _id: seriesDoc._id, name: seriesDoc.name };
-          }
-        }
 
         return {
           _id: book._id,
@@ -656,8 +651,8 @@ export const getUserReadBooks = query({
           seriesOrder: book.seriesOrder,
           averageRating: book.averageRating,
           ratingCount: book.ratingCount,
-          authors,
-          series,
+          authors: authorsMap.get(book._id) ?? [],
+          series: seriesMap.get(book._id) ?? null,
           readAt: data.finishedAt ?? data.readAt,
           userRating: data.rating,
           userReviewText: data.reviewText,
@@ -665,9 +660,7 @@ export const getUserReadBooks = query({
           isReadPrivate: data.isReadPrivate,
         };
       })
-    );
-
-    return booksWithDetails.filter((b) => b !== null);
+      .filter((b) => b !== null);
   },
 });
 
@@ -700,47 +693,34 @@ export const getAdminUserRatings = query({
       return bTime - aTime;
     });
 
-    return (
-      await Promise.all(
-        ratedOrReviewed.map(async (entry) => {
-          const book = await ctx.db.get(entry.bookId);
-          if (!book) return null;
+    const bookIds = ratedOrReviewed.map((e) => e.bookId);
+    const { bookMap, authorsMap } = await batchFetchBookDetails(ctx, bookIds);
 
-          const bookAuthors = await ctx.db
-            .query("bookAuthors")
-            .withIndex("by_book", (q) => q.eq("bookId", book._id))
-            .collect();
+    return ratedOrReviewed
+      .map((entry) => {
+        const book = bookMap.get(entry.bookId);
+        if (!book) return null;
 
-          const authors = (
-            await Promise.all(
-              bookAuthors.map(async (ba) => {
-                const author = await ctx.db.get(ba.authorId);
-                return author ? { _id: author._id, name: author.name } : null;
-              })
-            )
-          ).filter((author): author is { _id: Id<"authors">; name: string } => author !== null);
-
-          return {
-            _id: entry._id,
-            rating: entry.rating,
-            reviewText: entry.reviewText,
-            reviewedAt: entry.reviewedAt,
-            updatedAt: entry.updatedAt,
-            readAt: entry.readAt,
-            isRead: entry.isRead,
-            isReadPrivate: entry.isReadPrivate,
-            isReviewPrivate: entry.isReviewPrivate,
-            book: {
-              _id: book._id,
-              title: book.title,
-              coverImageR2Key: book.coverImageR2Key,
-              authors,
-              averageRating: book.averageRating,
-              ratingCount: book.ratingCount,
-            },
-          };
-        })
-      )
-    ).filter((entry) => entry !== null);
+        return {
+          _id: entry._id,
+          rating: entry.rating,
+          reviewText: entry.reviewText,
+          reviewedAt: entry.reviewedAt,
+          updatedAt: entry.updatedAt,
+          readAt: entry.readAt,
+          isRead: entry.isRead,
+          isReadPrivate: entry.isReadPrivate,
+          isReviewPrivate: entry.isReviewPrivate,
+          book: {
+            _id: book._id,
+            title: book.title,
+            coverImageR2Key: book.coverImageR2Key,
+            authors: authorsMap.get(book._id) ?? [],
+            averageRating: book.averageRating,
+            ratingCount: book.ratingCount,
+          },
+        };
+      })
+      .filter((entry) => entry !== null);
   },
 });

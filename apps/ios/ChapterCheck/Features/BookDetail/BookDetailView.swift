@@ -24,6 +24,9 @@ struct BookDetailView: View {
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.showNowPlaying) private var showNowPlaying
     @Environment(\.showToast) private var showToast
+    @Environment(CurrentUserProvider.self) private var currentUserProvider
+    @Environment(GenreProvider.self) private var genreProvider
+    @Environment(TagProvider.self) private var tagProvider
     private let networkMonitor = NetworkMonitor.shared
 
     var body: some View {
@@ -61,6 +64,9 @@ struct BookDetailView: View {
             viewModel.downloadManager = downloadManager
             viewModel.audioPlayerManager = audioPlayer
             viewModel.showToast = { toast in showToast(toast) }
+            viewModel.currentUser = currentUserProvider.currentUser
+            viewModel.allGenres = genreProvider.allGenres
+            viewModel.noteTags = tagProvider.tags
             viewModel.subscribe(bookId: bookId)
 
             if downloadManager.pendingDeletePromptBookId == bookId {
@@ -75,6 +81,18 @@ struct BookDetailView: View {
             if isConnected {
                 viewModel.recoverFromOffline()
             }
+        }
+        .onChange(of: currentUserProvider.currentUser?.id) { _, _ in
+            viewModel.currentUser = currentUserProvider.currentUser
+        }
+        .onChange(of: genreProvider.allGenres) { _, genres in
+            viewModel.allGenres = genres
+        }
+        .onChange(of: tagProvider.tags) { _, tags in
+            viewModel.noteTags = tags
+            // Prune selected tag IDs that no longer exist
+            let existingIds = Set(tags.map(\._id))
+            viewModel.selectedNoteTagIds = viewModel.selectedNoteTagIds.intersection(existingIds)
         }
         .sheet(isPresented: $isAddToShelfPresented) {
             AddToShelfSheet(bookId: bookId)

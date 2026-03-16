@@ -34,6 +34,7 @@ import type * as lib_audioFileNames from "../lib/audioFileNames.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_bookRatings from "../lib/bookRatings.js";
 import type * as lib_bookUserData from "../lib/bookUserData.js";
+import type * as lib_enrichment from "../lib/enrichment.js";
 import type * as lib_memoryTags from "../lib/memoryTags.js";
 import type * as lib_r2Client from "../lib/r2Client.js";
 import type * as lib_r2Keys from "../lib/r2Keys.js";
@@ -93,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/bookRatings": typeof lib_bookRatings;
   "lib/bookUserData": typeof lib_bookUserData;
+  "lib/enrichment": typeof lib_enrichment;
   "lib/memoryTags": typeof lib_memoryTags;
   "lib/r2Client": typeof lib_r2Client;
   "lib/r2Keys": typeof lib_r2Keys;

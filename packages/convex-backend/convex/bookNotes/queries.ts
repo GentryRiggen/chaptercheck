@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 
+import { type Doc, type Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
 
@@ -120,39 +121,105 @@ export const getMyAllNotes = query({
       .order("desc")
       .collect();
 
-    const enriched = await Promise.all(
-      notes.map(async (note) => {
-        const [book, audioFile, tagRows] = await Promise.all([
-          ctx.db.get(note.bookId),
-          note.audioFileId ? ctx.db.get(note.audioFileId) : Promise.resolve(null),
+    if (notes.length === 0) return [];
+
+    // 1. Batch-fetch all books, audio files, and tag rows in parallel
+    const uniqueBookIds = [...new Set(notes.map((n) => n.bookId))];
+    const uniqueAudioFileIds = [
+      ...new Set(notes.map((n) => n.audioFileId).filter((id): id is Id<"audioFiles"> => !!id)),
+    ];
+
+    const [bookDocs, audioFileDocs, tagRowsByNote] = await Promise.all([
+      Promise.all(uniqueBookIds.map((id) => ctx.db.get(id))),
+      Promise.all(uniqueAudioFileIds.map((id) => ctx.db.get(id))),
+      Promise.all(
+        notes.map((note) =>
           ctx.db
             .query("bookNoteTags")
             .withIndex("by_note", (q) => q.eq("noteId", note._id))
-            .collect(),
-        ]);
+            .collect()
+        )
+      ),
+    ]);
 
+    const bookMap = new Map<string, Doc<"books">>();
+    for (const doc of bookDocs) {
+      if (doc) bookMap.set(doc._id, doc);
+    }
+    const audioFileMap = new Map<string, Doc<"audioFiles">>();
+    for (const doc of audioFileDocs) {
+      if (doc) audioFileMap.set(doc._id, doc);
+    }
+
+    // 2. Batch-fetch bookAuthors for primary authors (one per book)
+    const bookAuthorFirstRows = await Promise.all(
+      uniqueBookIds.map((bookId) =>
+        ctx.db
+          .query("bookAuthors")
+          .withIndex("by_book", (q) => q.eq("bookId", bookId))
+          .first()
+      )
+    );
+
+    // 3. Collect unique author IDs and tag IDs, then batch-fetch
+    const authorIds = new Set<Id<"authors">>();
+    for (const row of bookAuthorFirstRows) {
+      if (row) authorIds.add(row.authorId);
+    }
+
+    const tagIds = new Set<Id<"memoryTags">>();
+    for (const rows of tagRowsByNote) {
+      for (const row of rows) {
+        tagIds.add(row.tagId);
+      }
+    }
+
+    const [authorDocs, tagDocs] = await Promise.all([
+      Promise.all([...authorIds].map((id) => ctx.db.get(id))),
+      Promise.all([...tagIds].map((id) => ctx.db.get(id))),
+    ]);
+
+    const authorMap = new Map<string, Doc<"authors">>();
+    for (const doc of authorDocs) {
+      if (doc) authorMap.set(doc._id, doc);
+    }
+    const tagMap = new Map<string, Doc<"memoryTags">>();
+    for (const doc of tagDocs) {
+      if (doc) tagMap.set(doc._id, doc);
+    }
+
+    // Build primary author lookup per book
+    const primaryAuthorByBook = new Map<string, string | null>();
+    for (let i = 0; i < uniqueBookIds.length; i++) {
+      const row = bookAuthorFirstRows[i];
+      if (row) {
+        const author = authorMap.get(row.authorId);
+        primaryAuthorByBook.set(uniqueBookIds[i], author?.name ?? null);
+      } else {
+        primaryAuthorByBook.set(uniqueBookIds[i], null);
+      }
+    }
+
+    // 4. Assemble results
+    return notes
+      .map((note, i) => {
+        const book = bookMap.get(note.bookId);
         if (!book) return null;
 
-        // Get primary author via bookAuthors join table
-        const bookAuthorRow = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", note.bookId))
-          .first();
-        const primaryAuthor = bookAuthorRow ? await ctx.db.get(bookAuthorRow.authorId) : null;
+        const audioFile = note.audioFileId ? (audioFileMap.get(note.audioFileId) ?? null) : null;
+        const tagRows = tagRowsByNote[i];
 
-        const tags = (
-          await Promise.all(
-            tagRows.map(async (row) => {
-              const tag = await ctx.db.get(row.tagId);
-              if (!tag || tag.userId !== user._id) return null;
-              return {
-                _id: tag._id,
-                name: tag.name,
-                normalizedName: tag.normalizedName,
-              };
-            })
-          )
-        ).filter((tag) => tag !== null);
+        const tags = tagRows
+          .map((row) => {
+            const tag = tagMap.get(row.tagId);
+            if (!tag || tag.userId !== user._id) return null;
+            return {
+              _id: tag._id,
+              name: tag.name,
+              normalizedName: tag.normalizedName,
+            };
+          })
+          .filter((tag) => tag !== null);
 
         return {
           ...note,
@@ -160,7 +227,7 @@ export const getMyAllNotes = query({
             _id: book._id,
             title: book.title,
             coverImageR2Key: book.coverImageR2Key ?? null,
-            primaryAuthorName: primaryAuthor?.name ?? null,
+            primaryAuthorName: primaryAuthorByBook.get(book._id) ?? null,
           },
           audioFile: audioFile
             ? {
@@ -175,9 +242,7 @@ export const getMyAllNotes = query({
           tags,
         };
       })
-    );
-
-    return enriched.filter((note) => note !== null);
+      .filter((note) => note !== null);
   },
 });
 

@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { type Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
+import { batchEnrichAuthors } from "../lib/enrichment";
 
 // Get a single author by ID
 export const getAuthor = query({
@@ -38,30 +39,7 @@ export const listAuthors = query({
     }
     const results = await q.paginate(args.paginationOpts);
 
-    // Enrich with book and series counts
-    const authorsWithCounts = await Promise.all(
-      results.page.map(async (author) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_author", (q) => q.eq("authorId", author._id))
-          .collect();
-
-        // Count unique series
-        const seriesIds = new Set<string>();
-        for (const ba of bookAuthors) {
-          const book = await ctx.db.get(ba.bookId);
-          if (book?.seriesId) {
-            seriesIds.add(book.seriesId);
-          }
-        }
-
-        return {
-          ...author,
-          bookCount: bookAuthors.length,
-          seriesCount: seriesIds.size,
-        };
-      })
-    );
+    const authorsWithCounts = await batchEnrichAuthors(ctx, results.page);
 
     return {
       ...results,
@@ -78,32 +56,7 @@ export const getRecentAuthors = query({
     const limit = args.limit ?? 6;
     const authors = await ctx.db.query("authors").order("desc").take(limit);
 
-    // Enrich with book and series counts
-    const authorsWithCounts = await Promise.all(
-      authors.map(async (author) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_author", (q) => q.eq("authorId", author._id))
-          .collect();
-
-        // Count unique series
-        const seriesIds = new Set<string>();
-        for (const ba of bookAuthors) {
-          const book = await ctx.db.get(ba.bookId);
-          if (book?.seriesId) {
-            seriesIds.add(book.seriesId);
-          }
-        }
-
-        return {
-          ...author,
-          bookCount: bookAuthors.length,
-          seriesCount: seriesIds.size,
-        };
-      })
-    );
-
-    return authorsWithCounts;
+    return await batchEnrichAuthors(ctx, authors);
   },
 });
 
@@ -132,32 +85,7 @@ export const searchAuthors = query({
       .withSearchIndex("search_authors", (q) => q.search("name", searchTerm))
       .take(50);
 
-    // Enrich with book and series counts
-    const authorsWithCounts = await Promise.all(
-      authors.map(async (author) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_author", (q) => q.eq("authorId", author._id))
-          .collect();
-
-        // Count unique series
-        const seriesIds = new Set<string>();
-        for (const ba of bookAuthors) {
-          const book = await ctx.db.get(ba.bookId);
-          if (book?.seriesId) {
-            seriesIds.add(book.seriesId);
-          }
-        }
-
-        return {
-          ...author,
-          bookCount: bookAuthors.length,
-          seriesCount: seriesIds.size,
-        };
-      })
-    );
-
-    return authorsWithCounts;
+    return await batchEnrichAuthors(ctx, authors);
   },
 });
 

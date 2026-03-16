@@ -1,5 +1,4 @@
 import ClerkKit
-import Combine
 import ConvexMobile
 import SwiftUI
 
@@ -11,13 +10,13 @@ import SwiftUI
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @State private var isAddBookPresented = false
-    @State private var currentUser: UserWithPermissions?
-    @State private var userCancellable: AnyCancellable?
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(ThemeManager.self) private var themeManager
+    @Environment(CurrentUserProvider.self) private var currentUserProvider
     private let networkMonitor = NetworkMonitor.shared
-    private let userRepository = UserRepository()
+
+    private var currentUser: UserWithPermissions? { currentUserProvider.currentUser }
 
     var body: some View {
         Group {
@@ -75,29 +74,15 @@ struct HomeView: View {
             viewModel.downloadManager = downloadManager
             viewModel.audioPlayerManager = audioPlayer
             viewModel.subscribe()
-            subscribeToUser()
         }
         .onDisappear {
             viewModel.unsubscribe()
-            userCancellable?.cancel()
-            userCancellable = nil
         }
         .onChange(of: networkMonitor.isConnected) { _, isConnected in
             if isConnected {
                 viewModel.recoverFromOffline()
             }
         }
-    }
-
-    private func subscribeToUser() {
-        guard userCancellable == nil,
-              let publisher = userRepository.subscribeToCurrentUser() else { return }
-        userCancellable = publisher
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in },
-                receiveValue: { user in currentUser = user }
-            )
     }
 
     // MARK: - Content

@@ -127,6 +127,9 @@ struct MainView: View {
 
     @State private var audioPlayer = AudioPlayerManager()
     @State private var downloadManager = DownloadManager()
+    @State private var currentUserProvider = CurrentUserProvider()
+    @State private var genreProvider = GenreProvider()
+    @State private var tagProvider = TagProvider()
     @State private var isNowPlayingPresented = false
     @State private var isSettingsPresented = false
     @State private var currentToast: ToastMessage?
@@ -229,6 +232,9 @@ struct MainView: View {
         }
         .environment(audioPlayer)
         .environment(downloadManager)
+        .environment(currentUserProvider)
+        .environment(genreProvider)
+        .environment(tagProvider)
         .environment(\.showNowPlaying, ShowNowPlayingAction { isNowPlayingPresented = true })
         .environment(\.navigateToDestination, navigateAction)
         .environment(\.showSettings, ShowSettingsAction { isSettingsPresented = true })
@@ -257,6 +263,11 @@ struct MainView: View {
             // Expose to CarPlay scene delegate
             SharedState.audioPlayer = audioPlayer
             SharedState.downloadManager = downloadManager
+
+            // Start global shared subscriptions
+            currentUserProvider.subscribe()
+            genreProvider.subscribe()
+            tagProvider.subscribe()
 
             if networkMonitor.isConnected {
                 subscribeToPreferences()
@@ -424,6 +435,9 @@ struct MainView: View {
             NowPlayingView()
                 .environment(audioPlayer)
                 .environment(downloadManager)
+                .environment(currentUserProvider)
+                .environment(genreProvider)
+                .environment(tagProvider)
                 .environment(\.navigateToDestination, navigateAction)
                 .preferredColorScheme(themeManager.preferredColorScheme)
         }

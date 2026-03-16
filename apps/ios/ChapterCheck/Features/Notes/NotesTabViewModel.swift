@@ -18,6 +18,7 @@ final class NotesTabViewModel {
     // MARK: - State
 
     var allNotes: [CrossBookNote] = []
+    /// Tags sourced from the shared `TagProvider` — updated externally by `NotesTabView`.
     var allTags: [MemoryTag] = []
     var isLoading = true
     var error: String?
@@ -37,7 +38,6 @@ final class NotesTabViewModel {
     private var cancellables = Set<AnyCancellable>()
 
     private var loadedSections: Set<String> = []
-    private static let allSections: Set<String> = ["notes", "tags"]
 
     var isOffline: Bool { !networkMonitor.isConnected }
     private(set) var isShowingOfflineData = false
@@ -124,7 +124,6 @@ final class NotesTabViewModel {
                 guard let self, cancellables.isEmpty else { return }
                 logger.info("Auth ready — subscribing to notes")
                 subscribeToAllNotes()
-                subscribeToTags()
             },
             onUnauthenticated: { [weak self] in
                 guard let self else { return }
@@ -160,7 +159,6 @@ final class NotesTabViewModel {
                 guard let self, cancellables.isEmpty else { return }
                 logger.info("Auth ready after offline recovery — subscribing to notes")
                 subscribeToAllNotes()
-                subscribeToTags()
             },
             onUnauthenticated: { [weak self] in
                 guard let self else { return }
@@ -199,37 +197,6 @@ final class NotesTabViewModel {
                 }
             )
             .store(in: &cancellables)
-    }
-
-    private func subscribeToTags() {
-        guard let publisher = notesRepository.subscribeToMyTags() else {
-            logger.warning("subscribeToMyTags returned nil — ConvexService may not be initialized")
-            handleSectionError("tags", message: "Unable to connect")
-            return
-        }
-        publisher
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { [weak self] completion in
-                    if case .failure(let error) = completion {
-                        self?.logger.error("tags FAILED: \(error)")
-                        self?.handleSectionError("tags", message: error.localizedDescription)
-                    }
-                },
-                receiveValue: { [weak self] tags in
-                    self?.logger.info("tags: received \(tags.count) tags")
-                    self?.allTags = tags
-                    self?.pruneStaleTagFilters()
-                    self?.markLoaded("tags")
-                }
-            )
-            .store(in: &cancellables)
-    }
-
-    /// Remove selected tag IDs that no longer exist (e.g., tag was deleted).
-    private func pruneStaleTagFilters() {
-        let validIds = Set(allTags.map(\._id))
-        selectedTagIds = selectedTagIds.intersection(validIds)
     }
 
     private func markLoaded(_ section: String) {

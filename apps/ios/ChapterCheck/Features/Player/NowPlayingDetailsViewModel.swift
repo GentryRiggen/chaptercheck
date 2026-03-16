@@ -15,7 +15,9 @@ final class NowPlayingDetailsViewModel {
     var ratingStats: RatingStats?
     var allGenres: [Genre] = []
     var myGenreVoteIds: [String] = []
+    /// Tags sourced from the shared `TagProvider` — updated externally by `NowPlayingView`.
     var noteTags: [MemoryTag] = []
+    /// Current user sourced from the shared `CurrentUserProvider` — updated externally by `NowPlayingView`.
     var currentUser: UserWithPermissions?
     var error: String?
 
@@ -26,7 +28,6 @@ final class NowPlayingDetailsViewModel {
 
     private let bookUserDataRepository = BookUserDataRepository()
     let genreRepository = GenreRepository()
-    private let userRepository = UserRepository()
     private let bookNotesRepository = BookNotesRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
@@ -94,42 +95,12 @@ final class NowPlayingDetailsViewModel {
             )
             .store(in: &cancellables)
 
-        genreRepository.subscribeToAllGenres()?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in },
-                receiveValue: { [weak self] genres in
-                    self?.allGenres = genres
-                }
-            )
-            .store(in: &cancellables)
-
         genreRepository.subscribeToMyGenreVotes(bookId: bookId)?
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] voteIds in
                     self?.myGenreVoteIds = voteIds
-                }
-            )
-            .store(in: &cancellables)
-
-        bookNotesRepository.subscribeToMyTags()?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in },
-                receiveValue: { [weak self] tags in
-                    self?.noteTags = tags
-                }
-            )
-            .store(in: &cancellables)
-
-        userRepository.subscribeToCurrentUser()?
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in },
-                receiveValue: { [weak self] user in
-                    self?.currentUser = user
                 }
             )
             .store(in: &cancellables)

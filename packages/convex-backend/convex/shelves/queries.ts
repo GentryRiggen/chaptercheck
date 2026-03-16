@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 
+import { type Doc, type Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 import { getCurrentUser, requireAuth } from "../lib/auth";
 import { getWantToReadShelfBook } from "../lib/wantToReadShelf";
@@ -33,41 +34,89 @@ export const getShelf = query({
       shelfBooks.sort((a, b) => a.addedAt - b.addedAt);
     }
 
-    // Enrich books with authors and series (same pattern as books/queries.ts:getBook)
-    const enrichedBooks = await Promise.all(
-      shelfBooks.map(async (sb) => {
-        const book = await ctx.db.get(sb.bookId);
+    // Batch-enrich books with authors and series
+    // 1. Fetch all books in parallel
+    const bookResults = await Promise.all(shelfBooks.map((sb) => ctx.db.get(sb.bookId)));
+    const bookMap = new Map<string, Doc<"books">>();
+    for (const book of bookResults) {
+      if (book) bookMap.set(book._id, book);
+    }
+
+    // 2. Fetch bookAuthors for all books in parallel
+    const validBookIds = [...bookMap.keys()] as Id<"books">[];
+    const bookAuthorsByBook = await Promise.all(
+      validBookIds.map((bookId) =>
+        ctx.db
+          .query("bookAuthors")
+          .withIndex("by_book", (q) => q.eq("bookId", bookId))
+          .collect()
+      )
+    );
+
+    // 3. Collect unique author IDs and series IDs
+    const authorIds = new Set<Id<"authors">>();
+    const seriesIds = new Set<Id<"series">>();
+    for (const bas of bookAuthorsByBook) {
+      for (const ba of bas) {
+        authorIds.add(ba.authorId);
+      }
+    }
+    for (const book of bookMap.values()) {
+      if (book.seriesId) seriesIds.add(book.seriesId);
+    }
+
+    // 4. Batch-fetch all authors and series
+    const [authorDocs, seriesDocs] = await Promise.all([
+      Promise.all([...authorIds].map((id) => ctx.db.get(id))),
+      Promise.all([...seriesIds].map((id) => ctx.db.get(id))),
+    ]);
+
+    const authorDocMap = new Map<string, Doc<"authors">>();
+    for (const doc of authorDocs) {
+      if (doc) authorDocMap.set(doc._id, doc);
+    }
+    const seriesDocMap = new Map<string, Doc<"series">>();
+    for (const doc of seriesDocs) {
+      if (doc) seriesDocMap.set(doc._id, doc);
+    }
+
+    // Build per-book lookup maps
+    const bookAuthorsLookup = new Map<string, Doc<"bookAuthors">[]>();
+    for (let i = 0; i < validBookIds.length; i++) {
+      bookAuthorsLookup.set(validBookIds[i], bookAuthorsByBook[i]);
+    }
+
+    // 5. Assemble enriched books preserving shelf-specific fields
+    const enrichedBooks = shelfBooks
+      .map((sb) => {
+        const book = bookMap.get(sb.bookId);
         if (!book) return null;
 
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        const authors = await Promise.all(
-          bookAuthors.map(async (ba) => {
-            const author = await ctx.db.get(ba.authorId);
+        const bas = bookAuthorsLookup.get(book._id) ?? [];
+        const authors = bas
+          .map((ba) => {
+            const author = authorDocMap.get(ba.authorId);
             return author ? { _id: author._id, name: author.name, role: ba.role } : null;
           })
-        );
+          .filter((a) => a !== null);
 
-        const series = book.seriesId ? await ctx.db.get(book.seriesId) : null;
+        const seriesDoc = book.seriesId ? (seriesDocMap.get(book.seriesId) ?? null) : null;
 
         return {
           ...book,
           shelfBookId: sb._id,
           position: sb.position,
-          authors: authors.filter((a) => a !== null),
-          series: series ? { _id: series._id, name: series.name } : null,
+          authors,
+          series: seriesDoc ? { _id: seriesDoc._id, name: seriesDoc.name } : null,
         };
       })
-    );
+      .filter((b) => b !== null);
 
     return {
       ...shelf,
       isOwner,
       owner: owner ? { _id: owner._id, name: owner.name, imageUrl: owner.imageUrl } : null,
-      books: enrichedBooks.filter((b) => b !== null),
+      books: enrichedBooks,
     };
   },
 });

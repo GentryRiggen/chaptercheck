@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import { query } from "../_generated/server";
 import { requireAuth } from "../lib/auth";
-import { createBookEnricher } from "../books/queries";
+import { batchEnrichAuthors, batchEnrichBooks } from "../lib/enrichment";
 
 // Unified search: returns both books and authors in a single reactive subscription
 export const searchAll = query({
@@ -54,8 +54,7 @@ export const searchAll = query({
     }
     const cappedBooks = mergedBooks.slice(0, 20);
 
-    const enrichBook = createBookEnricher(ctx);
-    const enrichedBooks = await Promise.all(cappedBooks.map((book) => enrichBook(book)));
+    const enrichedBooks = await batchEnrichBooks(ctx, cappedBooks);
 
     // --- Authors ---
     const authors = await ctx.db
@@ -63,28 +62,7 @@ export const searchAll = query({
       .withSearchIndex("search_authors", (q) => q.search("name", searchTerm))
       .take(10);
 
-    const authorsWithCounts = await Promise.all(
-      authors.map(async (author) => {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_author", (q) => q.eq("authorId", author._id))
-          .collect();
-
-        const seriesIds = new Set<string>();
-        for (const ba of bookAuthors) {
-          const book = await ctx.db.get(ba.bookId);
-          if (book?.seriesId) {
-            seriesIds.add(book.seriesId);
-          }
-        }
-
-        return {
-          ...author,
-          bookCount: bookAuthors.length,
-          seriesCount: seriesIds.size,
-        };
-      })
-    );
+    const authorsWithCounts = await batchEnrichAuthors(ctx, authors);
 
     // --- Users ---
     const usersRaw = await ctx.db

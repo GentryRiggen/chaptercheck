@@ -7,6 +7,7 @@ struct NotesTabView: View {
     @State private var previewNote: BookNote?
     @State private var editingNote: CrossBookNote?
     @State private var showComposerForSelectedBook = false
+    @Environment(TagProvider.self) private var tagProvider
 
     private let networkMonitor = NetworkMonitor.shared
 
@@ -39,6 +40,7 @@ struct NotesTabView: View {
             }
         }
         .onAppear {
+            viewModel.allTags = tagProvider.tags
             viewModel.subscribe()
         }
         .onDisappear {
@@ -48,6 +50,12 @@ struct NotesTabView: View {
             if !wasConnected && isConnected {
                 viewModel.recoverFromOffline()
             }
+        }
+        .onChange(of: tagProvider.tags) { _, tags in
+            viewModel.allTags = tags
+            // Prune selected tag IDs that no longer exist
+            let validIds = Set(tags.map(\._id))
+            viewModel.selectedTagIds = viewModel.selectedTagIds.intersection(validIds)
         }
         .sheet(isPresented: $showBookPicker, onDismiss: {
             // Delay to let SwiftUI finish the dismiss animation before presenting the next sheet
