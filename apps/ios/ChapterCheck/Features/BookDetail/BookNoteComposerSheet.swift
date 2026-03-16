@@ -23,6 +23,7 @@ struct BookNoteComposerSheet: View {
     @State private var selectedAudioFileId: String
     @State private var noteText: String
     @State private var selectedTagIds: Set<String>
+    @State private var isPublic: Bool
     @State private var startSeconds: Double
     @State private var endSeconds: Double
     @State private var activeHandle: RangeHandle = .end
@@ -51,6 +52,7 @@ struct BookNoteComposerSheet: View {
         _selectedAudioFileId = State(initialValue: context.initialAudioFileId)
         _noteText = State(initialValue: context.existingNote?.noteText ?? "")
         _selectedTagIds = State(initialValue: Set(context.existingNote?.tags?.map(\._id) ?? []))
+        _isPublic = State(initialValue: context.existingNote?.isPublic ?? false)
         _startSeconds = State(initialValue: context.initialStartSeconds)
         _endSeconds = State(initialValue: context.initialEndSeconds)
     }
@@ -64,6 +66,7 @@ struct BookNoteComposerSheet: View {
                     previewSection
                     noteTextSection
                     tagSection
+                    visibilitySection
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
@@ -361,6 +364,11 @@ struct BookNoteComposerSheet: View {
         }
     }
 
+    private var visibilitySection: some View {
+        Toggle("Share publicly", isOn: $isPublic)
+            .font(.subheadline)
+    }
+
     private func quickAdjustButton(title: String, delta: Double) -> some View {
         Button(title) {
             adjustActiveHandle(by: delta)
@@ -444,7 +452,8 @@ struct BookNoteComposerSheet: View {
                     noteText: {
                         let trimmed = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
                         return trimmed.isEmpty ? nil : trimmed
-                    }()
+                    }(),
+                    isPublic: isPublic
                 )
             )
             dismiss()
@@ -479,6 +488,7 @@ struct BookNoteSavePayload {
     let startSeconds: Double
     let endSeconds: Double
     let noteText: String?
+    let isPublic: Bool
 }
 
 private enum RangeHandle {

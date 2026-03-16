@@ -160,7 +160,8 @@ final class NowPlayingDetailsViewModel {
         tagIds: [String]?,
         startSeconds: Double,
         endSeconds: Double,
-        noteText: String?
+        noteText: String?,
+        isPublic: Bool = false
     ) async throws {
         try await bookNotesRepository.createNote(
             bookId: bookId,
@@ -170,7 +171,8 @@ final class NowPlayingDetailsViewModel {
             endSeconds: endSeconds,
             noteText: noteText,
             entryType: nil,
-            sourceText: nil
+            sourceText: nil,
+            isPublic: isPublic
         )
     }
 }

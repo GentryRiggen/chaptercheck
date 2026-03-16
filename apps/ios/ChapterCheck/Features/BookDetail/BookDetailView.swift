@@ -126,7 +126,8 @@ struct BookDetailView: View {
                             tagIds: payload.tagIds.isEmpty ? nil : payload.tagIds,
                             startSeconds: payload.startSeconds,
                             endSeconds: payload.endSeconds,
-                            noteText: payload.noteText
+                            noteText: payload.noteText,
+                            isPublic: payload.isPublic
                         )
                         Haptics.success()
                     },

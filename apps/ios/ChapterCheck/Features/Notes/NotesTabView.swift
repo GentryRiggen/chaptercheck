@@ -431,7 +431,8 @@ private struct NoteSheetsModifier: ViewModifier {
                                 tagIds: payload.tagIds.isEmpty ? nil : payload.tagIds,
                                 startSeconds: payload.startSeconds,
                                 endSeconds: payload.endSeconds,
-                                noteText: payload.noteText
+                                noteText: payload.noteText,
+                                isPublic: payload.isPublic
                             )
                         },
                         onCreateTag: { name in
