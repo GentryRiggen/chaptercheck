@@ -187,6 +187,15 @@ struct NowPlayingView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
+            // Audio output device label
+            if let deviceName = audioPlayer.outputDeviceName {
+                Label(deviceName, systemImage: "airplayaudio")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.bottom, 6)
+            }
+
             // Bottom toolbar
             bottomToolbar
                 .padding(.horizontal, 24)
@@ -379,13 +388,6 @@ struct NowPlayingView: View {
                         .lineLimit(1)
                 }
 
-                if let deviceName = audioPlayer.outputDeviceName {
-                    Label(deviceName, systemImage: "airplayaudio")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .padding(.top, 2)
-                }
             }
 
             Spacer()
