@@ -209,7 +209,8 @@ export default defineSchema({
     .index("by_shelf", ["shelfId"])
     .index("by_shelf_and_position", ["shelfId", "position"])
     .index("by_book", ["bookId"])
-    .index("by_shelf_and_book", ["shelfId", "bookId"]),
+    .index("by_shelf_and_book", ["shelfId", "bookId"])
+    .index("by_addedAt", ["addedAt"]),
 
   // Listening Progress (playback position & per-book speed)
   listeningProgress: defineTable({
@@ -353,5 +354,6 @@ export default defineSchema({
     .index("by_user_and_finishedAt", ["userId", "finishedAt"])
     .index("by_user_and_startedAt", ["userId", "startedAt"])
     .index("by_user_and_updatedAt", ["userId", "updatedAt"])
-    .index("by_user_and_favorite", ["userId", "favorite"]),
+    .index("by_user_and_favorite", ["userId", "favorite"])
+    .index("by_reviewedAt", ["reviewedAt"]),
 });

@@ -59,3 +59,9 @@ struct ActivityBook: Decodable, Hashable {
     let title: String
     let coverImageR2Key: String?
 }
+
+struct PaginatedActivityResult: Decodable {
+    let items: [ActivityItem]
+    let nextCursor: Double?
+    let hasMore: Bool
+}

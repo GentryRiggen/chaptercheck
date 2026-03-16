@@ -48,6 +48,22 @@ final class SocialViewModel {
     var isLoading = true
     var error: String?
 
+    // MARK: - Pagination State
+
+    var isLoadingMoreActivity = false
+    var hasMoreActivity = false
+    var loadMoreActivityError = false
+    private var activityNextCursor: Double?
+
+    var isLoadingMoreCommunity = false
+    var hasMoreCommunity = false
+    var loadMoreCommunityError = false
+    private var communityNextCursor: Double?
+
+    /// Items loaded via "Load More" (appended to subscription results)
+    private var olderActivityItems: [ActivityItem] = []
+    private var olderCommunityItems: [ActivityItem] = []
+
     // MARK: - Search & Filter
 
     var searchText = ""
@@ -58,11 +74,11 @@ final class SocialViewModel {
     }
 
     var filteredActivityFeed: [ActivityItem] {
-        filterItems(activityFeed)
+        filterItems(activityFeed + olderActivityItems)
     }
 
     var filteredCommunityActivity: [ActivityItem] {
-        filterItems(communityActivity)
+        filterItems(communityActivity + olderCommunityItems)
     }
 
     func clearFilters() {
@@ -138,6 +154,7 @@ final class SocialViewModel {
 
     func refresh() async {
         unsubscribe()
+        resetPaginationState()
         isLoading = true
         error = nil
         subscribe()
@@ -150,6 +167,7 @@ final class SocialViewModel {
         guard isShowingOfflineData else { return }
         logger.info("Network restored — switching to live social data")
         tearDownSubscriptions()
+        resetPaginationState()
         isShowingOfflineData = false
         isLoading = true
 
@@ -173,6 +191,61 @@ final class SocialViewModel {
         cancellables.removeAll()
         loadedSections.removeAll()
         hasSetInitialTab = false
+    }
+
+    private func resetPaginationState() {
+        olderActivityItems.removeAll()
+        olderCommunityItems.removeAll()
+        activityNextCursor = nil
+        communityNextCursor = nil
+        hasMoreActivity = false
+        hasMoreCommunity = false
+        loadMoreActivityError = false
+        loadMoreCommunityError = false
+    }
+
+    // MARK: - Load More
+
+    func loadMoreActivityFeed() {
+        guard !isLoadingMoreActivity, hasMoreActivity, let cursor = activityNextCursor else { return }
+        isLoadingMoreActivity = true
+        loadMoreActivityError = false
+
+        Task {
+            do {
+                let result = try await socialRepository.fetchOlderActivityFeed(beforeTimestamp: cursor)
+                let existingIds = Set(activityFeed.map(\.id) + olderActivityItems.map(\.id))
+                let newItems = result.items.filter { !existingIds.contains($0.id) }
+                olderActivityItems.append(contentsOf: newItems)
+                activityNextCursor = result.nextCursor
+                hasMoreActivity = result.hasMore
+            } catch {
+                logger.error("Failed to load more activity: \(error)")
+                loadMoreActivityError = true
+            }
+            isLoadingMoreActivity = false
+        }
+    }
+
+    func loadMoreCommunityActivity() {
+        guard !isLoadingMoreCommunity, hasMoreCommunity, let cursor = communityNextCursor else { return }
+        isLoadingMoreCommunity = true
+        loadMoreCommunityError = false
+
+        Task {
+            do {
+                let result = try await socialRepository.fetchOlderCommunityActivity(beforeTimestamp: cursor)
+                let existingIds = Set(communityActivity.map(\.id) + olderCommunityItems.map(\.id))
+                let newItems = result.items.filter { !existingIds.contains($0.id) }
+                olderCommunityItems.append(contentsOf: newItems)
+                communityNextCursor = result.nextCursor
+                hasMoreCommunity = result.hasMore
+            } catch {
+                logger.error("Failed to load more community activity: \(error)")
+                loadMoreCommunityError = true
+            }
+            isLoadingMoreCommunity = false
+        }
     }
 
     // MARK: - Private Subscription Setup
@@ -214,9 +287,11 @@ final class SocialViewModel {
                         self?.handleSectionError("activityFeed", message: error.localizedDescription)
                     }
                 },
-                receiveValue: { [weak self] items in
-                    self?.logger.info("activityFeed: received \(items.count) items")
-                    self?.activityFeed = items
+                receiveValue: { [weak self] result in
+                    self?.logger.info("activityFeed: received \(result.items.count) items")
+                    self?.activityFeed = result.items
+                    self?.hasMoreActivity = result.hasMore
+                    self?.activityNextCursor = result.nextCursor
                     self?.markLoaded("activityFeed")
                 }
             )
@@ -237,9 +312,11 @@ final class SocialViewModel {
                         self?.handleSectionError("communityActivity", message: error.localizedDescription)
                     }
                 },
-                receiveValue: { [weak self] items in
-                    self?.logger.info("communityActivity: received \(items.count) items")
-                    self?.communityActivity = items
+                receiveValue: { [weak self] result in
+                    self?.logger.info("communityActivity: received \(result.items.count) items")
+                    self?.communityActivity = result.items
+                    self?.hasMoreCommunity = result.hasMore
+                    self?.communityNextCursor = result.nextCursor
                     self?.markLoaded("communityActivity")
                 }
             )

@@ -108,7 +108,13 @@ struct SocialView: View {
         } else if viewModel.filteredActivityFeed.isEmpty {
             noMatchingActivity
         } else {
-            feedList(items: viewModel.filteredActivityFeed)
+            feedList(
+                items: viewModel.filteredActivityFeed,
+                hasMore: viewModel.hasMoreActivity,
+                isLoadingMore: viewModel.isLoadingMoreActivity,
+                loadMoreError: viewModel.loadMoreActivityError,
+                loadMore: { viewModel.loadMoreActivityFeed() }
+            )
         }
     }
 
@@ -125,7 +131,13 @@ struct SocialView: View {
         } else if viewModel.filteredCommunityActivity.isEmpty {
             noMatchingActivity
         } else {
-            feedList(items: viewModel.filteredCommunityActivity)
+            feedList(
+                items: viewModel.filteredCommunityActivity,
+                hasMore: viewModel.hasMoreCommunity,
+                isLoadingMore: viewModel.isLoadingMoreCommunity,
+                loadMoreError: viewModel.loadMoreCommunityError,
+                loadMore: { viewModel.loadMoreCommunityActivity() }
+            )
         }
     }
 
@@ -142,7 +154,13 @@ struct SocialView: View {
 
     // MARK: - Shared Feed List
 
-    private func feedList(items: [ActivityItem]) -> some View {
+    private func feedList(
+        items: [ActivityItem],
+        hasMore: Bool,
+        isLoadingMore: Bool,
+        loadMoreError: Bool,
+        loadMore: @escaping () -> Void
+    ) -> some View {
         VStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 ActivityItemRow(item: item)
@@ -151,6 +169,35 @@ struct SocialView: View {
                 if index < items.count - 1 {
                     Divider()
                         .padding(.horizontal)
+                }
+            }
+
+            if hasMore || loadMoreError {
+                Divider()
+                    .padding(.horizontal)
+
+                if isLoadingMore {
+                    ProgressView()
+                        .padding(.vertical, 20)
+                } else {
+                    VStack(spacing: 8) {
+                        if loadMoreError {
+                            Text("Failed to load more. Tap to retry.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Button(action: loadMore) {
+                            Text(loadMoreError ? "Retry" : "Load More")
+                                .font(.subheadline.weight(.medium))
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 10)
+                                .background(Capsule().strokeBorder(Color.accentColor, lineWidth: 1))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 16)
                 }
             }
         }

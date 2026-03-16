@@ -362,6 +362,39 @@ final class ConvexService: ObservableObject {
             .eraseToAnyPublisher()
     }
 
+    /// Execute a one-shot Convex query by subscribing and taking the first emitted value.
+    ///
+    /// Use this for paginated "load more" fetches where a real-time subscription is not needed.
+    func query<T: Decodable>(
+        _ name: String,
+        with args: [String: ConvexEncodable?]? = nil
+    ) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            var cancellable: AnyCancellable?
+            var didResume = false
+            cancellable = client.subscribe(to: name, with: args, yielding: T.self)
+                .first()
+                .sink(
+                    receiveCompletion: { completion in
+                        guard !didResume else { return }
+                        if case .failure(let error) = completion {
+                            didResume = true
+                            continuation.resume(throwing: error)
+                        }
+                        cancellable?.cancel()
+                        cancellable = nil
+                    },
+                    receiveValue: { value in
+                        guard !didResume else { return }
+                        didResume = true
+                        continuation.resume(returning: value)
+                        cancellable?.cancel()
+                        cancellable = nil
+                    }
+                )
+        }
+    }
+
     /// Execute a Convex mutation that returns a decoded value.
     func mutation<T: Decodable>(
         _ name: String,

@@ -58,11 +58,33 @@ final class SocialRepository {
         )
     }
 
-    func subscribeToActivityFeed() -> AnyPublisher<[ActivityItem], ClientError>? {
-        convex.subscribe(to: "follows/queries:getActivityFeed")
+    func subscribeToActivityFeed(limit: Int = 20) -> AnyPublisher<PaginatedActivityResult, ClientError>? {
+        convex.subscribe(
+            to: "follows/queries:getActivityFeed",
+            with: ["limit": Double(limit)]
+        )
     }
 
-    func subscribeToCommunityActivity() -> AnyPublisher<[ActivityItem], ClientError>? {
-        convex.subscribe(to: "follows/queries:getCommunityActivity")
+    func subscribeToCommunityActivity(limit: Int = 20) -> AnyPublisher<PaginatedActivityResult, ClientError>? {
+        convex.subscribe(
+            to: "follows/queries:getCommunityActivity",
+            with: ["limit": Double(limit)]
+        )
+    }
+
+    // MARK: - Paginated Fetches (one-shot)
+
+    func fetchOlderActivityFeed(beforeTimestamp: Double, limit: Int = 20) async throws -> PaginatedActivityResult {
+        try await convex.query(
+            "follows/queries:getActivityFeed",
+            with: ["limit": Double(limit), "beforeTimestamp": beforeTimestamp]
+        )
+    }
+
+    func fetchOlderCommunityActivity(beforeTimestamp: Double, limit: Int = 20) async throws -> PaginatedActivityResult {
+        try await convex.query(
+            "follows/queries:getCommunityActivity",
+            with: ["limit": Double(limit), "beforeTimestamp": beforeTimestamp]
+        )
     }
 }

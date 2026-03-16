@@ -134,13 +134,24 @@ type ActivityItem = {
   sourceText?: string;
 };
 
+type PaginatedActivityResult = {
+  items: ActivityItem[];
+  nextCursor: number | null;
+  hasMore: boolean;
+};
+
 type UserInfo = { _id: string; name?: string; imageUrl?: string };
 type BookInfo = { _id: string; title: string; coverImageR2Key?: string };
 
 export const getActivityFeed = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    limit: v.optional(v.number()),
+    beforeTimestamp: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<PaginatedActivityResult> => {
     const { user } = await requireAuth(ctx);
+    const limit = args.limit ?? 20;
+    const beforeTs = args.beforeTimestamp ?? Number.MAX_SAFE_INTEGER;
 
     const follows = await ctx.db
       .query("follows")
@@ -148,7 +159,9 @@ export const getActivityFeed = query({
       .collect();
 
     const followedUserIds = follows.map((f) => f.followingId);
-    if (followedUserIds.length === 0) return [];
+    if (followedUserIds.length === 0) {
+      return { items: [], nextCursor: null, hasMore: false };
+    }
 
     // Batch-fetch followed users
     const followedUsers = await Promise.all(followedUserIds.map((id) => ctx.db.get(id)));
@@ -171,15 +184,21 @@ export const getActivityFeed = query({
       return info;
     }
 
+    // Limit per user to avoid scanning too much data
+    const perUserLimit = Math.max(5, Math.ceil((limit * 2) / followedUserIds.length));
+
     for (const followedUserId of followedUserIds) {
       const userInfo = userMap.get(followedUserId);
       if (!userInfo) continue;
 
-      // Reviews (public only)
+      // Reviews — use by_user_and_reviewedAt index, ordered desc
       const reviews = await ctx.db
         .query("bookUserData")
-        .withIndex("by_user", (q) => q.eq("userId", followedUserId))
-        .collect();
+        .withIndex("by_user_and_reviewedAt", (q) =>
+          q.eq("userId", followedUserId).lt("reviewedAt", beforeTs)
+        )
+        .order("desc")
+        .take(perUserLimit);
 
       for (const review of reviews) {
         if (review.isReviewPrivate || review.isReadPrivate) continue;
@@ -200,39 +219,14 @@ export const getActivityFeed = query({
         });
       }
 
-      // Shelf adds (public shelves only)
-      const shelves = await ctx.db
-        .query("shelves")
-        .withIndex("by_user", (q) => q.eq("userId", followedUserId))
-        .collect();
-
-      for (const shelf of shelves.filter((s) => s.isPublic)) {
-        const shelfBooks = await ctx.db
-          .query("shelfBooks")
-          .withIndex("by_shelf", (q) => q.eq("shelfId", shelf._id))
-          .collect();
-
-        for (const sb of shelfBooks) {
-          const book = await getBook(sb.bookId);
-          if (!book) continue;
-
-          allItems.push({
-            _id: `shelf_${sb._id}`,
-            type: "shelf_add",
-            timestamp: sb.addedAt,
-            user: userInfo,
-            book,
-            shelfId: shelf._id,
-            shelfName: shelf.name,
-          });
-        }
-      }
-
-      // Public notes
+      // Public notes — use by_user_and_updatedAt index, ordered desc
       const notes = await ctx.db
         .query("bookNotes")
-        .withIndex("by_user_and_updatedAt", (q) => q.eq("userId", followedUserId))
-        .collect();
+        .withIndex("by_user_and_updatedAt", (q) =>
+          q.eq("userId", followedUserId).lt("updatedAt", beforeTs)
+        )
+        .order("desc")
+        .take(perUserLimit);
 
       for (const note of notes) {
         if (note.isPublic !== true) continue;
@@ -251,17 +245,62 @@ export const getActivityFeed = query({
           sourceText: note.sourceText,
         });
       }
+
+      // Shelf adds — get user's public shelves, then recent adds per shelf.
+      // Fetch extra since we filter by addedAt client-side (index lacks timestamp).
+      const shelves = await ctx.db
+        .query("shelves")
+        .withIndex("by_user", (q) => q.eq("userId", followedUserId))
+        .collect();
+
+      for (const shelf of shelves.filter((s) => s.isPublic)) {
+        const shelfBooks = await ctx.db
+          .query("shelfBooks")
+          .withIndex("by_shelf", (q) => q.eq("shelfId", shelf._id))
+          .order("desc")
+          .take(perUserLimit * 2);
+
+        for (const sb of shelfBooks) {
+          if (sb.addedAt >= beforeTs) continue;
+
+          const book = await getBook(sb.bookId);
+          if (!book) continue;
+
+          allItems.push({
+            _id: `shelf_${sb._id}`,
+            type: "shelf_add",
+            timestamp: sb.addedAt,
+            user: userInfo,
+            book,
+            shelfId: shelf._id,
+            shelfName: shelf.name,
+          });
+        }
+      }
     }
 
     allItems.sort((a, b) => b.timestamp - a.timestamp);
-    return allItems.slice(0, 50);
+
+    const hasMore = allItems.length > limit;
+    const items = allItems.slice(0, limit);
+    const nextCursor = items.length > 0 ? items[items.length - 1].timestamp : null;
+
+    return { items, nextCursor, hasMore };
   },
 });
 
 export const getCommunityActivity = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    limit: v.optional(v.number()),
+    beforeTimestamp: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<PaginatedActivityResult> => {
     const { user } = await requireAuth(ctx);
+    const limit = args.limit ?? 20;
+    const beforeTs = args.beforeTimestamp ?? Number.MAX_SAFE_INTEGER;
+
+    // Fetch more than limit to account for filtering (private profiles, self, etc.)
+    const fetchLimit = limit * 3;
 
     const allItems: ActivityItem[] = [];
     const userCache = new Map<string, UserInfo | null>();
@@ -289,10 +328,14 @@ export const getCommunityActivity = query({
       return info;
     }
 
-    // Public reviews from all users (except current)
-    const allReviews = await ctx.db.query("bookUserData").collect();
+    // Public reviews — use by_reviewedAt index, ordered desc
+    const recentReviews = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_reviewedAt", (q) => q.lt("reviewedAt", beforeTs))
+      .order("desc")
+      .take(fetchLimit);
 
-    for (const review of allReviews) {
+    for (const review of recentReviews) {
       if (review.userId === user._id) continue;
       if (review.isReviewPrivate || review.isReadPrivate) continue;
       if (review.rating === undefined && !review.reviewText) continue;
@@ -315,43 +358,17 @@ export const getCommunityActivity = query({
       });
     }
 
-    // Public shelf adds from all users (except current)
-    const allShelves = await ctx.db.query("shelves").collect();
+    // Public notes — use by_isPublic_and_updatedAt index
+    const recentNotes = await ctx.db
+      .query("bookNotes")
+      .withIndex("by_isPublic_and_updatedAt", (q) =>
+        q.eq("isPublic", true).lt("updatedAt", beforeTs)
+      )
+      .order("desc")
+      .take(fetchLimit);
 
-    for (const shelf of allShelves) {
-      if (shelf.userId === user._id) continue;
-      if (!shelf.isPublic) continue;
-
-      const shelfUser = await getUser(shelf.userId);
-      if (!shelfUser) continue;
-
-      const shelfBooks = await ctx.db
-        .query("shelfBooks")
-        .withIndex("by_shelf", (q) => q.eq("shelfId", shelf._id))
-        .collect();
-
-      for (const sb of shelfBooks) {
-        const book = await getBook(sb.bookId);
-        if (!book) continue;
-
-        allItems.push({
-          _id: `shelf_${sb._id}`,
-          type: "shelf_add",
-          timestamp: sb.addedAt,
-          user: shelfUser,
-          book,
-          shelfId: shelf._id,
-          shelfName: shelf.name,
-        });
-      }
-    }
-
-    // Public notes from all users (except current)
-    const allNotes = await ctx.db.query("bookNotes").collect();
-
-    for (const note of allNotes) {
+    for (const note of recentNotes) {
       if (note.userId === user._id) continue;
-      if (note.isPublic !== true) continue;
 
       const [noteUser, book] = await Promise.all([getUser(note.userId), getBook(note.bookId)]);
       if (!noteUser || !book) continue;
@@ -368,7 +385,53 @@ export const getCommunityActivity = query({
       });
     }
 
+    // Recent shelf adds — use by_addedAt index, then check shelf is public
+    const recentShelfBooks = await ctx.db
+      .query("shelfBooks")
+      .withIndex("by_addedAt", (q) => q.lt("addedAt", beforeTs))
+      .order("desc")
+      .take(fetchLimit);
+
+    const shelfCache = new Map<
+      string,
+      { isPublic: boolean; name: string; userId: string } | null
+    >();
+
+    for (const sb of recentShelfBooks) {
+      let shelfInfo = shelfCache.get(sb.shelfId);
+      if (shelfInfo === undefined) {
+        const shelf = await ctx.db.get(sb.shelfId);
+        shelfInfo = shelf
+          ? { isPublic: shelf.isPublic ?? false, name: shelf.name, userId: shelf.userId }
+          : null;
+        shelfCache.set(sb.shelfId, shelfInfo);
+      }
+      if (!shelfInfo || !shelfInfo.isPublic) continue;
+      if (shelfInfo.userId === user._id) continue;
+
+      const [shelfUser, book] = await Promise.all([
+        getUser(shelfInfo.userId as Id<"users">),
+        getBook(sb.bookId),
+      ]);
+      if (!shelfUser || !book) continue;
+
+      allItems.push({
+        _id: `shelf_${sb._id}`,
+        type: "shelf_add",
+        timestamp: sb.addedAt,
+        user: shelfUser,
+        book,
+        shelfId: sb.shelfId,
+        shelfName: shelfInfo.name,
+      });
+    }
+
     allItems.sort((a, b) => b.timestamp - a.timestamp);
-    return allItems.slice(0, 30);
+
+    const hasMore = allItems.length > limit;
+    const items = allItems.slice(0, limit);
+    const nextCursor = items.length > 0 ? items[items.length - 1].timestamp : null;
+
+    return { items, nextCursor, hasMore };
   },
 });

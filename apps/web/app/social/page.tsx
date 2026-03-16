@@ -199,10 +199,14 @@ interface FeedProps {
 }
 
 function FollowingFeed({ shouldSkipQuery, isAuthLoading, searchQuery, typeFilter }: FeedProps) {
-  const activityFeed = useQuery(api.follows.queries.getActivityFeed, shouldSkipQuery ? "skip" : {});
+  const activityResult = useQuery(
+    api.follows.queries.getActivityFeed,
+    shouldSkipQuery ? "skip" : {}
+  );
+  const activityFeed = activityResult?.items;
   const filteredFeed = useFilteredActivity(activityFeed, searchQuery, typeFilter);
 
-  const isLoading = !shouldSkipQuery && activityFeed === undefined;
+  const isLoading = !shouldSkipQuery && activityResult === undefined;
 
   if (isLoading || isAuthLoading) {
     return (
@@ -247,13 +251,14 @@ function FollowingFeed({ shouldSkipQuery, isAuthLoading, searchQuery, typeFilter
 }
 
 function DiscoverFeed({ shouldSkipQuery, isAuthLoading, searchQuery, typeFilter }: FeedProps) {
-  const communityActivity = useQuery(
+  const communityResult = useQuery(
     api.follows.queries.getCommunityActivity,
     shouldSkipQuery ? "skip" : {}
   );
+  const communityActivity = communityResult?.items;
   const filteredFeed = useFilteredActivity(communityActivity, searchQuery, typeFilter);
 
-  const isLoading = !shouldSkipQuery && communityActivity === undefined;
+  const isLoading = !shouldSkipQuery && communityResult === undefined;
 
   if (isLoading || isAuthLoading) {
     return (
