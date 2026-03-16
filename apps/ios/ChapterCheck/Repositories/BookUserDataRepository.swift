@@ -89,6 +89,29 @@ final class BookUserDataRepository {
         )
     }
 
+    /// Subscribe to a paginated list of books filtered by optional reading status.
+    func subscribeToUserBooksByStatusPaginated(
+        userId: String,
+        status: String? = nil,
+        numItems: Int = 20,
+        cursor: String? = nil
+    ) -> AnyPublisher<PaginatedResult<UserBookWithStatus>, ClientError>? {
+        var args: [String: ConvexEncodable?] = [
+            "userId": userId,
+            "paginationOpts": [
+                "numItems": Double(numItems),
+                "cursor": cursor,
+            ] as [String: ConvexEncodable?],
+        ]
+        if let status {
+            args["status"] = status
+        }
+        return convex.subscribe(
+            to: "bookUserData/queries:getUserBooksByStatusPaginated",
+            with: args
+        )
+    }
+
     /// Subscribe to a paginated list of a user's reviews.
     func subscribeToUserReviewsPaginated(
         userId: String,

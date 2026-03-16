@@ -177,18 +177,40 @@ struct HomeView: View {
                             label: "Listened"
                         )
 
-                        StatCard(
-                            icon: "book.fill",
-                            value: "\(stats.booksInProgressInt)",
-                            label: "In Progress"
-                        )
+                        if let userId = currentUser?._id {
+                            NavigationLink(value: AppDestination.allReadingHistory(userId: userId, initialStatus: .reading)) {
+                                StatCard(
+                                    icon: "book.fill",
+                                    value: "\(stats.booksInProgressInt)",
+                                    label: "In Progress"
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            StatCard(
+                                icon: "book.fill",
+                                value: "\(stats.booksInProgressInt)",
+                                label: "In Progress"
+                            )
+                        }
 
                         if stats.booksFinishedInt > 0 {
-                            StatCard(
-                                icon: "checkmark.circle.fill",
-                                value: "\(stats.booksFinishedInt)",
-                                label: stats.booksFinishedInt == 1 ? "Finished" : "Finished"
-                            )
+                            if let userId = currentUser?._id {
+                                NavigationLink(value: AppDestination.allReadingHistory(userId: userId, initialStatus: .finished)) {
+                                    StatCard(
+                                        icon: "checkmark.circle.fill",
+                                        value: "\(stats.booksFinishedInt)",
+                                        label: "Finished"
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                StatCard(
+                                    icon: "checkmark.circle.fill",
+                                    value: "\(stats.booksFinishedInt)",
+                                    label: "Finished"
+                                )
+                            }
                         }
                     }
                     .padding(.horizontal)

@@ -467,6 +467,124 @@ export const getUserReadBooksPaginated = query({
 });
 
 /**
+ * Get books a user has in their library filtered by optional status.
+ * When status is provided, returns only books matching that status.
+ * When no status is provided, returns ALL books with a bookUserData entry.
+ * Returns paginated list with book details and status, respecting privacy settings.
+ */
+export const getUserBooksByStatusPaginated = query({
+  args: {
+    userId: v.id("users"),
+    status: v.optional(
+      v.union(
+        v.literal("want_to_read"),
+        v.literal("reading"),
+        v.literal("finished"),
+        v.literal("paused"),
+        v.literal("dnf")
+      )
+    ),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getCurrentUser(ctx);
+    if (!currentUser) {
+      throw new Error("Not authenticated");
+    }
+
+    const isOwnProfile = currentUser._id === args.userId;
+
+    const allUserData = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    let filteredData = allUserData;
+
+    if (args.status) {
+      filteredData = allUserData.filter((d) => {
+        if (d.status === args.status) return true;
+        // Legacy fallback: if status field is not set, use isRead for "finished"
+        if (args.status === "finished" && !d.status && d.isRead === true) return true;
+        return false;
+      });
+    }
+
+    if (!isOwnProfile) {
+      filteredData = filteredData.filter((d) => !d.isReadPrivate);
+    }
+
+    // Sort by lastStatusChangedAt, falling back to updatedAt
+    filteredData.sort((a, b) => {
+      const aTime = a.lastStatusChangedAt ?? a.updatedAt;
+      const bTime = b.lastStatusChangedAt ?? b.updatedAt;
+      return bTime - aTime;
+    });
+
+    // Manual pagination
+    const { cursor, numItems } = args.paginationOpts;
+    const startIndex = cursor ? Math.max(0, parseInt(cursor as string, 10) || 0) : 0;
+    const endIndex = startIndex + numItems;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+    const hasMore = endIndex < filteredData.length;
+
+    const booksWithDetails = await Promise.all(
+      paginatedData.map(async (data) => {
+        const book = await ctx.db.get(data.bookId);
+        if (!book) return null;
+
+        const bookAuthors = await ctx.db
+          .query("bookAuthors")
+          .withIndex("by_book", (q) => q.eq("bookId", book._id))
+          .collect();
+
+        const authors = (
+          await Promise.all(
+            bookAuthors.map(async (ba) => {
+              const author = await ctx.db.get(ba.authorId);
+              return author ? { _id: author._id, name: author.name } : null;
+            })
+          )
+        ).filter((a): a is { _id: Id<"authors">; name: string } => a !== null);
+
+        let series: { _id: Id<"series">; name: string } | null = null;
+        if (book.seriesId) {
+          const seriesDoc = await ctx.db.get(book.seriesId);
+          if (seriesDoc) {
+            series = { _id: seriesDoc._id, name: seriesDoc.name };
+          }
+        }
+
+        return {
+          _id: book._id,
+          title: book.title,
+          coverImageR2Key: book.coverImageR2Key,
+          seriesOrder: book.seriesOrder,
+          averageRating: book.averageRating,
+          ratingCount: book.ratingCount,
+          authors,
+          series,
+          readAt: data.finishedAt ?? data.readAt,
+          userRating: data.rating,
+          userReviewText: data.reviewText,
+          isReviewPrivate: data.isReviewPrivate,
+          isReadPrivate: data.isReadPrivate,
+          status: data.status ?? (data.isRead ? "finished" : undefined),
+        };
+      })
+    );
+
+    const filtered = booksWithDetails.filter((b) => b !== null);
+
+    return {
+      page: filtered,
+      isDone: !hasMore,
+      continueCursor: hasMore ? String(endIndex) : String(startIndex),
+    };
+  },
+});
+
+/**
  * Get books a user has marked as read
  * Returns list with book details, respecting privacy settings
  */

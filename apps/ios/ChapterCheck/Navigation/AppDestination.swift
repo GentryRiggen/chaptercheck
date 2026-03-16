@@ -15,7 +15,7 @@ enum AppDestination: Hashable {
     case browseLibrary(initialSort: SortOption = .titleAsc)
     case browseAuthors
     case browseShelves
-    case allReadingHistory(userId: String)
+    case allReadingHistory(userId: String, initialStatus: ReadingStatus? = nil)
     case allUserReviews(userId: String)
     case followers(userId: String)
     case following(userId: String)

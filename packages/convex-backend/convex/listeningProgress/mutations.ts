@@ -1,11 +1,14 @@
 import { v } from "convex/values";
 
-import { mutation } from "../_generated/server";
+import { type Id } from "../_generated/dataModel";
+import { mutation, type MutationCtx } from "../_generated/server";
 import { requireAuthMutation } from "../lib/auth";
 
 /**
  * Save or update listening progress for a book.
  * Upserts by (userId, bookId) — one row per user per book.
+ * Also auto-sets the book's reading status to "reading" if it has no status
+ * or is in "want_to_read", so the "In Progress" stat stays accurate.
  */
 export const saveProgress = mutation({
   args: {
@@ -61,10 +64,14 @@ export const saveProgress = mutation({
         lastListenedAt: clientTimestamp,
         updatedAt: now,
       });
+
+      // Auto-set "reading" status on first progress save for this book
+      await autoSetReadingStatus(ctx, user._id, args.bookId, now);
+
       return existing._id;
     }
 
-    return await ctx.db.insert("listeningProgress", {
+    const id = await ctx.db.insert("listeningProgress", {
       userId: user._id,
       bookId: args.bookId,
       audioFileId: args.audioFileId,
@@ -74,5 +81,55 @@ export const saveProgress = mutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    // Auto-set "reading" status on first progress save for this book
+    await autoSetReadingStatus(ctx, user._id, args.bookId, now);
+
+    return id;
   },
 });
+
+/**
+ * Auto-set a book to "reading" status when the user starts listening.
+ * Only transitions from no-status or "want_to_read". Doesn't override
+ * explicit statuses like "finished", "paused", or "dnf".
+ */
+async function autoSetReadingStatus(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  bookId: Id<"books">,
+  now: number
+) {
+  const bookUserData = await ctx.db
+    .query("bookUserData")
+    .withIndex("by_user_and_book", (q) => q.eq("userId", userId).eq("bookId", bookId))
+    .unique();
+
+  if (bookUserData) {
+    // Only auto-transition if no explicit status or "want_to_read"
+    const status = bookUserData.status;
+    if (status && status !== "want_to_read") return;
+
+    await ctx.db.patch(bookUserData._id, {
+      status: "reading",
+      startedAt: bookUserData.startedAt ?? now,
+      lastStatusChangedAt: now,
+      isRead: false,
+      updatedAt: now,
+    });
+  } else {
+    // Create bookUserData with "reading" status
+    await ctx.db.insert("bookUserData", {
+      userId,
+      bookId,
+      status: "reading",
+      startedAt: now,
+      lastStatusChangedAt: now,
+      isRead: false,
+      isReadPrivate: false,
+      isReviewPrivate: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}

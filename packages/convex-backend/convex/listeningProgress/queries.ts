@@ -130,6 +130,12 @@ export const getListeningStats = query({
       totalListeningSeconds += p.positionSeconds;
     }
 
+    // Count books by status from bookUserData
+    const readingBooks = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_user_and_status", (q) => q.eq("userId", user._id).eq("status", "reading"))
+      .collect();
+
     const finishedBooks = await ctx.db
       .query("bookUserData")
       .withIndex("by_user_and_status", (q) => q.eq("userId", user._id).eq("status", "finished"))
@@ -137,7 +143,7 @@ export const getListeningStats = query({
 
     return {
       totalListeningSeconds,
-      booksInProgress: progressRecords.length,
+      booksInProgress: readingBooks.length,
       booksFinished: finishedBooks.length,
     };
   },

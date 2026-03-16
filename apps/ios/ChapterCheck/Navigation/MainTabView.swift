@@ -487,8 +487,8 @@ struct MainView: View {
             AuthorsView()
         case .browseShelves:
             MyShelvesBrowseView()
-        case .allReadingHistory(let userId):
-            AllReadingHistoryView(userId: userId)
+        case .allReadingHistory(let userId, let initialStatus):
+            AllReadingHistoryView(userId: userId, initialStatus: initialStatus)
         case .allUserReviews(let userId):
             AllUserReviewsView(userId: userId)
         case .followers(let userId):

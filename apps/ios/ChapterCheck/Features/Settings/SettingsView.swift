@@ -147,8 +147,8 @@ struct SettingsView: View {
             ShelfDetailView(shelfId: id)
         case .profile(let userId):
             ProfileView(userId: userId)
-        case .allReadingHistory(let userId):
-            AllReadingHistoryView(userId: userId)
+        case .allReadingHistory(let userId, let initialStatus):
+            AllReadingHistoryView(userId: userId, initialStatus: initialStatus)
         case .allUserReviews(let userId):
             AllUserReviewsView(userId: userId)
         case .browseShelves:

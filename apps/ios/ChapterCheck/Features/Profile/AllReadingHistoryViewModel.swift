@@ -2,20 +2,22 @@ import Combine
 import ConvexMobile
 import Foundation
 
-/// View model for the paginated "all reading history" screen.
+/// View model for the paginated "all books" screen with status filtering.
 ///
-/// Follows the same cursor-based pagination pattern as `LibraryViewModel`.
+/// Supports filtering by any `ReadingStatus` or showing all books. When the
+/// selected status changes, the subscription is reset and a fresh page is loaded.
 @Observable
 @MainActor
 final class AllReadingHistoryViewModel {
 
     // MARK: - Public State
 
-    var books: [UserReadBook] = []
+    var books: [UserBookWithStatus] = []
     var isLoading = true
     var isLoadingMore = false
     var hasMore = true
     var error: String?
+    var selectedStatus: ReadingStatus?
 
     // MARK: - Private State
 
@@ -27,8 +29,11 @@ final class AllReadingHistoryViewModel {
 
     // MARK: - Lifecycle
 
-    func subscribe(userId: String) {
+    func subscribe(userId: String, initialStatus: ReadingStatus? = nil) {
         currentUserId = userId
+        if selectedStatus == nil && initialStatus != nil {
+            selectedStatus = initialStatus
+        }
         authObserver.start(
             onAuthenticated: { [weak self] in
                 guard let self, cancellables.isEmpty, let userId = currentUserId else { return }
@@ -56,6 +61,14 @@ final class AllReadingHistoryViewModel {
         }
     }
 
+    func selectStatus(_ status: ReadingStatus?) {
+        guard status != selectedStatus else { return }
+        selectedStatus = status
+        guard let userId = currentUserId else { return }
+        cancellables.removeAll()
+        loadFirstPage(userId: userId)
+    }
+
     func loadNextPage() {
         guard !isLoadingMore, hasMore, currentCursor != nil, let userId = currentUserId else { return }
         isLoadingMore = true
@@ -75,8 +88,9 @@ final class AllReadingHistoryViewModel {
     }
 
     private func subscribeToPage(userId: String, cursor: String?) {
-        repository.subscribeToUserReadBooksPaginated(
+        repository.subscribeToUserBooksByStatusPaginated(
             userId: userId,
+            status: selectedStatus?.rawValue,
             numItems: 20,
             cursor: cursor
         )?
@@ -84,7 +98,7 @@ final class AllReadingHistoryViewModel {
         .sink(
             receiveCompletion: { [weak self] completion in
                 if case .failure(let err) = completion {
-                    self?.error = userFacingMessage(from: err, fallback: "Unable to load reading history")
+                    self?.error = userFacingMessage(from: err, fallback: "Unable to load books")
                     self?.isLoading = false
                     self?.isLoadingMore = false
                     self?.authObserver.needsResubscription()

@@ -56,3 +56,34 @@ struct UserReadBook: Decodable, Identifiable, Sendable {
         authors.first?.name
     }
 }
+
+/// A book with reading status, from `bookUserData/queries:getUserBooksByStatusPaginated`.
+///
+/// Extends the `UserReadBook` shape with an optional `status` field for filtering.
+struct UserBookWithStatus: Decodable, Identifiable, Sendable {
+    let _id: String
+    let title: String
+    let coverImageR2Key: String?
+    let seriesOrder: Double?
+    let averageRating: Double?
+    let ratingCount: Double?
+    let authors: [BookAuthorSummary]
+    let series: SeriesSummary?
+    let readAt: Double?
+    let userRating: Double?
+    let userReviewText: String?
+    let isReviewPrivate: Bool
+    let isReadPrivate: Bool
+    let status: String?
+
+    var id: String { _id }
+    var userRatingInt: Int? { userRating.map { Int($0) } }
+
+    var primaryAuthorName: String? {
+        authors.first?.name
+    }
+
+    var readingStatus: ReadingStatus? {
+        ReadingStatus(statusString: status, isRead: nil)
+    }
+}
