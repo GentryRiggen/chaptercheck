@@ -220,7 +220,7 @@ final class AudioPlayerManager {
     private static let minSaveThresholdSeconds: Double = 1.0
 
     /// Interval between periodic progress saves during playback.
-    private static let progressSaveIntervalSeconds: Double = 10.0
+    private static let progressSaveIntervalSeconds: Double = 1.0
 
     /// Non-critical remote progress updates are coalesced and flushed on this cadence.
     private static let remoteProgressSyncIntervalSeconds: Double = 20.0
