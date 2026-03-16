@@ -80,6 +80,22 @@ struct RecentListeningAudioFile: Decodable, Sendable {
     let displayName: String
 }
 
+/// Lightweight stats for the home screen header.
+/// Matches the shape returned by `listeningProgress/queries:getListeningStats`.
+struct ListeningStats: Decodable, Sendable {
+    let totalListeningSeconds: Double
+    let booksInProgress: Double
+    let booksFinished: Double
+
+    var booksInProgressInt: Int { Int(booksInProgress) }
+    var booksFinishedInt: Int { Int(booksFinished) }
+
+    /// Formatted total listening time like "12h 34m"
+    var formattedTotalTime: String {
+        TimeFormatting.formatDuration(totalListeningSeconds)
+    }
+}
+
 /// Lightweight author summary used in nested query results.
 /// Only contains `_id` and `name`.
 struct BookAuthorSummary: Decodable, Identifiable, Hashable, Sendable {

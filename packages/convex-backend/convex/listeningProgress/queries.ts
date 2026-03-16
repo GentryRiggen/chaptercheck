@@ -111,6 +111,39 @@ export const getRecentlyListening = query({
 });
 
 /**
+ * Lightweight stats for the home screen: total listening time,
+ * books in progress, and books finished.
+ */
+export const getListeningStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const { user } = await requireAuth(ctx);
+
+    const progressRecords = await ctx.db
+      .query("listeningProgress")
+      .withIndex("by_user_and_lastListened", (q) => q.eq("userId", user._id))
+      .collect();
+
+    // Sum position across all books as an approximation of total listening time
+    let totalListeningSeconds = 0;
+    for (const p of progressRecords) {
+      totalListeningSeconds += p.positionSeconds;
+    }
+
+    const finishedBooks = await ctx.db
+      .query("bookUserData")
+      .withIndex("by_user_and_status", (q) => q.eq("userId", user._id).eq("status", "finished"))
+      .collect();
+
+    return {
+      totalListeningSeconds,
+      booksInProgress: progressRecords.length,
+      booksFinished: finishedBooks.length,
+    };
+  },
+});
+
+/**
  * Get a user's listening activity for the admin drill-in page.
  * Returns their most recently synced listening state plus recent history.
  */

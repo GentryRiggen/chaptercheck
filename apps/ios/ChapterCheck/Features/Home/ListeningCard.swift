@@ -1,14 +1,15 @@
 import Combine
 import SwiftUI
 
-/// Compact card (160pt wide) for the horizontal continue listening scroll.
+/// Compact card (140pt wide) for the horizontal continue listening scroll.
 ///
-/// Shows book cover, title (2 lines max), and a progress bar.
+/// Shows book cover with a progress bar overlay and title.
 /// Tapping resumes playback via `AudioPlayerManager`.
 struct ListeningCard: View {
     let item: RecentListeningProgress
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
+    @Environment(ThemeManager.self) private var themeManager
 
     @Environment(\.showNowPlaying) private var showNowPlaying
     @State private var isResuming = false
@@ -23,22 +24,41 @@ struct ListeningCard: View {
         Button {
             resumePlayback()
         } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                ZStack {
+            VStack(alignment: .leading, spacing: 8) {
+                ZStack(alignment: .bottom) {
                     BookCoverView(r2Key: item.book.coverImageR2Key, displayMode: .fit(maxWidth: 140, maxHeight: 210))
 
-                    Circle()
-                        .fill(.black.opacity(0.4))
-                        .frame(width: 36, height: 36)
+                    // Progress bar overlay at bottom of cover
+                    GeometryReader { geo in
+                        VStack {
+                            Spacer()
+                            ZStack(alignment: .leading) {
+                                Rectangle()
+                                    .fill(.black.opacity(0.3))
+                                    .frame(height: 3)
 
-                    if isResuming {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.white)
+                                Rectangle()
+                                    .fill(themeManager.accentColor)
+                                    .frame(width: max(0, geo.size.width * item.progressFraction), height: 3)
+                            }
+                        }
                     }
+
+                    // Play button overlay
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 40, height: 40)
+                        .overlay {
+                            if isResuming {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
 
                 Text(item.book.title)
@@ -47,7 +67,6 @@ struct ListeningCard: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .frame(height: 32, alignment: .top)
-
             }
             .frame(width: 140)
         }

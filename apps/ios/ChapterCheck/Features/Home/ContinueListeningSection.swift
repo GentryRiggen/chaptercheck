@@ -11,11 +11,8 @@ struct ContinueListeningSection: View {
     private var remainingItems: [RecentListeningProgress] { Array(items.dropFirst()) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Continue Listening")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .padding(.horizontal)
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Continue Listening")
 
             if let heroItem {
                 HeroListeningCard(item: heroItem)

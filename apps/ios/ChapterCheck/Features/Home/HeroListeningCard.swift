@@ -3,12 +3,14 @@ import SwiftUI
 
 /// Large, full-width card for the most recently listened audiobook.
 ///
-/// Displays the book cover, title, author, progress bar, and part information.
-/// Tapping the card resumes playback via `AudioPlayerManager`.
+/// Displays the book cover, title, author, progress bar, and part information
+/// with an accent-gradient background. Tapping the card resumes playback via
+/// `AudioPlayerManager`.
 struct HeroListeningCard: View {
     let item: RecentListeningProgress
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
+    @Environment(ThemeManager.self) private var themeManager
 
     @Environment(\.showNowPlaying) private var showNowPlaying
     @State private var isResuming = false
@@ -51,41 +53,55 @@ struct HeroListeningCard: View {
         Button {
             resumePlayback()
         } label: {
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
+                // Compact cover with play overlay
                 ZStack {
-                    BookCoverView(r2Key: item.book.coverImageR2Key, displayMode: .fit(maxWidth: 140, maxHeight: 210))
+                    BookCoverView(r2Key: item.book.coverImageR2Key, displayMode: .fit(maxWidth: 80, maxHeight: 120))
 
                     Circle()
                         .fill(.black.opacity(0.4))
-                        .frame(width: 44, height: 44)
+                        .frame(width: 36, height: 36)
 
                     if isResuming {
                         ProgressView()
                             .tint(.white)
                     } else {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 18))
+                        Image(systemName: isCurrentBook && audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.white)
                     }
                 }
 
+                // Book info + progress
                 VStack(alignment: .leading, spacing: 6) {
                     Text(item.book.title)
-                        .font(.headline)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
 
                     if let authorName = item.book.authors.first?.name {
                         Text(authorName)
-                            .font(.subheadline)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 0)
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        ProgressView(value: liveProgressFraction)
+                    VStack(alignment: .leading, spacing: 5) {
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule()
+                                    .fill(.fill.tertiary)
+                                    .frame(height: 4)
+
+                                Capsule()
+                                    .fill(themeManager.accentColor)
+                                    .frame(width: max(0, geo.size.width * liveProgressFraction), height: 4)
+                            }
+                        }
+                        .frame(height: 4)
 
                         Text(liveTimeProgress)
                             .font(.caption2)
@@ -96,7 +112,7 @@ struct HeroListeningCard: View {
             }
             .padding(12)
             .background(.fill.quaternary)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
         .disabled(isResuming)

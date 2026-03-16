@@ -11,27 +11,8 @@ struct BookRowSection: View {
     var seeAllDestination: AppDestination?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(title)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-
-                Spacer()
-
-                if let seeAllDestination {
-                    NavigationLink(value: seeAllDestination) {
-                        HStack(spacing: 2) {
-                            Text("See All")
-                                .font(.subheadline)
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                        }
-                        .foregroundStyle(.tint)
-                    }
-                }
-            }
-            .padding(.horizontal)
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: title, seeAllDestination: seeAllDestination)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {

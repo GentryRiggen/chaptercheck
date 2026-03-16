@@ -38,6 +38,14 @@ final class ProgressRepository {
         )
     }
 
+    /// Subscribe to listening stats for the home screen header.
+    func subscribeToListeningStats() -> AnyPublisher<ListeningStats, ClientError>? {
+        convex.subscribe(
+            to: "listeningProgress/queries:getListeningStats",
+            with: [:]
+        )
+    }
+
     // MARK: - Mutations
 
     /// Save or update listening progress for a book.

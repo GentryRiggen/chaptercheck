@@ -5,8 +5,8 @@ import SwiftUI
 
 /// The main home screen — a listening-first feed with discovery sections.
 ///
-/// Displays a hero card for the most recently listened audiobook, followed by
-/// additional continue listening items, discovery sections, and quick links to
+/// Displays a personalized greeting with listening stats, a hero card for the
+/// most recently listened audiobook, discovery sections, and quick links to
 /// browse the full library and authors.
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var userCancellable: AnyCancellable?
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
+    @Environment(ThemeManager.self) private var themeManager
     private let networkMonitor = NetworkMonitor.shared
     private let userRepository = UserRepository()
 
@@ -83,14 +84,8 @@ struct HomeView: View {
         }
         .onChange(of: networkMonitor.isConnected) { _, isConnected in
             if isConnected {
-                // Back online — if we were showing offline data (launched offline),
-                // transition to live subscriptions. Otherwise, existing Convex
-                // subscriptions auto-reconnect on their own.
                 viewModel.recoverFromOffline()
             }
-            // Going offline mid-session: do nothing — stale Convex data stays
-            // visible, offline banner appears via viewModel.isOffline, and
-            // Convex subscriptions will auto-reconnect when network restores.
         }
     }
 
@@ -109,11 +104,14 @@ struct HomeView: View {
 
     private var scrollContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 28) {
                 if viewModel.isOffline {
                     OfflineBanner()
                         .padding(.horizontal)
                 }
+
+                // Greeting + Stats
+                greetingSection
 
                 // Continue Listening (hero card + horizontal scroll)
                 if !viewModel.recentlyListening.isEmpty {
@@ -138,47 +136,142 @@ struct HomeView: View {
                 Spacer()
                     .frame(height: 80)
             }
-            .padding(.top)
+            .padding(.top, 4)
         }
         .refreshable { await viewModel.refresh() }
+    }
+
+    // MARK: - Greeting + Stats
+
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let timeOfDay: String
+        switch hour {
+        case 5..<12: timeOfDay = "Good Morning"
+        case 12..<17: timeOfDay = "Good Afternoon"
+        case 17..<22: timeOfDay = "Good Evening"
+        default: timeOfDay = "Good Night"
+        }
+
+        if let firstName = currentUser?.name?.components(separatedBy: " ").first,
+           !firstName.isEmpty {
+            return "\(timeOfDay), \(firstName)"
+        }
+        return timeOfDay
+    }
+
+    private var greetingSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(greeting)
+                .font(.title2)
+                .fontWeight(.bold)
+                .padding(.horizontal)
+
+            if let stats = viewModel.listeningStats,
+               stats.totalListeningSeconds > 0 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        StatCard(
+                            icon: "headphones",
+                            value: stats.formattedTotalTime,
+                            label: "Listened"
+                        )
+
+                        StatCard(
+                            icon: "book.fill",
+                            value: "\(stats.booksInProgressInt)",
+                            label: "In Progress"
+                        )
+
+                        if stats.booksFinishedInt > 0 {
+                            StatCard(
+                                icon: "checkmark.circle.fill",
+                                value: "\(stats.booksFinishedInt)",
+                                label: stats.booksFinishedInt == 1 ? "Finished" : "Finished"
+                            )
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
     }
 
     // MARK: - Welcome (empty listening state)
 
     private var welcomeSection: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "headphones")
-                .font(.system(size: 40))
-                .foregroundStyle(.secondary)
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(themeManager.accentColor.opacity(0.12))
+                    .frame(width: 80, height: 80)
 
-            Text("Welcome to Chapter Check")
-                .font(.title3)
-                .fontWeight(.semibold)
+                Image(systemName: "headphones")
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundStyle(themeManager.accentColor)
+            }
 
-            Text("Start listening to an audiobook to see your progress here.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 6) {
+                Text("Welcome to Chapter Check")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+
+                Text("Start listening to an audiobook to see your progress here.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
 
             NavigationLink(value: AppDestination.browseLibrary()) {
                 Text("Browse Library")
                     .font(.subheadline)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(.tint)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(themeManager.accentGradient)
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
             }
             .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
+        .padding(.vertical, 24)
         .padding(.horizontal)
     }
+}
 
-    // MARK: - Browse Quick Links
+// MARK: - Stat Card
 
+private struct StatCard: View {
+    let icon: String
+    let value: String
+    let label: String
+    @Environment(ThemeManager.self) private var themeManager
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(themeManager.accentColor)
+                .frame(width: 36, height: 36)
+                .background(themeManager.accentColor.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+
+                Text(label)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.fill.quaternary)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
 }
 
 #Preview {

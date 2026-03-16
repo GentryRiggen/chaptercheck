@@ -3,32 +3,15 @@ import SwiftUI
 /// Horizontal scroll section for bookshelves on the home screen.
 ///
 /// Shows a header with "My Bookshelves", a "See All" link, and a horizontal
-/// scroll of shelf cards. Includes a leading "+" card to create a new shelf.
+/// scroll of shelf cards. Includes a trailing "+" card to create a new shelf.
 struct ShelfRowSection: View {
     let shelves: [Shelf]
 
     @State private var isCreateShelfPresented = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("My Bookshelves")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-
-                Spacer()
-
-                NavigationLink(value: AppDestination.browseShelves) {
-                    HStack(spacing: 2) {
-                        Text("See All")
-                            .font(.subheadline)
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                    }
-                    .foregroundStyle(.tint)
-                }
-            }
-            .padding(.horizontal)
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "My Bookshelves", seeAllDestination: .browseShelves)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 12) {
@@ -57,7 +40,7 @@ struct ShelfRowSection: View {
         } label: {
             VStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 10)
                         .fill(.fill.tertiary)
                         .frame(width: cardWidth, height: cardWidth * 1.5)
                     Image(systemName: "plus")
@@ -131,7 +114,7 @@ private struct HomeShelfCard: View {
 
     private var emptyPlaceholder: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(.fill.tertiary)
             Image(systemName: "books.vertical.fill")
                 .font(.system(size: cardWidth * 0.2))

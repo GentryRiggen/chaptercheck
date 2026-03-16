@@ -24,6 +24,7 @@ final class HomeViewModel {
     var recentlyListening: [RecentListeningProgress] = []
     var topRatedBooks: [BookWithDetails] = []
     var myShelves: [Shelf] = []
+    var listeningStats: ListeningStats?
 
     var isLoading = true
     var showRetry = false
@@ -48,7 +49,7 @@ final class HomeViewModel {
     private var retryTimer: Task<Void, Never>?
     private var offlineLoadTask: Task<Void, Never>?
 
-    private static let allSections: Set<String> = ["recentlyListening", "topRatedBooks", "myShelves"]
+    private static let allSections: Set<String> = ["recentlyListening", "topRatedBooks", "myShelves", "listeningStats"]
 
     var isOffline: Bool { !networkMonitor.isConnected }
 
@@ -74,6 +75,7 @@ final class HomeViewModel {
                 subscribeToRecentlyListening()
                 subscribeToTopRatedBooks()
                 subscribeToMyShelves()
+                subscribeToListeningStats()
                 startRetryTimer()
             },
             onUnauthenticated: { [weak self] in
@@ -128,6 +130,7 @@ final class HomeViewModel {
                 subscribeToRecentlyListening()
                 subscribeToTopRatedBooks()
                 subscribeToMyShelves()
+                subscribeToListeningStats()
                 startRetryTimer()
             },
             onUnauthenticated: { [weak self] in
@@ -215,6 +218,25 @@ final class HomeViewModel {
                     self?.logger.info("myShelves: received \(shelves.count) shelves")
                     self?.myShelves = shelves
                     self?.markLoaded("myShelves")
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToListeningStats() {
+        progressRepository.subscribeToListeningStats()?
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.logger.error("listeningStats FAILED: \(error)")
+                        self?.handleSectionError("listeningStats", message: userFacingMessage(from: error, fallback: "Unable to load stats"))
+                    }
+                },
+                receiveValue: { [weak self] stats in
+                    self?.logger.info("listeningStats: received")
+                    self?.listeningStats = stats
+                    self?.markLoaded("listeningStats")
                 }
             )
             .store(in: &cancellables)

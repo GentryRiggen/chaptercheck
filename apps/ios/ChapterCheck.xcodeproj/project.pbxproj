@@ -112,6 +112,7 @@
 		A137B12978CD53F0202969D3 /* BookNoteComposerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F9F91502B2AE2C5366DA68 /* BookNoteComposerSheet.swift */; };
 		A50D25449BF328A1F81202CB /* SeriesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC19EA8B17DE29DBBE0653E /* SeriesRepository.swift */; };
 		A635AD80A6F6CB94F3409CF2 /* LibraryBookCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2270CA0481AB114D83A86F /* LibraryBookCard.swift */; };
+		A6DFC779DE779454831560BB /* SectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CD37D12F2D581B5579BEBD /* SectionHeader.swift */; };
 		ABAEF11D0938A25BC09B31C6 /* SortPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 141DE2C31C996E43C7F2B81C /* SortPicker.swift */; };
 		ABB828D17FF8FC56AC90AC57 /* AudioFileListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89075E8FAC4E97E7F00B783A /* AudioFileListView.swift */; };
 		ABDD5FD8CC99B0164B0B7BD4 /* BookDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 970B3470E06FC2CB79D92500 /* BookDetailViewModel.swift */; };
@@ -276,6 +277,7 @@
 		7EF573A3C63E4C0B662DEFBA /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		80899FCE870DA63B54308D5A /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		840E3752314AD70DCD3CF0D2 /* StreamURLCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamURLCache.swift; sourceTree = "<group>"; };
+		84CD37D12F2D581B5579BEBD /* SectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionHeader.swift; sourceTree = "<group>"; };
 		853FD7CA0E0107089396BFBA /* UserPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferences.swift; sourceTree = "<group>"; };
 		8574461A528DEA09DFD33321 /* BookMutationRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookMutationRepository.swift; sourceTree = "<group>"; };
 		85F61ADA691407A8306FB641 /* AuthorRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorRepository.swift; sourceTree = "<group>"; };
@@ -478,6 +480,7 @@
 				30541061F368C414D79E9EA8 /* HomeView.swift */,
 				C1EDE993B6FC208B50C71598 /* HomeViewModel.swift */,
 				F2374A2C380BE1BB06CE53A4 /* ListeningCard.swift */,
+				84CD37D12F2D581B5579BEBD /* SectionHeader.swift */,
 				9EE23323E4BD1BC9D14AF654 /* ShelfRowSection.swift */,
 			);
 			path = Home;
@@ -1023,6 +1026,7 @@
 				5284926160436E1EEEC08CB5 /* SearchRepository.swift in Sources */,
 				432229924A4CF6D95FF52027 /* SearchView.swift in Sources */,
 				E6DA96FC5FA6D8177A6318B3 /* SearchViewModel.swift in Sources */,
+				A6DFC779DE779454831560BB /* SectionHeader.swift in Sources */,
 				3483B62D0548C402FFD73E28 /* SeekBarView.swift in Sources */,
 				BB31BC28B6F7B8F6B4E42D52 /* SentryService.swift in Sources */,
 				497BCC5A1FF9C4343B42E2BC /* Series.swift in Sources */,
