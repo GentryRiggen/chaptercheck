@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var convexUser: UserWithPermissions?
     @State private var storageStats: StorageStats?
     @State private var cancellables = Set<AnyCancellable>()
+    @State private var showSignOutConfirmation = false
 
     private let userRepository = UserRepository()
 
@@ -88,11 +89,22 @@ struct SettingsView: View {
                     .disabled(convexService.isResetting)
 
                     Button("Sign Out", role: .destructive) {
-                        downloadManager.deleteAllDownloads()
-                        UserDefaults.standard.removeObject(forKey: "hasAuthenticatedBefore")
-                        Task {
-                            await convexService.logout()
+                        showSignOutConfirmation = true
+                    }
+                    .confirmationDialog(
+                        "Are you sure you want to sign out?",
+                        isPresented: $showSignOutConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Sign Out", role: .destructive) {
+                            downloadManager.deleteAllDownloads()
+                            UserDefaults.standard.removeObject(forKey: "hasAuthenticatedBefore")
+                            Task {
+                                await convexService.logout()
+                            }
                         }
+                    } message: {
+                        Text("Downloaded audiobooks will be removed from this device.")
                     }
 
                     NavigationLink {
