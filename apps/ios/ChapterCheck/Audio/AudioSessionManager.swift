@@ -14,14 +14,28 @@ final class AudioSessionManager {
     /// - Parameter shouldResume: `true` if playback should resume after the interruption ended.
     var onInterruption: ((_ shouldResume: Bool) -> Void)?
 
+    /// Callback invoked when the audio output route changes.
+    /// - Parameter deviceName: The name of the current output device, or `nil` for built-in speaker.
+    var onRouteChange: ((_ deviceName: String?) -> Void)?
+
     private let logger = Logger(subsystem: "com.chaptercheck", category: "AudioSession")
 
     init() {
         registerForInterruptions()
+        registerForRouteChanges()
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Returns the current output device name, or `nil` if using the built-in speaker/earpiece.
+    func currentOutputDeviceName() -> String? {
+        let route = AVAudioSession.sharedInstance().currentRoute
+        guard let output = route.outputs.first else { return nil }
+        let builtInTypes: Set<AVAudioSession.Port> = [.builtInSpeaker, .builtInReceiver]
+        if builtInTypes.contains(output.portType) { return nil }
+        return output.portName
     }
 
     // MARK: - Configuration
@@ -82,6 +96,24 @@ final class AudioSessionManager {
             name: AVAudioSession.interruptionNotification,
             object: AVAudioSession.sharedInstance()
         )
+    }
+
+    private func registerForRouteChanges() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRouteChange(_:)),
+            name: AVAudioSession.routeChangeNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+    }
+
+    @objc
+    private func handleRouteChange(_ notification: Notification) {
+        let deviceName = currentOutputDeviceName()
+        logger.info("Audio route changed, output device: \(deviceName ?? "built-in speaker")")
+        DispatchQueue.main.async { [weak self] in
+            self?.onRouteChange?(deviceName)
+        }
     }
 
     @objc

@@ -89,6 +89,9 @@ final class AudioPlayerManager {
     /// Timestamp of the most recent progress save, used to drive UI indicators.
     private(set) var lastSavedAt: Date?
 
+    /// Name of the current audio output device (e.g. "AirPods Pro"), or `nil` for built-in speaker.
+    private(set) var outputDeviceName: String?
+
     /// Current skip-forward amount in seconds, reflecting momentum.
     private(set) var skipAmountForward: Double = 30
 
@@ -1152,6 +1155,15 @@ final class AudioPlayerManager {
                 }
             }
         }
+
+        sessionManager.onRouteChange = { [weak self] deviceName in
+            Task { @MainActor in
+                self?.outputDeviceName = deviceName
+            }
+        }
+
+        // Read initial output device
+        outputDeviceName = sessionManager.currentOutputDeviceName()
     }
 
     private func configureRemoteCommands() {
