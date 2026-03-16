@@ -63,6 +63,18 @@ final class ProgressRepository {
     ///   - clientTimestamp: Device timestamp in epoch milliseconds for ordering
     ///     out-of-order saves from the same device.
     /// - Throws: `ClientError` if the audio file does not belong to the specified book.
+    /// Immediately touch `lastListenedAt` so the book appears at the top of Continue Listening
+    /// before any meaningful position data has been saved.
+    func markListening(bookId: String, audioFileId: String) async throws {
+        try await convex.mutation(
+            "listeningProgress/mutations:markListening",
+            with: [
+                "bookId": bookId,
+                "audioFileId": audioFileId,
+            ]
+        )
+    }
+
     func saveProgress(
         bookId: String,
         audioFileId: String,

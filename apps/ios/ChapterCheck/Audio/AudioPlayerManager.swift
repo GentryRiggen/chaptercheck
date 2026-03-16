@@ -356,6 +356,16 @@ final class AudioPlayerManager {
             streamingEventId = UUID()
         }
 
+        // Immediately mark this book as listening so it appears in Continue Listening
+        // (full position data syncs later via the coalesced saveProgress calls)
+        Task {
+            do {
+                try await progressRepository.markListening(bookId: book._id, audioFileId: audioFile._id)
+            } catch {
+                logger.error("Failed to mark listening: \(error.localizedDescription)")
+            }
+        }
+
         // Prefetch the stream URL for the next part so transitions are seamless
         if let nextFile = nextAudioFile(after: audioFile) {
             Task { await streamURLCache.prefetch(audioFileId: nextFile._id) }
@@ -657,7 +667,6 @@ final class AudioPlayerManager {
                     self.lastSavedPosition = self.currentPosition
 
                     self.startProgressSaving()
-                    self.scheduleInitialProgressSync()
                     self.updateNowPlayingFull()
                     self.loadCoverArtwork()
 
@@ -789,20 +798,6 @@ final class AudioPlayerManager {
                 await MainActor.run { [weak self] in
                     self?.saveProgressIfChanged()
                 }
-            }
-        }
-    }
-
-    /// Force an immediate remote sync shortly after playback starts so the book
-    /// appears in Continue Listening without waiting for the 20-second coalesce window.
-    private func scheduleInitialProgressSync() {
-        let bookId = currentBook?._id
-        Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2))
-            guard !Task.isCancelled else { return }
-            await MainActor.run { [weak self] in
-                guard let self, self.currentBook?._id == bookId else { return }
-                self.saveProgressNow(forceRemoteSync: true)
             }
         }
     }

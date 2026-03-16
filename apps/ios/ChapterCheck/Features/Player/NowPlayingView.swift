@@ -259,6 +259,7 @@ struct NowPlayingView: View {
         }
         .onChange(of: audioPlayer.currentBook?._id) { oldId, newId in
             guard newId != oldId else { return }
+            dismissDownloadPrompt()
             detailsViewModel.unsubscribe()
             withAnimation(.easeInOut(duration: 0.3)) {
                 selectedCarouselPage = 0

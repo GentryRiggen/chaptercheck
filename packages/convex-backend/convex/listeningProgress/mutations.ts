@@ -90,6 +90,52 @@ export const saveProgress = mutation({
 });
 
 /**
+ * Touch the lastListenedAt timestamp when playback begins so the book
+ * immediately appears at the top of Continue Listening — before any
+ * meaningful position data exists.  Creates the record if none exists yet.
+ */
+export const markListening = mutation({
+  args: {
+    bookId: v.id("books"),
+    audioFileId: v.id("audioFiles"),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireAuthMutation(ctx);
+    const now = Date.now();
+
+    const audioFile = await ctx.db.get(args.audioFileId);
+    if (!audioFile || audioFile.bookId !== args.bookId) {
+      throw new Error("Audio file does not belong to the specified book");
+    }
+
+    const existing = await ctx.db
+      .query("listeningProgress")
+      .withIndex("by_user_and_book", (q) => q.eq("userId", user._id).eq("bookId", args.bookId))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        lastListenedAt: now,
+        updatedAt: now,
+      });
+    } else {
+      await ctx.db.insert("listeningProgress", {
+        userId: user._id,
+        bookId: args.bookId,
+        audioFileId: args.audioFileId,
+        positionSeconds: 0,
+        playbackRate: 1,
+        lastListenedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await autoSetReadingStatus(ctx, user._id, args.bookId, now);
+  },
+});
+
+/**
  * Auto-set a book to "reading" status when the user starts listening.
  * Only transitions from no-status or "want_to_read". Doesn't override
  * explicit statuses like "finished", "paused", or "dnf".

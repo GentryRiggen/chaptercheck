@@ -65,6 +65,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   const generateStreamUrl = useAction(api.audioFiles.actions.generateStreamUrl);
   const saveProgressMutation = useMutation(api.listeningProgress.mutations.saveProgress);
+  const markListeningMutation = useMutation(api.listeningProgress.mutations.markListening);
 
   // Refs for values needed in callbacks/intervals without causing re-renders
   const playbackRateRef = useRef(playbackRate);
@@ -334,6 +335,12 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       setDuration(0);
       lastSavedPositionRef.current = 0;
 
+      // Immediately mark this book as listening so it appears in Continue Listening
+      // (full position data syncs later via the coalesced saveProgress calls)
+      markListeningMutation({ bookId: track.bookId, audioFileId: track.audioFileId }).catch((err) =>
+        console.warn("markListening failed:", err)
+      );
+
       // Set pending seek if resuming from a position
       if (options?.initialPosition && options.initialPosition > 0) {
         pendingSeekRef.current = options.initialPosition;
@@ -354,7 +361,13 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setIsLoading(false);
       }
     },
-    [currentTrack?.audioFileId, generateStreamUrl, resetMomentum, saveProgress]
+    [
+      currentTrack?.audioFileId,
+      generateStreamUrl,
+      markListeningMutation,
+      resetMomentum,
+      saveProgress,
+    ]
   );
 
   const pause = useCallback(() => {
