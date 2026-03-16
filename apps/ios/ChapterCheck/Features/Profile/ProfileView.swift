@@ -39,10 +39,12 @@ struct ProfileView: View {
     @ViewBuilder
     private func profileContent(_ profile: UserProfile) -> some View {
         List {
-            // Header
+            // Hero: gradient banner + avatar + name + stats
             Section {
-                profileHeader(profile)
+                profileHero(profile)
             }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // Private profile gate
             if profile.isProfilePrivate && !profile.isOwnProfile {
@@ -55,10 +57,6 @@ struct ProfileView: View {
                     .padding(.vertical, 20)
                 }
             } else {
-                // Stats
-                if let stats = profile.stats {
-                    statsSection(stats)
-                }
 
                 // Shelves
                 if !viewModel.shelves.isEmpty {
@@ -76,7 +74,24 @@ struct ProfileView: View {
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                     } header: {
-                        Text("Shelves")
+                        HStack {
+                            Text("Shelves")
+                            Spacer()
+                            if profile.isOwnProfile {
+                                NavigationLink(value: AppDestination.browseShelves) {
+                                    HStack(spacing: 2) {
+                                        Text("See All")
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                    }
+                                    .font(.subheadline)
+                                    .fontWeight(.regular)
+                                    .foregroundStyle(Color.accentColor)
+                                    .textCase(.none)
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -136,6 +151,7 @@ struct ProfileView: View {
             }
 
         }
+        .listSectionSpacing(.compact)
         .refreshable { await viewModel.refresh() }
         .safeAreaInset(edge: .bottom) {
             Spacer().frame(height: 80)
@@ -144,9 +160,78 @@ struct ProfileView: View {
 
     // MARK: - Sub-views
 
-    private func profileHeader(_ profile: UserProfile) -> some View {
-        HStack(spacing: 14) {
-            // Avatar
+    // MARK: - Profile Hero
+
+    private func profileHero(_ profile: UserProfile) -> some View {
+        VStack(spacing: 0) {
+            // Gradient banner with avatar overlapping
+            ZStack(alignment: .bottom) {
+                // Gradient banner
+                themeManager.accentGradient
+                    .frame(height: 90)
+
+                // Avatar — overlaps banner and content below
+                profileAvatar(profile)
+                    .offset(y: 36)
+            }
+
+            // Name + subtitle + follow + stats
+            VStack(spacing: 12) {
+                // Spacer for avatar overhang
+                Spacer().frame(height: 28)
+
+                Text(profile.displayName)
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                if let stats = profile.stats {
+                    Text(memberSummary(profile: profile, stats: stats))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                if profile.isProfilePrivate {
+                    Label("Private Profile", systemImage: "lock.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(.tertiarySystemFill), in: Capsule())
+                }
+
+                if !profile.isOwnProfile {
+                    FollowButton(userId: userId)
+                }
+
+                // Stats row
+                Divider()
+                    .padding(.horizontal, 20)
+
+                HStack(spacing: 0) {
+                    if let stats = profile.stats {
+                        statCell(value: stats.booksReadInt, label: "Books") {
+                            pushDestination(.allReadingHistory(userId: userId))
+                        }
+                        statCell(value: stats.reviewsWrittenInt, label: "Reviews") {
+                            pushDestination(.allUserReviews(userId: userId))
+                        }
+                    }
+                    statCell(value: viewModel.followersCount, label: "Followers") {
+                        pushDestination(.followers(userId: userId))
+                    }
+                    statCell(value: viewModel.followingCount, label: "Following") {
+                        pushDestination(.following(userId: userId))
+                    }
+                }
+                .padding(.horizontal, 8)
+            }
+            .padding(.bottom, 14)
+        }
+        .clipped()
+    }
+
+    private func profileAvatar(_ profile: UserProfile) -> some View {
+        Group {
             if let imageUrl = profile.imageUrl, let url = URL(string: imageUrl) {
                 AsyncImage(url: url) { phase in
                     switch phase {
@@ -158,115 +243,41 @@ struct ProfileView: View {
                         avatarPlaceholder
                     }
                 }
-                .frame(width: 56, height: 56)
+                .frame(width: 72, height: 72)
                 .clipShape(Circle())
             } else {
                 avatarPlaceholder
             }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(profile.displayName)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-
-                if profile.isProfilePrivate {
-                    Label("Private", systemImage: "lock")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let stats = profile.stats {
-                    Text(memberSinceAndBooks(profile: profile, stats: stats))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            if !profile.isOwnProfile {
-                FollowButton(userId: userId)
-            }
         }
-        .padding(.vertical, 4)
+        .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 3))
+        .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
     }
 
-    private func memberSinceAndBooks(profile: UserProfile, stats: UserProfileStats) -> String {
+    private func memberSummary(profile: UserProfile, stats: UserProfileStats) -> String {
         let year = Calendar.current.component(.year, from: Date(timeIntervalSince1970: profile.createdAt / 1000))
         let currentYear = Calendar.current.component(.year, from: Date())
-        let yearStr = year == currentYear ? "this year" : "since \(year)"
-        return "Joined \(yearStr) · \(stats.booksReadInt) books read"
+        let yearStr = year == currentYear ? "Joined this year" : "Member since \(year)"
+        return "\(yearStr) · \(stats.booksReadInt) books read"
     }
 
-    private func statsSection(_ stats: UserProfileStats) -> some View {
-        Section {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    statPill(
-                        value: stats.booksReadInt,
-                        label: "Books",
-                        icon: "book.closed.fill",
-                        action: { pushDestination(.allReadingHistory(userId: userId)) }
-                    )
-                    statPill(
-                        value: stats.reviewsWrittenInt,
-                        label: "Reviews",
-                        icon: "star.fill",
-                        action: { pushDestination(.allUserReviews(userId: userId)) }
-                    )
-                    statPill(
-                        value: stats.shelvesCountInt,
-                        label: "Shelves",
-                        icon: "books.vertical.fill",
-                        action: nil
-                    )
-                    statPill(
-                        value: viewModel.followersCount,
-                        label: "Followers",
-                        icon: "person.2.fill",
-                        action: { pushDestination(.followers(userId: userId)) }
-                    )
-                    statPill(
-                        value: viewModel.followingCount,
-                        label: "Following",
-                        icon: "heart.fill",
-                        action: { pushDestination(.following(userId: userId)) }
-                    )
-                }
-                .padding(.horizontal, 16)
-            }
-            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-        }
-    }
-
-    private func statPill(value: Int, label: String, icon: String, action: (() -> Void)?) -> some View {
-        let content = HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(action != nil ? Color.accentColor : .secondary)
-
-            VStack(alignment: .leading, spacing: 1) {
+    private func statCell(value: Int, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
                 Text("\(value)")
-                    .font(.subheadline)
+                    .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.accentColor)
                 Text(label)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 10))
-
-        return Group {
-            if let action {
-                Button(action: action) { content }
-                    .buttonStyle(.plain)
-            } else {
-                content
-            }
-        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(value) \(label)")
+        .accessibilityHint("View \(label.lowercased())")
     }
 
     private func profileShelfCard(_ shelf: Shelf) -> some View {
@@ -346,10 +357,10 @@ struct ProfileView: View {
     private var avatarPlaceholder: some View {
         Circle()
             .fill(themeManager.accentGradient)
-            .frame(width: 56, height: 56)
+            .frame(width: 72, height: 72)
             .overlay {
                 Image(systemName: "person.fill")
-                    .font(.title3)
+                    .font(.title2)
                     .foregroundStyle(.white)
             }
     }
