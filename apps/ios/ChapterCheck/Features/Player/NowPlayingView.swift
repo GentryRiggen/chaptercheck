@@ -115,7 +115,7 @@ struct NowPlayingView: View {
                 Capsule()
                     .fill(.tertiary)
                     .frame(width: 36, height: 5)
-                    .padding(.top, 16)
+                    .padding(.top, 32)
                     .padding(.bottom, 4)
             }
             .buttonStyle(.plain)
@@ -165,9 +165,10 @@ struct NowPlayingView: View {
                 .frame(height: carouselToSeekSpacing)
 
             seekBarSection
-
-            // Slider seek undo banner
-            sliderSeekUndoSection
+                .overlay(alignment: .top) {
+                    sliderSeekUndoSection
+                        .offset(y: -44)
+                }
 
             // Transport controls — vertically centered between seek bar and bottom toolbar
             Color.clear
