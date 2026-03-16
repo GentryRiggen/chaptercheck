@@ -5,6 +5,16 @@ struct AllReadingHistoryView: View {
     let userId: String
 
     @State private var viewModel = AllReadingHistoryViewModel()
+    @State private var searchText = ""
+
+    private var filteredBooks: [UserReadBook] {
+        guard !searchText.isEmpty else { return viewModel.books }
+        let query = searchText.lowercased()
+        return viewModel.books.filter { book in
+            book.title.lowercased().contains(query)
+                || book.authors.contains { $0.name.lowercased().contains(query) }
+        }
+    }
 
     var body: some View {
         Group {
@@ -27,19 +37,25 @@ struct AllReadingHistoryView: View {
         }
         .navigationTitle("Reading History")
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: "Search books")
         .onAppear { viewModel.subscribe(userId: userId) }
         .onDisappear { viewModel.unsubscribe() }
     }
 
     private var bookList: some View {
         List {
-            ForEach(viewModel.books) { book in
-                LibraryBookCard(book: book)
-                    .onAppear {
-                        if book._id == viewModel.books.last?._id {
-                            viewModel.loadNextPage()
+            if !searchText.isEmpty && filteredBooks.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+                    .listRowSeparator(.hidden)
+            } else {
+                ForEach(filteredBooks) { book in
+                    LibraryBookCard(book: book)
+                        .onAppear {
+                            if searchText.isEmpty, book._id == viewModel.books.last?._id {
+                                viewModel.loadNextPage()
+                            }
                         }
-                    }
+                }
             }
 
             if viewModel.isLoadingMore {

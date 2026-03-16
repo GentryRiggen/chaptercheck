@@ -2,6 +2,7 @@
 
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
+import { useDebounce } from "@chaptercheck/shared/hooks/useDebounce";
 import { formatRelativeDate } from "@chaptercheck/shared/utils";
 import { useQuery } from "convex/react";
 import {
@@ -14,12 +15,13 @@ import {
   Lock,
   MessageSquare,
   Plus,
+  Search,
   Settings,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { BookCover } from "@/components/books/BookCover";
 import { LibraryBookCard } from "@/components/books/LibraryBookCard";
@@ -28,6 +30,7 @@ import { ShelfCard } from "@/components/shelves/ShelfCard";
 import { ShelfDialog } from "@/components/shelves/ShelfDialog";
 import { FollowButton } from "@/components/social/FollowButton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -60,6 +63,33 @@ export default function UserProfilePage() {
 
   const [createShelfOpen, setCreateShelfOpen] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
+  const [bookSearch, setBookSearch] = useState("");
+  const [reviewSearch, setReviewSearch] = useState("");
+  const debouncedBookSearch = useDebounce(bookSearch, 300);
+  const debouncedReviewSearch = useDebounce(reviewSearch, 300);
+
+  const filteredBooks = useMemo(() => {
+    if (!readBooks) return [];
+    if (!debouncedBookSearch) return readBooks;
+    const q = debouncedBookSearch.toLowerCase();
+    return readBooks.filter(
+      (book) =>
+        book.title.toLowerCase().includes(q) ||
+        book.authors?.some((a) => a.name.toLowerCase().includes(q))
+    );
+  }, [readBooks, debouncedBookSearch]);
+
+  const filteredReviews = useMemo(() => {
+    if (!reviews) return [];
+    if (!debouncedReviewSearch) return reviews;
+    const q = debouncedReviewSearch.toLowerCase();
+    return reviews.filter(
+      (review) =>
+        review.book?.title.toLowerCase().includes(q) ||
+        review.book?.authors.some((a) => a.name.toLowerCase().includes(q)) ||
+        review.reviewText?.toLowerCase().includes(q)
+    );
+  }, [reviews, debouncedReviewSearch]);
 
   const booksLoading = readBooks === undefined && !shouldSkipBooks;
   const noBooksRead = readBooks !== undefined && readBooks.length === 0;
@@ -253,9 +283,22 @@ export default function UserProfilePage() {
         {/* Reviews section - only show if profile is public or own profile */}
         {(!profile.isProfilePrivate || profile.isOwnProfile) && (
           <div className="mb-8">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Reviews
-            </h2>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Reviews
+              </h2>
+              {reviews && reviews.length > 0 && (
+                <div className="relative max-w-xs flex-1">
+                  <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search reviews..."
+                    value={reviewSearch}
+                    onChange={(e) => setReviewSearch(e.target.value)}
+                    className="h-8 pl-8 text-sm"
+                  />
+                </div>
+              )}
+            </div>
 
             {reviews === undefined ? (
               <div className="space-y-3">
@@ -272,9 +315,16 @@ export default function UserProfilePage() {
                     : `${profile.name || "This user"} hasn't written any reviews.`}
                 </p>
               </div>
+            ) : filteredReviews.length === 0 ? (
+              <div className="rounded-lg border border-border/50 bg-card/50 p-8 text-center">
+                <Search className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+                <p className="text-muted-foreground">
+                  No reviews matching &quot;{debouncedReviewSearch}&quot;
+                </p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {reviews.map((review) => {
+                {filteredReviews.map((review) => {
                   const isExpanded = expandedReviews.has(review._id);
                   const hasLongText = (review.reviewText?.length ?? 0) > 200;
 
@@ -388,9 +438,22 @@ export default function UserProfilePage() {
         {/* Books grid - only show if profile is public or own profile */}
         {(!profile.isProfilePrivate || profile.isOwnProfile) && (
           <div>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {profile.isOwnProfile ? "Your Library" : `${profile.name || "User"}'s Library`}
-            </h2>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                {profile.isOwnProfile ? "Your Library" : `${profile.name || "User"}'s Library`}
+              </h2>
+              {readBooks && readBooks.length > 0 && (
+                <div className="relative max-w-xs flex-1">
+                  <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search books..."
+                    value={bookSearch}
+                    onChange={(e) => setBookSearch(e.target.value)}
+                    className="h-8 pl-8 text-sm"
+                  />
+                </div>
+              )}
+            </div>
 
             {booksLoading ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -412,9 +475,16 @@ export default function UserProfilePage() {
                   </Button>
                 )}
               </div>
+            ) : filteredBooks.length === 0 ? (
+              <div className="rounded-lg border border-border/50 bg-card/50 p-8 text-center">
+                <Search className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+                <p className="text-muted-foreground">
+                  No books matching &quot;{debouncedBookSearch}&quot;
+                </p>
+              </div>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {readBooks?.map((book) => (
+                {filteredBooks.map((book) => (
                   <LibraryBookCard key={book._id} book={book} isOwnProfile={profile.isOwnProfile} />
                 ))}
               </div>

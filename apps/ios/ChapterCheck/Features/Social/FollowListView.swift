@@ -15,7 +15,14 @@ struct FollowListView: View {
     @State private var cancellable: AnyCancellable?
     @State private var isLoading = true
     @State private var authObserver = ConvexAuthObserver()
+    @State private var searchText = ""
     private let socialRepository = SocialRepository()
+
+    private var filteredUsers: [FollowedUser] {
+        guard !searchText.isEmpty else { return users }
+        let query = searchText.lowercased()
+        return users.filter { $0.name?.lowercased().contains(query) == true }
+    }
 
     var body: some View {
         Group {
@@ -34,8 +41,13 @@ struct FollowListView: View {
                 )
             } else {
                 List {
-                    ForEach(users) { user in
-                        UserAvatarRow(user: user)
+                    if !searchText.isEmpty && filteredUsers.isEmpty {
+                        ContentUnavailableView.search(text: searchText)
+                            .listRowSeparator(.hidden)
+                    } else {
+                        ForEach(filteredUsers) { user in
+                            UserAvatarRow(user: user)
+                        }
                     }
                 }
                 .refreshable { await refresh() }
@@ -46,6 +58,7 @@ struct FollowListView: View {
         }
         .navigationTitle(mode == .followers ? "Followers" : "Following")
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: mode == .followers ? "Search followers" : "Search following")
         .onAppear { startSubscription() }
         .onDisappear {
             authObserver.cancel()

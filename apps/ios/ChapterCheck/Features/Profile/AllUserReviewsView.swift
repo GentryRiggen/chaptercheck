@@ -5,6 +5,17 @@ struct AllUserReviewsView: View {
     let userId: String
 
     @State private var viewModel = AllUserReviewsViewModel()
+    @State private var searchText = ""
+
+    private var filteredReviews: [UserReview] {
+        guard !searchText.isEmpty else { return viewModel.reviews }
+        let query = searchText.lowercased()
+        return viewModel.reviews.filter { review in
+            review.book?.title.lowercased().contains(query) == true
+                || review.book?.authors.contains { $0.name.lowercased().contains(query) } == true
+                || review.reviewText?.lowercased().contains(query) == true
+        }
+    }
 
     var body: some View {
         Group {
@@ -27,20 +38,26 @@ struct AllUserReviewsView: View {
         }
         .navigationTitle("Reviews")
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: "Search reviews")
         .onAppear { viewModel.subscribe(userId: userId) }
         .onDisappear { viewModel.unsubscribe() }
     }
 
     private var reviewList: some View {
         List {
-            ForEach(viewModel.reviews) { review in
-                if let book = review.book {
-                    NavigationLink(value: AppDestination.book(id: book._id)) {
-                        reviewRow(review, book: book)
-                    }
-                    .onAppear {
-                        if review._id == viewModel.reviews.last?._id {
-                            viewModel.loadNextPage()
+            if !searchText.isEmpty && filteredReviews.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+                    .listRowSeparator(.hidden)
+            } else {
+                ForEach(filteredReviews) { review in
+                    if let book = review.book {
+                        NavigationLink(value: AppDestination.book(id: book._id)) {
+                            reviewRow(review, book: book)
+                        }
+                        .onAppear {
+                            if searchText.isEmpty, review._id == viewModel.reviews.last?._id {
+                                viewModel.loadNextPage()
+                            }
                         }
                     }
                 }
