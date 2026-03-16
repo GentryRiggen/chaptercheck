@@ -44,29 +44,32 @@ struct NowPlayingView: View {
         selectedCarouselPage == 1 && audioPlayer.currentBook != nil
     }
 
+    /// Carousel expansion (100pt) is exactly offset by spacing reductions below
+    /// so the total VStack height stays constant — expansion goes downward only.
     private var carouselHeight: CGFloat {
-        artworkSize + (isDetailsPageActive ? 132 : 0)
+        artworkSize + (isDetailsPageActive ? 100 : 0)
     }
 
     private var topToCarouselSpacing: CGFloat {
-        isDetailsPageActive ? 10 : 28
+        isDetailsPageActive ? 10 : 28 // −18
     }
 
     private var carouselToSeekSpacing: CGFloat {
-        isDetailsPageActive ? 10 : 26
+        isDetailsPageActive ? 6 : 26 // −20
     }
 
     private var seekToTransportSpacing: CGFloat {
-        isDetailsPageActive ? 14 : 34
+        isDetailsPageActive ? 8 : 34 // −26
     }
 
     private var transportToToolbarSpacing: CGFloat {
-        isDetailsPageActive ? 12 : 30
+        isDetailsPageActive ? 6 : 30 // −24
     }
 
     private var indicatorTopPadding: CGFloat {
-        isDetailsPageActive ? 8 : 12
+        isDetailsPageActive ? 0 : 12 // −12
     }
+    // Total spacing reduction: 18+20+26+24+12 = 100 ✓
 
     private var totalBookDurationSeconds: Double? {
         let summedDuration = audioPlayer.audioFiles.reduce(0.0) { partialResult, file in
@@ -139,7 +142,7 @@ struct NowPlayingView: View {
                     isReviewSheetPresented = true
                 }
             )
-            .frame(height: carouselHeight)
+            .frame(height: carouselHeight, alignment: .top)
 
             // Page indicator dots
             if audioPlayer.currentBook != nil {
@@ -184,6 +187,7 @@ struct NowPlayingView: View {
             bottomToolbar
                 .padding(.horizontal, 24)
                 .padding(.bottom, 12)
+
         }
         .overlay(alignment: .top) {
             downloadBannerOverlay
@@ -205,7 +209,7 @@ struct NowPlayingView: View {
             .padding(.bottom, -6)
         }
         .background(.background)
-        .animation(.spring(duration: 0.35, bounce: 0.16), value: selectedCarouselPage)
+        .animation(.spring(duration: 0.45, bounce: 0.12), value: selectedCarouselPage)
         .onAppear {
             isPlayingAnimated = audioPlayer.isPlaying
             detailsViewModel.showToast = { toast in showToast(toast) }
