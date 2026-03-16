@@ -54,19 +54,8 @@ struct AuthGateView: View {
                             UserDefaults.standard.set(true, forKey: Self.hasAuthenticatedBeforeKey)
                         }
                     }
-            } else if !Clerk.shared.isLoaded {
-                loadingView
-                    .onAppear {
-                        logger.info("Clerk not loaded yet, showing loading view")
-                    }
-            } else if Clerk.shared.session == nil {
-                SignInView()
-                    .onAppear {
-                        hasAuthenticated = false
-                        logger.info("Clerk loaded but no session, showing SignInView")
-                    }
-            } else {
-                // Initial authentication (not yet authenticated this session)
+            } else if Clerk.shared.isLoaded, Clerk.shared.session != nil {
+                // Clerk session exists but Convex not yet authenticated
                 loadingView
                     .task {
                         switch convexService.authState {
@@ -78,6 +67,31 @@ struct AuthGateView: View {
                             await convexService.login()
                         case .authenticated:
                             break
+                        }
+                    }
+            } else {
+                // Either Clerk not loaded or no session — keep SignInView in a
+                // single structural branch so @State survives transient Clerk
+                // state changes during the OTP flow (isLoaded can briefly toggle
+                // when signInWithEmailCode mutates Clerk's @Observable state).
+                SignInView()
+                    .disabled(!Clerk.shared.isLoaded)
+                    .overlay {
+                        if !Clerk.shared.isLoaded {
+                            ZStack {
+                                Color(.systemBackground).ignoresSafeArea()
+                                loadingView
+                            }
+                            .transition(.opacity)
+                        }
+                    }
+                    .animation(.default, value: Clerk.shared.isLoaded)
+                    .onAppear {
+                        hasAuthenticated = false
+                        if !Clerk.shared.isLoaded {
+                            logger.info("Clerk not loaded yet, showing loading overlay")
+                        } else {
+                            logger.info("Clerk loaded but no session, showing SignInView")
                         }
                     }
             }
