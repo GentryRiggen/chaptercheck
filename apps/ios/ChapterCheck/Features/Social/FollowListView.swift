@@ -25,10 +25,12 @@ struct FollowListView: View {
     }
 
     var body: some View {
-        Group {
+        List {
             if isLoading {
                 ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 300)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
             } else if users.isEmpty {
                 ContentUnavailableView(
                     mode == .followers ? "No Followers" : "Not Following Anyone",
@@ -39,23 +41,20 @@ struct FollowListView: View {
                             : "This user isn't following anyone yet."
                     )
                 )
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .frame(maxWidth: .infinity, minHeight: 300)
+            } else if !searchText.isEmpty && filteredUsers.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+                    .listRowSeparator(.hidden)
             } else {
-                List {
-                    if !searchText.isEmpty && filteredUsers.isEmpty {
-                        ContentUnavailableView.search(text: searchText)
-                            .listRowSeparator(.hidden)
-                    } else {
-                        ForEach(filteredUsers) { user in
-                            UserAvatarRow(user: user)
-                        }
-                    }
-                }
-                .refreshable { await refresh() }
-                .safeAreaInset(edge: .bottom) {
-                    Spacer().frame(height: 80)
+                ForEach(filteredUsers) { user in
+                    UserAvatarRow(user: user)
                 }
             }
         }
+        .refreshable { await refresh() }
+        .contentMargins(.bottom, 80)
         .navigationTitle(mode == .followers ? "Followers" : "Following")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: mode == .followers ? "Search followers" : "Search following")

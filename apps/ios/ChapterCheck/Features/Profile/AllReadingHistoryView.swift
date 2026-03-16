@@ -17,34 +17,30 @@ struct AllReadingHistoryView: View {
     }
 
     var body: some View {
-        Group {
+        List {
             if viewModel.isLoading && viewModel.books.isEmpty {
                 LoadingView(message: "Loading reading history...")
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .frame(maxWidth: .infinity, minHeight: 300)
             } else if let error = viewModel.error, viewModel.books.isEmpty {
                 ErrorView(message: error) {
                     viewModel.unsubscribe()
                     viewModel.subscribe(userId: userId)
                 }
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .frame(maxWidth: .infinity, minHeight: 300)
             } else if viewModel.books.isEmpty {
                 EmptyStateView(
                     icon: "book.closed",
                     title: "No Books",
                     subtitle: "No reading history yet."
                 )
-            } else {
-                bookList
-            }
-        }
-        .navigationTitle("Reading History")
-        .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $searchText, prompt: "Search books")
-        .onAppear { viewModel.subscribe(userId: userId) }
-        .onDisappear { viewModel.unsubscribe() }
-    }
-
-    private var bookList: some View {
-        List {
-            if !searchText.isEmpty && filteredBooks.isEmpty {
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .frame(maxWidth: .infinity, minHeight: 300)
+            } else if !searchText.isEmpty && filteredBooks.isEmpty {
                 ContentUnavailableView.search(text: searchText)
                     .listRowSeparator(.hidden)
             } else {
@@ -66,10 +62,14 @@ struct AllReadingHistoryView: View {
                 }
                 .listRowSeparator(.hidden)
             }
-
         }
         .listStyle(.insetGrouped)
         .refreshable { await viewModel.refresh() }
         .contentMargins(.bottom, 80)
+        .navigationTitle("Reading History")
+        .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: "Search books")
+        .onAppear { viewModel.subscribe(userId: userId) }
+        .onDisappear { viewModel.unsubscribe() }
     }
 }

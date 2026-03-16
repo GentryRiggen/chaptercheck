@@ -18,34 +18,30 @@ struct AllUserReviewsView: View {
     }
 
     var body: some View {
-        Group {
+        List {
             if viewModel.isLoading && viewModel.reviews.isEmpty {
                 LoadingView(message: "Loading reviews...")
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .frame(maxWidth: .infinity, minHeight: 300)
             } else if let error = viewModel.error, viewModel.reviews.isEmpty {
                 ErrorView(message: error) {
                     viewModel.unsubscribe()
                     viewModel.subscribe(userId: userId)
                 }
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .frame(maxWidth: .infinity, minHeight: 300)
             } else if viewModel.reviews.isEmpty {
                 EmptyStateView(
                     icon: "star",
                     title: "No Reviews",
                     subtitle: "No reviews yet."
                 )
-            } else {
-                reviewList
-            }
-        }
-        .navigationTitle("Reviews")
-        .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $searchText, prompt: "Search reviews")
-        .onAppear { viewModel.subscribe(userId: userId) }
-        .onDisappear { viewModel.unsubscribe() }
-    }
-
-    private var reviewList: some View {
-        List {
-            if !searchText.isEmpty && filteredReviews.isEmpty {
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .frame(maxWidth: .infinity, minHeight: 300)
+            } else if !searchText.isEmpty && filteredReviews.isEmpty {
                 ContentUnavailableView.search(text: searchText)
                     .listRowSeparator(.hidden)
             } else {
@@ -71,11 +67,15 @@ struct AllUserReviewsView: View {
                 }
                 .listRowSeparator(.hidden)
             }
-
         }
         .listStyle(.insetGrouped)
         .refreshable { await viewModel.refresh() }
         .contentMargins(.bottom, 80)
+        .navigationTitle("Reviews")
+        .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: "Search reviews")
+        .onAppear { viewModel.subscribe(userId: userId) }
+        .onDisappear { viewModel.unsubscribe() }
     }
 
     private func reviewRow(_ review: UserReview, book: UserReviewBook) -> some View {
