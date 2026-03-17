@@ -199,7 +199,7 @@ struct NowPlayingView: View {
             // Bottom toolbar
             bottomToolbar
                 .padding(.horizontal, 24)
-                .padding(.bottom, 12)
+                .padding(.bottom, 24)
 
         }
         .overlay(alignment: .top) {
@@ -581,7 +581,7 @@ struct NowPlayingView: View {
                     isAudioSettingsPresented = true
                 } label: {
                     Image(systemName: "waveform")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(auxiliaryButtonForeground)
                         .frame(width: 44, height: 44)
                 }
@@ -601,7 +601,7 @@ struct NowPlayingView: View {
                 } label: {
                     VStack(spacing: 2) {
                         Image(systemName: audioPlayer.isSleepTimerActive ? "moon.zzz.fill" : "moon.zzz")
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(audioPlayer.isSleepTimerActive ? AnyShapeStyle(.tint) : AnyShapeStyle(auxiliaryButtonForeground))
                         if audioPlayer.isSleepTimerActive {
                             Text(audioPlayer.formattedSleepTimer)
@@ -632,7 +632,7 @@ struct NowPlayingView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(auxiliaryButtonForeground)
                         .frame(width: 44, height: 44)
                 }
