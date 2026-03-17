@@ -66,7 +66,7 @@ struct NowPlayingView: View {
     }
 
     private var transportToToolbarSpacing: CGFloat {
-        isDetailsPageActive ? 6 : 30 // −24
+        isDetailsPageActive ? 2 : 22 // −24
     }
 
     private var indicatorTopPadding: CGFloat {
@@ -115,7 +115,7 @@ struct NowPlayingView: View {
                 Capsule()
                     .fill(.tertiary)
                     .frame(width: 36, height: 5)
-                    .padding(.top, 32)
+                    .padding(.top, 48)
                     .padding(.bottom, 4)
             }
             .buttonStyle(.plain)
@@ -169,6 +169,22 @@ struct NowPlayingView: View {
                     sliderSeekUndoSection
                         .offset(y: -44)
                 }
+                .overlay(alignment: .top) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark")
+                        Text("Saved")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .opacity(showSavedIndicator ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.3), value: showSavedIndicator)
+                    .accessibilityLabel("Progress saved")
+                    .accessibilityHidden(!showSavedIndicator)
+                    .offset(y: -20)
+                }
 
             // Transport controls — vertically centered between seek bar and bottom toolbar
             Color.clear
@@ -199,27 +215,11 @@ struct NowPlayingView: View {
             // Bottom toolbar
             bottomToolbar
                 .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+                .padding(.bottom, 16)
 
         }
         .overlay(alignment: .top) {
             downloadBannerOverlay
-        }
-        .overlay(alignment: .bottom) {
-            HStack(spacing: 4) {
-                Image(systemName: "checkmark")
-                Text("Saved")
-            }
-            .font(.caption2)
-            .foregroundStyle(.tertiary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(.ultraThinMaterial, in: Capsule())
-            .opacity(showSavedIndicator ? 1 : 0)
-            .animation(.easeInOut(duration: 0.3), value: showSavedIndicator)
-            .accessibilityLabel("Progress saved")
-            .accessibilityHidden(!showSavedIndicator)
-            .padding(.bottom, -6)
         }
         .background(.background)
         .animation(.spring(duration: 0.45, bounce: 0.12), value: selectedCarouselPage)

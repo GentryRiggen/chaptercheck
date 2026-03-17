@@ -26,7 +26,7 @@ TOKEN=$(grep '^SENTRY_PERSONAL_AUTH_TOKEN=' .env.local | cut -d'=' -f2-)
 For each project (`chaptercheck-ios`, `chaptercheck-web`), fetch unresolved issues sorted by frequency:
 
 ```
-GET https://sentry.io/api/0/projects/willful-divide/{project}/issues/?query=is:unresolved&sort=freq&statsPeriod=90d
+GET https://sentry.io/api/0/projects/willful-divide/{project}/issues/?query=is:unresolved&sort=freq&statsPeriod=14d
 Header: Authorization: Bearer $TOKEN
 ```
 
