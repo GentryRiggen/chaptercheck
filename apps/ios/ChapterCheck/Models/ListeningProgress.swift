@@ -96,6 +96,12 @@ struct ListeningStats: Decodable, Sendable {
     }
 }
 
+/// Playback rate with usage frequency from `getFrequentPlaybackRates`.
+struct PlaybackRateFrequency: Decodable, Sendable {
+    let rate: Double
+    let count: Double
+}
+
 /// Lightweight author summary used in nested query results.
 /// Only contains `_id` and `name`.
 struct BookAuthorSummary: Decodable, Identifiable, Hashable, Sendable {

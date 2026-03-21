@@ -105,7 +105,6 @@
 		98528EA4814C305A14CA2806 /* RatingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2378962E933FABD7C0C295 /* RatingView.swift */; };
 		98FF49DA00CB7653A6439FE6 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6473F22AEC09FB226B51B669 /* ProfileViewModel.swift */; };
 		9A8A43C873AF394C94594DC0 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA97502AD85AF8872354E13B /* Haptics.swift */; };
-		9AAC44B4289085F2956EFCBC /* ShakeToShowLogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3BA217A9EE4C74FF830EE0 /* ShakeToShowLogs.swift */; };
 		9B1868DCAF1D61407DF53D1A /* NowPlayingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 692C9931AE04860DB229B0CD /* NowPlayingManager.swift */; };
 		9BDA7E203C3258842AB31DE6 /* AllUserReviewsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E7DF8071D10D2D6E6C1B81B /* AllUserReviewsViewModel.swift */; };
 		9BE7BE29C1A43950149C33C1 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65BC23B5B2CC5CF590F01849 /* SignInView.swift */; };
@@ -251,7 +250,6 @@
 		5A0C12489543394591DDBD2F /* AudioRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRepository.swift; sourceTree = "<group>"; };
 		5A2270CA0481AB114D83A86F /* LibraryBookCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryBookCard.swift; sourceTree = "<group>"; };
 		5B1BD01887EACA9AB86AD7DA /* AuthorsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorsViewModel.swift; sourceTree = "<group>"; };
-		5B3BA217A9EE4C74FF830EE0 /* ShakeToShowLogs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShakeToShowLogs.swift; sourceTree = "<group>"; };
 		5C037E6D8704725B117FC880 /* AuthorDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorDetailView.swift; sourceTree = "<group>"; };
 		5D22CEFC589F33A4E05E8BFB /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
 		5DF069F79095281A3066C4CC /* AddBookConfirmViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookConfirmViewModel.swift; sourceTree = "<group>"; };
@@ -810,7 +808,6 @@
 				8D39D59C9BD5DBC43AF1FF92 /* AppLogger.swift */,
 				DA97502AD85AF8872354E13B /* Haptics.swift */,
 				06A3B31A69EFE47BC15F52A5 /* OfflineBanner.swift */,
-				5B3BA217A9EE4C74FF830EE0 /* ShakeToShowLogs.swift */,
 				1277AE5AAB42ECE08E81020B /* TimeFormatting.swift */,
 				65E343C151A1CEDFA88974A3 /* ToastEnvironment.swift */,
 				15E7F0C599C7203F7EF1B180 /* UserFacingError.swift */,
@@ -1059,7 +1056,6 @@
 				7979FF730E90284C5A1F2E27 /* SeriesDetailViewModel.swift in Sources */,
 				A50D25449BF328A1F81202CB /* SeriesRepository.swift in Sources */,
 				CB06A06F653E338C7B18765A /* SettingsView.swift in Sources */,
-				9AAC44B4289085F2956EFCBC /* ShakeToShowLogs.swift in Sources */,
 				782FD0AD4489FFD85D82A72B /* SharedState.swift in Sources */,
 				C63F88E3285C32FC4C0431F0 /* Shelf.swift in Sources */,
 				B89A67ECD0FE8AC80AB8395D /* ShelfCard.swift in Sources */,

@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// Sheet for audio playback settings: speed control, voice boost, skip durations,
@@ -14,17 +15,65 @@ struct AudioSettingsSheet: View {
     private static let forwardOptions: [Double] = [10, 15, 30, 45, 60]
     private static let backwardOptions: [Double] = [5, 10, 15, 30]
 
+    @State private var frequentRates: [PlaybackRateFrequency] = []
+    @State private var rateSubscription: AnyCancellable?
+
     private let preferencesRepository = PreferencesRepository()
+    private let progressRepository = ProgressRepository()
+
+    /// Up to 3 speed presets from listening history, excluding the current rate.
+    /// Falls back to [1.0, 1.5, 2.0] when there's no history.
+    private var speedPresets: [Double] {
+        let currentRounded = (audioPlayer.playbackRate * 10).rounded() / 10
+        let defaults: [Double] = [1.0, 1.5, 2.0]
+
+        let candidates: [Double]
+        if frequentRates.isEmpty {
+            candidates = defaults
+        } else {
+            candidates = frequentRates.map(\.rate)
+        }
+
+        return Array(
+            candidates
+                .filter { ($0 * 10).rounded() / 10 != currentRounded }
+                .prefix(3)
+        )
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // Header
-                Text("Audio")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, 36)
-                    .padding(.top, 16)
+                // Header + speed presets
+                HStack {
+                    Text("Audio")
+                        .font(.title2)
+                        .fontWeight(.bold)
+
+                    Spacer()
+
+                    if !speedPresets.isEmpty {
+                        HStack(spacing: 8) {
+                            ForEach(speedPresets, id: \.self) { rate in
+                                Button {
+                                    Haptics.selection()
+                                    audioPlayer.setRate(rate)
+                                } label: {
+                                    Text(formatRate(rate))
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(.tint, in: Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
 
                 // Speed control row
                 speedControl
@@ -70,6 +119,19 @@ struct AudioSettingsSheet: View {
                 ) { preferencesRepository.updatePreferences(smartRewindEnabled: $0) }
             }
             .padding(.bottom, 16)
+        }
+        .onAppear {
+            guard rateSubscription == nil else { return }
+            rateSubscription = progressRepository.subscribeToFrequentPlaybackRates()?
+                .replaceError(with: [])
+                .receive(on: DispatchQueue.main)
+                .sink { rates in
+                    frequentRates = rates
+                }
+        }
+        .onDisappear {
+            rateSubscription?.cancel()
+            rateSubscription = nil
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)

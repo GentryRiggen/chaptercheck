@@ -46,6 +46,15 @@ final class ProgressRepository {
         )
     }
 
+    /// Subscribe to the user's most frequently used playback rates.
+    /// Used for speed preset pills in the audio settings sheet.
+    func subscribeToFrequentPlaybackRates() -> AnyPublisher<[PlaybackRateFrequency], ClientError>? {
+        convex.subscribe(
+            to: "listeningProgress/queries:getFrequentPlaybackRates",
+            with: [:]
+        )
+    }
+
     // MARK: - Mutations
 
     /// Save or update listening progress for a book.

@@ -217,6 +217,37 @@ export const getListeningStats = query({
 });
 
 /**
+ * Get the user's most frequently used playback rates across all books.
+ * Returns up to 5 distinct rates sorted by usage frequency (descending).
+ */
+export const getFrequentPlaybackRates = query({
+  args: {},
+  handler: async (ctx) => {
+    const { user } = await requireAuth(ctx);
+
+    // One row per book — bounded by library size, cap at 200 for safety.
+    const progressRecords = await ctx.db
+      .query("listeningProgress")
+      .withIndex("by_user_and_lastListened", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .take(200);
+
+    // Count frequency of each rate, normalized to 1 decimal place
+    const rateCounts = new Map<number, number>();
+    for (const p of progressRecords) {
+      const rate = Math.round(p.playbackRate * 10) / 10;
+      rateCounts.set(rate, (rateCounts.get(rate) ?? 0) + 1);
+    }
+
+    // Sort by frequency descending, return top 5
+    return [...rateCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([rate, count]) => ({ rate, count }));
+  },
+});
+
+/**
  * Get a user's listening activity for the admin drill-in page.
  * Returns their most recently synced listening state plus recent history.
  */
