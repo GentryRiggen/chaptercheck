@@ -35,7 +35,6 @@ struct BookNoteComposerSheet: View {
     @State private var isScrubbingPreview = false
     @State private var previewScrubTime: Double = 0
 
-    private static let windowRadiusSeconds: Double = 15 * 60
     private static let maxNoteLengthSeconds: Double = 30 * 60
 
     init(
@@ -59,35 +58,10 @@ struct BookNoteComposerSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    filePickerSection
-                    rangeSection
-                    previewSection
-                    noteTextSection
-                    tagSection
-                    visibilitySection
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle(context.existingNote == nil ? "Add Note" : "Edit Note")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(context.existingNote == nil ? "Save" : "Update") {
-                        Task { await save() }
-                    }
-                    .disabled(isSaving || !canSave)
-                }
-            }
+            scrollContent
+                .navigationTitle(context.existingNote == nil ? "Add Note" : "Edit Note")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { toolbarContent }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
@@ -110,6 +84,38 @@ struct BookNoteComposerSheet: View {
         }
     }
 
+    private var scrollContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                filePickerSection
+                rangeSection
+                previewSection
+                noteTextSection
+                tagSection
+                visibilitySection
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            }
+            .padding()
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button("Cancel") { dismiss() }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button(context.existingNote == nil ? "Save" : "Update") {
+                Task { await save() }
+            }
+            .disabled(isSaving || !canSave)
+        }
+    }
+
     private var selectedAudioFile: AudioFile? {
         context.audioFiles.first(where: { $0._id == selectedAudioFileId })
     }
@@ -119,18 +125,6 @@ struct BookNoteComposerSheet: View {
             return max(endSeconds, startSeconds + 1, 60)
         }
         return duration
-    }
-
-    private var windowStart: Double {
-        max(0, context.anchorSeconds - Self.windowRadiusSeconds)
-    }
-
-    private var windowEnd: Double {
-        min(maxDuration, context.anchorSeconds + Self.windowRadiusSeconds)
-    }
-
-    private var windowLength: Double {
-        max(windowEnd - windowStart, 1)
     }
 
     private var canSave: Bool {
@@ -146,6 +140,8 @@ struct BookNoteComposerSheet: View {
         isScrubbingPreview ? previewScrubTime : clipPreviewPlayer.currentTime
     }
 
+    // MARK: - Sections
+
     private var filePickerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Moment")
@@ -159,7 +155,10 @@ struct BookNoteComposerSheet: View {
                 }
                 .pickerStyle(.menu)
                 .onChange(of: selectedAudioFileId) { _, _ in
-                    clampRange()
+                    // Clamp range to new file duration
+                    startSeconds = min(startSeconds, maxDuration)
+                    endSeconds = min(endSeconds, maxDuration)
+                    if startSeconds >= endSeconds { endSeconds = min(startSeconds + 60, maxDuration) }
                 }
             } else if let selectedAudioFile {
                 Text(selectedAudioFile.displayName ?? selectedAudioFile.fileName)
@@ -185,23 +184,30 @@ struct BookNoteComposerSheet: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            DualHandleRangeSlider(
+            WaveformClipSelector(
                 startSeconds: $startSeconds,
                 endSeconds: $endSeconds,
-                windowStart: windowStart,
-                windowEnd: windowEnd,
-                maxLength: Self.maxNoteLengthSeconds,
-                activeHandle: $activeHandle
+                totalDuration: maxDuration,
+                maxClipDuration: Self.maxNoteLengthSeconds,
+                initialCenterTime: (context.initialStartSeconds + context.initialEndSeconds) / 2,
+                playbackTime: clipPreviewPlayer.isPlaying ? startSeconds + clipPreviewPlayer.currentTime : nil
             )
-            .frame(height: 44)
 
+            // Quick adjust controls — adjust whichever handle is active.
             HStack(spacing: 12) {
                 quickAdjustButton(title: "-15", delta: -15)
                 quickAdjustButton(title: "-5", delta: -5)
-                Text(activeHandle == .start ? "Adjusting start" : "Adjusting end")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
+
+                Button {
+                    activeHandle = activeHandle == .start ? .end : .start
+                } label: {
+                    Text(activeHandle == .start ? "Adjusting start" : "Adjusting end")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+
                 quickAdjustButton(title: "+5", delta: 5)
                 quickAdjustButton(title: "+15", delta: 15)
             }
@@ -369,6 +375,8 @@ struct BookNoteComposerSheet: View {
             .font(.subheadline)
     }
 
+    // MARK: - Controls
+
     private func quickAdjustButton(title: String, delta: Double) -> some View {
         Button(title) {
             adjustActiveHandle(by: delta)
@@ -387,6 +395,8 @@ struct BookNoteComposerSheet: View {
         .disabled(selectedAudioFile == nil || clipPreviewPlayer.isLoading)
     }
 
+    // MARK: - Logic
+
     private func handlePreviewScrub(isEditing: Bool) {
         if isEditing {
             isScrubbingPreview = true
@@ -401,23 +411,17 @@ struct BookNoteComposerSheet: View {
     private func adjustActiveHandle(by delta: Double) {
         switch activeHandle {
         case .start:
-            startSeconds = min(max(windowStart, startSeconds + delta), endSeconds - 1)
+            let newStart = (startSeconds + delta).clamped(to: 0...(endSeconds - 1))
+            startSeconds = newStart
             if endSeconds - startSeconds > Self.maxNoteLengthSeconds {
-                endSeconds = min(windowEnd, startSeconds + Self.maxNoteLengthSeconds)
+                endSeconds = min(startSeconds + Self.maxNoteLengthSeconds, maxDuration)
             }
         case .end:
-            endSeconds = max(min(windowEnd, endSeconds + delta), startSeconds + 1)
+            let newEnd = (endSeconds + delta).clamped(to: (startSeconds + 1)...maxDuration)
+            endSeconds = newEnd
             if endSeconds - startSeconds > Self.maxNoteLengthSeconds {
-                startSeconds = max(windowStart, endSeconds - Self.maxNoteLengthSeconds)
+                startSeconds = max(endSeconds - Self.maxNoteLengthSeconds, 0)
             }
-        }
-    }
-
-    private func clampRange() {
-        startSeconds = min(max(windowStart, startSeconds), max(windowEnd - 1, windowStart))
-        endSeconds = min(max(startSeconds + 1, endSeconds), windowEnd)
-        if endSeconds - startSeconds > Self.maxNoteLengthSeconds {
-            endSeconds = min(windowEnd, startSeconds + Self.maxNoteLengthSeconds)
         }
     }
 
@@ -481,6 +485,8 @@ struct BookNoteComposerSheet: View {
 
 }
 
+// MARK: - Supporting types
+
 struct BookNoteSavePayload {
     let noteId: String?
     let audioFileId: String
@@ -496,67 +502,364 @@ private enum RangeHandle {
     case end
 }
 
-private struct DualHandleRangeSlider: View {
+// MARK: - Comparable clamped helpers
+
+private extension Double {
+    func clamped(to range: ClosedRange<Double>) -> Double {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+    }
+}
+
+private extension CGFloat {
+    func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+    }
+}
+
+// MARK: - WaveformClipSelector
+
+/// An Overcast-style scrollable waveform clip selector.
+///
+/// The waveform spans the full audio duration and can be panned horizontally.
+/// A highlighted selection box with draggable handles marks the clip boundaries.
+/// Panning and handle-dragging share a single DragGesture; the mode is determined
+/// by the proximity of the drag start location to each handle.
+private struct WaveformClipSelector: View {
+
     @Binding var startSeconds: Double
     @Binding var endSeconds: Double
-    let windowStart: Double
-    let windowEnd: Double
-    let maxLength: Double
-    @Binding var activeHandle: RangeHandle
+    let totalDuration: Double
+    let maxClipDuration: Double
+    /// The time (seconds) to center the viewport on when the view first appears.
+    let initialCenterTime: Double
+    /// Absolute playback time (seconds into the audio file) while previewing, or nil when not playing.
+    let playbackTime: Double?
+
+    // MARK: Layout constants
+
+    /// Visible seconds of audio in the viewport. ~2 minutes gives a good balance
+    /// between fine adjustment precision and contextual overview.
+    private static let visibleDuration: Double = 120
+    private static let waveformHeight: CGFloat = 80
+    private static let barWidth: CGFloat = 3
+    private static let barGap: CGFloat = 1
+    private static let barStride: CGFloat = barWidth + barGap
+    private static let handleHitRadius: CGFloat = 30
+    private static let selectionCornerRadius: CGFloat = 6
+    private static let selectionBorderWidth: CGFloat = 2
+    private static let handlePillWidth: CGFloat = 8
+    private static let handlePillHeight: CGFloat = 40
+
+    // MARK: State
+
+    /// The audio time (seconds) at the center of the viewport.
+    @State private var panCenterTime: Double = 0
+    /// Drag interaction mode for the active gesture.
+    @State private var dragMode: DragMode = .panning
+    /// Whether a drag mode has been committed for the current gesture.
+    @State private var didDetermineMode: Bool = false
+    /// Accumulated pan translation since drag start, for delta computation.
+    @State private var lastDragTranslation: CGFloat = 0
+    /// Recent drag samples for momentum computation: (timestamp, panCenterTime)
+    @State private var velocitySamples: [(time: Date, panCenter: Double)] = []
+    /// Measured viewport width from GeometryReader.
+    @State private var viewportWidth: CGFloat = 300
+
+    private enum DragMode: Equatable {
+        case panning
+        case draggingStart
+        case draggingEnd
+    }
+
+    // MARK: Derived layout
+
+    private var totalDurationSafe: Double { max(totalDuration, 1) }
+    private var pixelsPerSecond: CGFloat { viewportWidth / Self.visibleDuration }
+    private var timeAtLeftEdge: Double { panCenterTime - Self.visibleDuration / 2 }
+
+    private func screenX(for time: Double) -> CGFloat {
+        CGFloat(time - timeAtLeftEdge) * pixelsPerSecond
+    }
+
+    private func time(atScreenX x: CGFloat) -> Double {
+        timeAtLeftEdge + Double(x) / Double(pixelsPerSecond)
+    }
+
+    private func clampedCenter(_ candidate: Double) -> Double {
+        let halfVisible = Self.visibleDuration / 2
+        let lower = min(halfVisible, totalDurationSafe / 2)
+        let upper = max(totalDurationSafe - halfVisible, totalDurationSafe / 2)
+        return candidate.clamped(to: lower...upper)
+    }
+
+    // MARK: Waveform bar height
+
+    private func barHeight(for index: Int, maxHeight: CGFloat) -> CGFloat {
+        // Deterministic pseudo-random using a sum of sine waves at different frequencies.
+        // Produces natural-looking variation without any randomness source.
+        let d = Double(index)
+        let raw = abs(sin(d * 0.1 + cos(d * 0.3)) * 0.5 + 0.5)
+        return CGFloat(raw) * maxHeight * 0.8 + maxHeight * 0.2
+    }
+
+    // MARK: Body
 
     var body: some View {
-        GeometryReader { geometry in
-            let width = max(geometry.size.width, 1)
-            let windowLength = max(windowEnd - windowStart, 1)
-            let startX = CGFloat((startSeconds - windowStart) / windowLength) * width
-            let endX = CGFloat((endSeconds - windowStart) / windowLength) * width
+        VStack(spacing: 6) {
+            GeometryReader { geo in
+                let width = geo.size.width
 
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(.fill.tertiary)
-                    .frame(height: 6)
+                ZStack {
+                    // Waveform canvas — full extent, clipped to viewport
+                    waveformCanvas(width: width)
 
-                Capsule()
-                    .fill(.tint)
-                    .frame(width: max(endX - startX, 8), height: 8)
-                    .offset(x: startX)
+                    // Dimming overlays outside the selection
+                    selectionDimming(width: width)
 
-                handle(at: startX, selected: activeHandle == .start)
-                    .gesture(dragGesture(for: .start, width: width))
+                    // Selection border + handles
+                    selectionBorderAndHandles(width: width)
 
-                handle(at: endX, selected: activeHandle == .end)
-                    .gesture(dragGesture(for: .end, width: width))
+                    // Center playhead line
+                    playheadLine(width: width)
+                }
+                .frame(width: width, height: Self.waveformHeight)
+                .clipped()
+                .contentShape(Rectangle())
+                .gesture(panAndHandleGesture)
+                .onAppear {
+                    viewportWidth = width
+                    panCenterTime = clampedCenter(initialCenterTime)
+                }
+                .onChange(of: width) { _, newWidth in
+                    viewportWidth = newWidth
+                }
             }
-            .frame(height: 44)
+            .frame(height: Self.waveformHeight)
+
+            // Time labels: START on left, DURATION on right — Overcast style
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("START")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                    Text(TimeFormatting.formatTime(startSeconds))
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("DURATION")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                    Text(TimeFormatting.formatDuration(endSeconds - startSeconds))
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 
-    private func handle(at x: CGFloat, selected: Bool) -> some View {
-        Circle()
-            .fill(.background)
-            .frame(width: selected ? 24 : 20, height: selected ? 24 : 20)
-            .overlay(Circle().stroke(.tint, lineWidth: 3))
-            .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
-            .offset(x: x - (selected ? 12 : 10))
+    // MARK: - Subviews
+
+    /// Renders waveform bars using Canvas for efficient drawing.
+    /// Only bars that intersect the visible viewport are drawn.
+    private func waveformCanvas(width: CGFloat) -> some View {
+        Canvas { context, size in
+            let height = size.height
+            let stride = Self.barStride
+            let bw = Self.barWidth
+
+            // Compute the pixel offset from the absolute waveform origin to the left edge
+            // of the viewport. Bars at absolute pixel position >= absoluteOffset are visible.
+            let absoluteOffset = CGFloat(timeAtLeftEdge) * pixelsPerSecond
+
+            // Total bars across the full audio duration.
+            let totalBars = Int(ceil(CGFloat(totalDurationSafe) * pixelsPerSecond / stride))
+
+            // Only iterate bars that could intersect [0, width] in screen space.
+            let firstBarIndex = max(0, Int(floor(absoluteOffset / stride)))
+            let lastBarIndex = min(totalBars - 1, Int(ceil((absoluteOffset + width) / stride)) + 1)
+
+            guard firstBarIndex <= lastBarIndex else { return }
+
+            for barIndex in firstBarIndex...lastBarIndex {
+                let screenBarX = CGFloat(barIndex) * stride - absoluteOffset
+
+                guard screenBarX + bw >= 0, screenBarX < width else { continue }
+
+                let bh = barHeight(for: barIndex, maxHeight: height)
+                let barY = (height - bh) / 2
+                let barRect = CGRect(x: screenBarX, y: barY, width: bw, height: bh)
+                let barPath = Path(roundedRect: barRect, cornerRadius: bw / 2)
+
+                // Color bars inside the selection with accent, outside with dimmed tertiary.
+                let barCenterTime = time(atScreenX: screenBarX + bw / 2)
+                let isSelected = barCenterTime >= startSeconds && barCenterTime <= endSeconds
+                let color: Color = isSelected ? .accentColor : Color(.tertiaryLabel)
+                context.fill(barPath, with: .color(color))
+            }
+        }
     }
 
-    private func dragGesture(for handle: RangeHandle, width: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 0)
+    /// Black opacity overlays to the left and right of the selection region.
+    private func selectionDimming(width: CGFloat) -> some View {
+        let startX = screenX(for: startSeconds).clamped(to: 0...width)
+        let endX = screenX(for: endSeconds).clamped(to: 0...width)
+
+        return ZStack(alignment: .leading) {
+            // Left dim
+            Rectangle()
+                .fill(Color.black.opacity(0.38))
+                .frame(width: startX)
+                .frame(maxHeight: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Right dim
+            Rectangle()
+                .fill(Color.black.opacity(0.38))
+                .frame(width: max(width - endX, 0))
+                .frame(maxHeight: .infinity)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// The rounded-rect border framing the selection, plus the handle pill indicators.
+    @ViewBuilder
+    private func selectionBorderAndHandles(width: CGFloat) -> some View {
+        let startX = screenX(for: startSeconds).clamped(to: 0...width)
+        let endX = screenX(for: endSeconds).clamped(to: 0...width)
+        let selWidth = max(endX - startX, 8)
+
+        // Selection border
+        RoundedRectangle(cornerRadius: Self.selectionCornerRadius)
+            .stroke(Color.accentColor, lineWidth: Self.selectionBorderWidth)
+            .frame(width: selWidth, height: Self.waveformHeight - 2)
+            .offset(x: startX - (width / 2 - selWidth / 2))
+            .allowsHitTesting(false)
+
+        // Left handle pill — centered on the left selection edge.
+        RoundedRectangle(cornerRadius: Self.handlePillWidth / 2)
+            .fill(Color.accentColor)
+            .frame(width: Self.handlePillWidth, height: Self.handlePillHeight)
+            .offset(x: startX - width / 2)
+            .allowsHitTesting(false)
+
+        // Right handle pill — centered on the right selection edge.
+        RoundedRectangle(cornerRadius: Self.handlePillWidth / 2)
+            .fill(Color.accentColor)
+            .frame(width: Self.handlePillWidth, height: Self.handlePillHeight)
+            .offset(x: endX - width / 2)
+            .allowsHitTesting(false)
+    }
+
+    /// A thin vertical line showing the current playback position during preview,
+    /// or a subtle center line for orientation when not playing.
+    @ViewBuilder
+    private func playheadLine(width: CGFloat) -> some View {
+        if let playbackTime {
+            let x = screenX(for: playbackTime)
+            if x >= 0, x <= width {
+                Rectangle()
+                    .fill(Color.primary)
+                    .frame(width: 2, height: Self.waveformHeight)
+                    .offset(x: x - width / 2)
+                    .allowsHitTesting(false)
+            }
+        } else {
+            Rectangle()
+                .fill(Color.primary.opacity(0.2))
+                .frame(width: 1, height: Self.waveformHeight)
+                .allowsHitTesting(false)
+        }
+    }
+
+    // MARK: - Gesture
+
+    /// The unified pan + handle drag gesture.
+    ///
+    /// Uses a single DragGesture on the entire component. The interaction mode
+    /// (panning vs. handle dragging) is committed once per gesture using the
+    /// finger-down location stored in `value.startLocation`. Subsequent events
+    /// continue in the committed mode regardless of where the finger moves.
+    private var panAndHandleGesture: some Gesture {
+        DragGesture(minimumDistance: 4, coordinateSpace: .local)
             .onChanged { value in
-                activeHandle = handle
-                let windowLength = max(windowEnd - windowStart, 1)
-                let rawValue = windowStart + max(0, min(Double(value.location.x / width) * windowLength, windowLength))
-                switch handle {
-                case .start:
-                    startSeconds = min(rawValue, endSeconds - 1)
-                    if endSeconds - startSeconds > maxLength {
-                        endSeconds = min(windowEnd, startSeconds + maxLength)
+                // Commit to an interaction mode exactly once per gesture, using the
+                // stable finger-down position so mode cannot drift mid-drag.
+                if !didDetermineMode {
+                    didDetermineMode = true
+                    let sx = value.startLocation.x
+                    let startHandleX = screenX(for: startSeconds)
+                    let endHandleX = screenX(for: endSeconds)
+                    if abs(sx - startHandleX) <= Self.handleHitRadius {
+                        dragMode = .draggingStart
+                    } else if abs(sx - endHandleX) <= Self.handleHitRadius {
+                        dragMode = .draggingEnd
+                    } else {
+                        dragMode = .panning
                     }
-                case .end:
-                    endSeconds = max(rawValue, startSeconds + 1)
-                    if endSeconds - startSeconds > maxLength {
-                        startSeconds = max(windowStart, endSeconds - maxLength)
+                }
+
+                switch dragMode {
+                case .panning:
+                    // Compute delta from accumulated translation to avoid discontinuities.
+                    let delta = value.translation.width - lastDragTranslation
+                    lastDragTranslation = value.translation.width
+                    // Dragging right moves the viewport to earlier audio time (invert).
+                    let timeDelta = -Double(delta) / Double(pixelsPerSecond)
+                    panCenterTime = clampedCenter(panCenterTime + timeDelta)
+
+                    // Record samples for momentum deceleration (keep last 5).
+                    velocitySamples.append((time: Date(), panCenter: panCenterTime))
+                    if velocitySamples.count > 5 { velocitySamples.removeFirst() }
+
+                case .draggingStart:
+                    let rawTime = time(atScreenX: value.location.x)
+                    startSeconds = rawTime.clamped(to: 0...(endSeconds - 1))
+                    // Push end forward if the clip would exceed the maximum duration.
+                    if endSeconds - startSeconds > maxClipDuration {
+                        endSeconds = min(startSeconds + maxClipDuration, totalDurationSafe)
                     }
+
+                case .draggingEnd:
+                    let rawTime = time(atScreenX: value.location.x)
+                    endSeconds = rawTime.clamped(to: (startSeconds + 1)...totalDurationSafe)
+                    // Push start back if the clip would exceed the maximum duration.
+                    if endSeconds - startSeconds > maxClipDuration {
+                        startSeconds = max(endSeconds - maxClipDuration, 0)
+                    }
+                }
+            }
+            .onEnded { _ in
+                let endedMode = dragMode
+
+                // Reset per-gesture transient state.
+                didDetermineMode = false
+                dragMode = .panning
+                lastDragTranslation = 0
+
+                guard endedMode == .panning, velocitySamples.count >= 2 else {
+                    velocitySamples.removeAll()
+                    return
+                }
+
+                // Velocity from the two most recent samples (seconds of audio / wall second).
+                let newest = velocitySamples.last!
+                let older = velocitySamples[velocitySamples.count - 2]
+                let dt = newest.time.timeIntervalSince(older.time)
+                velocitySamples.removeAll()
+
+                guard dt > 0 else { return }
+
+                let velocity = (newest.panCenter - older.panCenter) / dt
+                let decelerationFactor: Double = 0.4
+                let targetCenter = clampedCenter(panCenterTime + velocity * decelerationFactor)
+
+                withAnimation(.easeOut(duration: 0.5)) {
+                    panCenterTime = targetCenter
                 }
             }
     }
