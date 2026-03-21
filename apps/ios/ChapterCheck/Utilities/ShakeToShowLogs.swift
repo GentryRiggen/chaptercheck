@@ -32,16 +32,7 @@ private struct ShakeToShowLogsModifier: ViewModifier {
                 isShowingLogs = true
             }
             .sheet(isPresented: $isShowingLogs) {
-                NavigationStack {
-                    ConsoleView()
-                        .navigationTitle("Logs")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button("Done") { isShowingLogs = false }
-                            }
-                        }
-                }
+                ConsoleView()
             }
     }
 }

@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var storageStats: StorageStats?
     @State private var cancellables = Set<AnyCancellable>()
     @State private var showSignOutConfirmation = false
+    @State private var showLogs = false
 
     private let userRepository = UserRepository()
 
@@ -68,8 +69,8 @@ struct SettingsView: View {
 
                 // Developer section
                 Section {
-                    NavigationLink {
-                        ConsoleView()
+                    Button {
+                        showLogs = true
                     } label: {
                         Label("Logs", systemImage: "doc.text.magnifyingglass")
                     }
@@ -153,6 +154,9 @@ struct SettingsView: View {
                 subscribeToStorageStats()
             }
             .onDisappear { cancellables.removeAll() }
+            .sheet(isPresented: $showLogs) {
+                ConsoleView()
+            }
         }
     }
 
