@@ -407,16 +407,45 @@ actor DownloadService {
             saveManifestToDisk()
 
             logger.error("Download failed for '\(audioFileId)': \(error.localizedDescription)")
-            SentryService.capture(
-                error,
-                context: "DownloadService.performDownload",
-                extras: ["audioFileId": audioFileId, "bookId": bookId]
-            )
+
+            // Only report non-transient errors to Sentry — network timeouts/drops are expected
+            if !Self.isTransientNetworkError(error) {
+                SentryService.capture(
+                    error,
+                    context: "DownloadService.performDownload",
+                    extras: ["audioFileId": audioFileId, "bookId": bookId]
+                )
+            }
             continuation.finish()
         }
 
         // Always clean up the active task reference when done
         activeTasks.removeValue(forKey: audioFileId)
+    }
+
+    /// Returns `true` for transient network errors that don't need Sentry reporting.
+    private static func isTransientNetworkError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        let code = nsError.code
+        let domain = nsError.domain
+
+        if domain == NSURLErrorDomain {
+            switch code {
+            case NSURLErrorTimedOut,              // -1001
+                 NSURLErrorNetworkConnectionLost, // -1005
+                 NSURLErrorNotConnectedToInternet: // -1009
+                return true
+            default:
+                break
+            }
+        }
+
+        // Check underlying error
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            return isTransientNetworkError(underlying)
+        }
+
+        return false
     }
 
     private func saveManifestToDisk() {

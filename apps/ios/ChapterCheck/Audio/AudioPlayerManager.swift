@@ -583,6 +583,7 @@ final class AudioPlayerManager {
         guard let audioFile = currentAudioFile else { return }
         error = nil
         isLoading = true
+        transientRetryCount = 0
         let resumePosition = currentPosition
         Task {
             await loadAndPlay(audioFile: audioFile, startPosition: resumePosition)
@@ -678,6 +679,7 @@ final class AudioPlayerManager {
 
                 switch item.status {
                 case .readyToPlay:
+                    self.transientRetryCount = 0
                     self.syncTimelineFromPlayer()
 
                     if startPosition > 0 {
@@ -695,16 +697,34 @@ final class AudioPlayerManager {
                     self.loadCoverArtwork()
 
                 case .failed:
+                    let playerError = item.error
+                    self.logger.error("Player item failed: \(playerError?.localizedDescription ?? "unknown")")
+
+                    // Auto-retry for transient errors (network timeout, connection lost, media services reset)
+                    if self.isTransientPlaybackError(playerError), self.transientRetryCount < Self.maxTransientRetries {
+                        self.transientRetryCount += 1
+                        self.logger.info("Transient error, auto-retrying (\(self.transientRetryCount)/\(Self.maxTransientRetries))")
+                        let resumePosition = self.currentPosition
+                        if let audioFile = self.currentAudioFile {
+                            self.teardownPlayer()
+                            Task {
+                                try? await Task.sleep(for: .seconds(1))
+                                await self.loadAndPlay(audioFile: audioFile, startPosition: resumePosition)
+                            }
+                        }
+                        return
+                    }
+
                     self.error = "Couldn't load the audio. Please try again."
                     self.isLoading = false
-                    self.logger.error("Player item failed: \(item.error?.localizedDescription ?? "unknown")")
-                    if let playerError = item.error {
+                    if let playerError {
                         SentryService.capture(
                             playerError,
                             context: "AudioPlayerManager.playerItem.failed",
                             extras: [
                                 "audioFileId": self.currentAudioFile?._id ?? "unknown",
-                                "bookId": self.currentBook?._id ?? "unknown"
+                                "bookId": self.currentBook?._id ?? "unknown",
+                                "retriesAttempted": "\(self.transientRetryCount)"
                             ]
                         )
                     } else {
@@ -784,6 +804,33 @@ final class AudioPlayerManager {
                 }
             }
         }
+    }
+
+    // MARK: - Private: Transient Error Detection
+
+    /// Returns `true` for errors that are likely transient and worth auto-retrying:
+    /// network timeout (-1001), connection lost (-1005), or media services reset (-11819).
+    private func isTransientPlaybackError(_ error: Error?) -> Bool {
+        guard let nsError = error as? NSError else { return false }
+        let code = nsError.code
+        let domain = nsError.domain
+
+        // NSURLErrorDomain: timeout (-1001), connection lost (-1005)
+        if domain == NSURLErrorDomain && (code == NSURLErrorTimedOut || code == NSURLErrorNetworkConnectionLost) {
+            return true
+        }
+
+        // AVFoundationErrorDomain: media services were reset (-11819)
+        if domain == "AVFoundationErrorDomain" && code == -11819 {
+            return true
+        }
+
+        // Check underlying error recursively
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            return isTransientPlaybackError(underlying)
+        }
+
+        return false
     }
 
     // MARK: - Private: Teardown
