@@ -67,42 +67,35 @@ struct SettingsView: View {
                     Text("Settings")
                 }
 
-                // Developer section
+                // Storage section
+                if let stats = storageStats {
+                    storageSection(stats)
+                }
+
+                // About section
                 Section {
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text(appVersionString)
+                            .foregroundStyle(.secondary)
+                    }
+
                     Button {
                         showLogs = true
                     } label: {
                         Label("Logs", systemImage: "doc.text.magnifyingglass")
                     }
                 } header: {
-                    Text("Developer")
-                }
-
-                // Storage section
-                if let stats = storageStats {
-                    storageSection(stats)
+                    Text("About")
                 }
 
                 // Sign out & account
                 Section {
                     Button {
-                        Task {
-                            await convexService.resetApplicationSession(reason: "manual_settings_reset")
-                        }
-                    } label: {
-                        HStack {
-                            Label("Reload App Session", systemImage: "arrow.clockwise.circle")
-                            Spacer()
-                            if convexService.isResetting {
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
-                        }
-                    }
-                    .disabled(convexService.isResetting)
-
-                    Button("Sign Out", role: .destructive) {
                         showSignOutConfirmation = true
+                    } label: {
+                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                     .confirmationDialog(
                         "Are you sure you want to sign out?",
@@ -125,16 +118,6 @@ struct SettingsView: View {
                     } label: {
                         Label("Delete Account", systemImage: "trash")
                             .foregroundStyle(.red)
-                    }
-                }
-
-                // App info
-                Section {
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text(appVersionString)
-                            .foregroundStyle(.secondary)
                     }
                 }
             }
