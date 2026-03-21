@@ -163,11 +163,12 @@ export const getActivityFeed = query({
       return { items: [], nextCursor: null, hasMore: false };
     }
 
-    // Batch-fetch followed users
+    // Batch-fetch followed users, excluding private profiles
     const followedUsers = await Promise.all(followedUserIds.map((id) => ctx.db.get(id)));
     const userMap = new Map<string, UserInfo>();
     for (const u of followedUsers) {
-      if (u) userMap.set(u._id, { _id: u._id, name: u.name, imageUrl: u.imageUrl });
+      if (u && !u.isProfilePrivate)
+        userMap.set(u._id, { _id: u._id, name: u.name, imageUrl: u.imageUrl });
     }
 
     const allItems: ActivityItem[] = [];

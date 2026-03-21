@@ -105,6 +105,16 @@ export const updateProfilePrivacy = mutation({
       updatedAt: Date.now(),
     });
 
+    // When going private, remove all followers
+    if (args.isProfilePrivate) {
+      const followers = await ctx.db
+        .query("follows")
+        .withIndex("by_following", (q) => q.eq("followingId", user._id))
+        .collect();
+
+      await Promise.all(followers.map((f) => ctx.db.delete(f._id)));
+    }
+
     return { success: true };
   },
 });

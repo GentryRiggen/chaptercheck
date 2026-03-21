@@ -17,6 +17,10 @@ export const followUser = mutation({
       throw new Error("User not found");
     }
 
+    if (targetUser.isProfilePrivate) {
+      throw new Error("Cannot follow a private profile");
+    }
+
     // Check if already following
     const existing = await ctx.db
       .query("follows")
