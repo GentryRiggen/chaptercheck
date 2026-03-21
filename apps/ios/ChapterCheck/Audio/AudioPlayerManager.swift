@@ -212,8 +212,20 @@ final class AudioPlayerManager {
     /// Last known live position from the AVPlayer, used as fallback
     /// when the player is nil during reconnection to avoid stale `currentPosition`.
     private var lastLivePosition: Double?
+
+    /// True when `duration` was set from a frame-accurate source (AVAudioFile)
+    /// rather than AVPlayer's potentially inaccurate MP3 header estimate.
+    /// Prevents `syncTimelineFromPlayer()` from overwriting the accurate value.
+    private var hasAccurateLocalDuration: Bool = false
     private var webSocketObservation: AnyCancellable?
     private var reconnectObservation: NSObjectProtocol?
+
+    /// Number of automatic retries attempted for the current track on transient failures.
+    private var transientRetryCount = 0
+
+    /// Maximum number of automatic retries for transient playback errors
+    /// (network timeout, connection lost, media services reset).
+    private static let maxTransientRetries = 2
 
     /// Minimum position change (in seconds) before saving progress to the backend.
     /// Prevents unnecessary writes when the user pauses and resumes at the same spot.
@@ -589,6 +601,7 @@ final class AudioPlayerManager {
         audioFiles = []
         currentPosition = 0
         duration = 0
+        hasAccurateLocalDuration = false
         isPlaying = false
         isLoading = false
         error = nil
@@ -602,12 +615,23 @@ final class AudioPlayerManager {
     // MARK: - Private: Loading & Playing
 
     private func loadAndPlay(audioFile: AudioFile, startPosition: Double) async {
+        hasAccurateLocalDuration = false
+
         do {
             // Prefer local file if available (offline playback)
             let url: URL
             if let localURL = await downloadManager?.localFileURL(for: audioFile._id) {
                 url = localURL
                 logger.info("Playing from local file: \(audioFile._id)")
+
+                // Use AVAudioFile for frame-accurate duration. AVPlayer's
+                // MP3 duration estimate (from Xing/LAME headers) can be off
+                // by 5-15 seconds; AVAudioFile reads the actual PCM frame
+                // count which is exact.
+                if let accurateDuration = Self.frameAccurateDuration(for: localURL) {
+                    duration = accurateDuration
+                    hasAccurateLocalDuration = true
+                }
             } else if !NetworkMonitor.shared.isConnected {
                 self.error = "This book isn't downloaded for offline listening."
                 isLoading = false
@@ -1091,15 +1115,19 @@ final class AudioPlayerManager {
     }
 
     private func syncTimelineFromPlayer() {
-        if let liveDuration = livePlayerDuration() {
-            if duration <= 0 || abs(duration - liveDuration) > 0.5 {
-                if duration > 0, abs(duration - liveDuration) > 1 {
-                    logger.warning("Player duration corrected from \(self.duration, format: .fixed(precision: 2))s to \(liveDuration, format: .fixed(precision: 2))s")
+        // Skip duration sync when we have a frame-accurate value from
+        // AVAudioFile — AVPlayer's MP3 header estimate would overwrite it.
+        if !hasAccurateLocalDuration {
+            if let liveDuration = livePlayerDuration() {
+                if duration <= 0 || abs(duration - liveDuration) > 0.5 {
+                    if duration > 0, abs(duration - liveDuration) > 1 {
+                        logger.warning("Player duration corrected from \(self.duration, format: .fixed(precision: 2))s to \(liveDuration, format: .fixed(precision: 2))s")
+                    }
+                    duration = liveDuration
                 }
-                duration = liveDuration
+            } else if duration <= 0 {
+                duration = currentAudioFile?.duration ?? 0
             }
-        } else if duration <= 0 {
-            duration = currentAudioFile?.duration ?? 0
         }
 
         if let livePosition = livePlayerPosition() {
@@ -1131,6 +1159,25 @@ final class AudioPlayerManager {
             return nil
         }
         return seconds
+    }
+
+    /// Returns the frame-accurate duration for a local audio file, or nil on failure.
+    /// Uses `AVAudioFile` which reads the actual PCM frame count rather than
+    /// relying on potentially inaccurate MP3 Xing/LAME headers.
+    private static let durationLogger = Logger(subsystem: "com.chaptercheck", category: "AudioDuration")
+
+    private static func frameAccurateDuration(for url: URL) -> Double? {
+        do {
+            let audioFile = try AVAudioFile(forReading: url)
+            let sampleRate = audioFile.processingFormat.sampleRate
+            guard sampleRate > 0 else { return nil }
+            let duration = Double(audioFile.length) / sampleRate
+            guard duration > 0 else { return nil }
+            return duration
+        } catch {
+            durationLogger.debug("AVAudioFile duration extraction failed for \(url.lastPathComponent): \(error.localizedDescription)")
+            return nil
+        }
     }
 
     private func loadCoverArtwork() {
@@ -1234,6 +1281,13 @@ final class AudioPlayerManager {
     private func appWillResignActive() {
         // Save progress and update lock screen when app backgrounds
         if isPlaying {
+            // Snapshot the freshest position before suspension so
+            // lastLivePosition is as recent as possible if needed as
+            // a fallback on resume.
+            syncTimelineFromPlayer()
+            if let livePos = livePlayerPosition() {
+                lastLivePosition = livePos
+            }
             saveProgressNow(forceRemoteSync: true)
             updateNowPlayingFull()
         }
@@ -1241,14 +1295,29 @@ final class AudioPlayerManager {
 
     @objc
     private func appDidBecomeActive() {
-        // Sync UI state with actual player state when returning to foreground.
-        // The player may have been paused by the system or by the user via
-        // lock screen controls while the app was in the background.
-        if let player {
-            let playerIsPlaying = player.rate > 0
-            if isPlaying != playerIsPlaying {
-                isPlaying = playerIsPlaying
-            }
+        guard let player else { return }
+
+        // The periodic time observer was suspended while the app was
+        // backgrounded (main run loop paused), so currentPosition and
+        // lastLivePosition are stale. Sync them from the live AVPlayer
+        // state immediately — without this, skip forward/backward can
+        // jump to the position from when the app was backgrounded.
+        syncTimelineFromPlayer()
+        if let livePos = livePlayerPosition() {
+            lastLivePosition = livePos
+        }
+
+        // Sync play/pause state — the player may have been paused by
+        // the system or by the user via lock screen controls while the
+        // app was in the background.
+        let playerIsPlaying = player.rate > 0
+        if isPlaying != playerIsPlaying {
+            isPlaying = playerIsPlaying
+        }
+
+        // Refresh lock screen with accurate position
+        if isPlaying {
+            updateNowPlayingState()
         }
     }
 

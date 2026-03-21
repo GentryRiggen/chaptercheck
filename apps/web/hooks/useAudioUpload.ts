@@ -67,7 +67,24 @@ export const useAudioUpload = (bookId: Id<"books">) => {
         xhr.send(file);
       });
 
-      // Step 3: Store metadata in Convex
+      // Step 3: Extract frame-accurate duration using Web Audio API.
+      // decodeAudioData reads actual PCM frames rather than relying on
+      // potentially inaccurate MP3 Xing/LAME headers. Skip for very large
+      // files (>200MB) to avoid excessive memory usage during decoding.
+      let duration = 0;
+      if (file.size < 200 * 1024 * 1024) {
+        try {
+          const audioContext = new AudioContext();
+          const arrayBuffer = await file.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          duration = audioBuffer.duration;
+          await audioContext.close();
+        } catch {
+          // Fall back to 0; backend will backfill from player-reported duration
+        }
+      }
+
+      // Step 4: Store metadata in Convex
       const format = file.name.split(".").pop() || "unknown";
 
       await createAudioFile({
@@ -79,7 +96,7 @@ export const useAudioUpload = (bookId: Id<"books">) => {
         r2Bucket,
         storageAccountId,
         partNumber: options.partNumber,
-        duration: 0, // TODO: Extract actual duration from audio file
+        duration,
       });
 
       updateProgress(100);

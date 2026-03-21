@@ -30,10 +30,14 @@ export const saveProgress = mutation({
       throw new Error("Audio file does not belong to the specified book");
     }
 
-    // Backfill audio file duration when the stored value is 0 but the
-    // player reports a real duration (metadata wasn't available at upload).
-    if (audioFile.duration === 0 && args.audioDuration && args.audioDuration > 0) {
-      await ctx.db.patch(audioFile._id, { duration: args.audioDuration });
+    // Backfill audio file duration when the stored value is missing or
+    // significantly inaccurate. Covers both files uploaded with duration 0
+    // (web uploads) and files with inaccurate AVFoundation estimates from
+    // MP3 Xing/LAME headers (can be off by 5-15s).
+    if (args.audioDuration && args.audioDuration > 0) {
+      if (audioFile.duration === 0 || Math.abs(audioFile.duration - args.audioDuration) > 2) {
+        await ctx.db.patch(audioFile._id, { duration: args.audioDuration });
+      }
     }
 
     const existing = await ctx.db
