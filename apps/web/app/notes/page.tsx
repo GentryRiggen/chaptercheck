@@ -17,6 +17,7 @@ import {
   LogIn,
   MoreHorizontal,
   Pencil,
+  Play,
   Plus,
   Search,
   StickyNote,
@@ -28,6 +29,12 @@ import { Suspense, useMemo, useState } from "react";
 
 import { BookCover } from "@/components/books/BookCover";
 import { FreeformNoteComposerDialog } from "@/components/books/FreeformNoteComposerDialog";
+import {
+  formatDuration,
+  formatTime,
+  getAudioFileLabel,
+  NoteClipPreviewDialog,
+} from "@/components/books/NoteClipPreviewDialog";
 import { NoteDeleteDialog } from "@/components/books/NoteDeleteDialog";
 import {
   ENTRY_TYPES,
@@ -103,34 +110,6 @@ type AllNote = {
 
 type SortOption = "recent" | "oldest" | "by_book";
 
-function formatTime(seconds: number) {
-  if (!isFinite(seconds) || seconds < 0) return "0:00";
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  if (hrs > 0) {
-    return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  }
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-function formatDuration(seconds: number) {
-  if (!isFinite(seconds) || seconds <= 0) return "0m";
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  if (hrs > 0) return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
-  if (mins > 0) return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
-  return `${secs}s`;
-}
-
-function getAudioFileLabel(audioFile: NonNullable<AllNote["audioFile"]>) {
-  if (audioFile.partNumber) {
-    return `Part ${audioFile.partNumber} • ${audioFile.displayName || audioFile.fileName}`;
-  }
-  return audioFile.displayName || audioFile.fileName;
-}
-
 export default function NotesPage() {
   return (
     <Suspense>
@@ -159,6 +138,9 @@ function NotesPageContent() {
   const [selectedEntryType, setSelectedEntryType] = useState<EntryType | "all">("all");
   const [selectedTagId, setSelectedTagId] = useState<Id<"memoryTags"> | "all">("all");
   const [sortOption, setSortOption] = useState<SortOption>("recent");
+
+  // Preview state
+  const [previewNote, setPreviewNote] = useState<AllNote | null>(null);
 
   // Composer state
   const [composerOpen, setComposerOpen] = useState(false);
@@ -512,6 +494,7 @@ function NotesPageContent() {
                               key={note._id}
                               note={note}
                               showBook={false}
+                              onPreview={() => setPreviewNote(note)}
                               onEdit={() => handleEdit(note)}
                               onDelete={() => handleDelete(note._id)}
                             />
@@ -529,6 +512,7 @@ function NotesPageContent() {
                     key={note._id}
                     note={note}
                     showBook
+                    onPreview={() => setPreviewNote(note)}
                     onEdit={() => handleEdit(note)}
                     onDelete={() => handleDelete(note._id)}
                   />
@@ -538,6 +522,15 @@ function NotesPageContent() {
           </>
         )}
       </main>
+
+      {/* Clip preview dialog */}
+      <NoteClipPreviewDialog
+        open={previewNote !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewNote(null);
+        }}
+        note={previewNote}
+      />
 
       {/* Book picker dialog */}
       <BookPickerDialog
@@ -580,11 +573,13 @@ function NotesPageContent() {
 function CrossBookNoteCard({
   note,
   showBook,
+  onPreview,
   onEdit,
   onDelete,
 }: {
   note: AllNote;
   showBook: boolean;
+  onPreview: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -708,6 +703,16 @@ function CrossBookNoteCard({
             )}
             <span>Updated {formatRelativeDate(note.updatedAt)}</span>
           </div>
+
+          {/* Preview clip button (only for audio-anchored notes) */}
+          {isAudioAnchored && (
+            <div className="pt-1">
+              <Button variant="outline" size="sm" onClick={onPreview}>
+                <Play className="h-4 w-4" />
+                Preview Clip
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </article>
