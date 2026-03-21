@@ -34,8 +34,12 @@ export default withSentryConfig(nextConfig, {
   // Suppress source map upload logs outside CI
   silent: true,
   widenClientFileUpload: true,
-  disableLogger: true,
-  // Disable automatic instrumentation for Cloudflare Workers compatibility
-  autoInstrumentServerFunctions: false,
-  autoInstrumentMiddleware: false,
+  webpack: {
+    // Disable automatic instrumentation for Cloudflare Workers compatibility
+    autoInstrumentServerFunctions: false,
+    autoInstrumentMiddleware: false,
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });
