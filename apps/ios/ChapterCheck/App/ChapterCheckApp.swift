@@ -22,7 +22,7 @@ struct ChapterCheckApp: App {
                 .environment(themeManager)
                 .tint(themeManager.accentColor)
                 .preferredColorScheme(themeManager.preferredColorScheme)
-                .shakeToShowLogs()
+
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background {
