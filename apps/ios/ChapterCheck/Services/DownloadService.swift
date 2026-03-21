@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Actor handling file I/O, URLSession downloads, and manifest persistence.
 ///
@@ -9,7 +8,7 @@ import os
 actor DownloadService {
 
     private let audioRepository: AudioRepository
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "DownloadService")
+    private let logger = AppLogger(category: "DownloadService")
 
     private var manifest: DownloadManifest
     private var activeTasks: [String: Task<Void, Never>] = [:]

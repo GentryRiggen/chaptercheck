@@ -1,6 +1,5 @@
 import Foundation
 import Network
-import os
 
 extension Notification.Name {
     static let networkRestored = Notification.Name("networkRestored")
@@ -22,7 +21,7 @@ final class NetworkMonitor {
 
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.chaptercheck.networkMonitor")
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "NetworkMonitor")
+    private let logger = AppLogger(category: "NetworkMonitor")
 
     private init() {
         monitor.pathUpdateHandler = { [weak self] path in

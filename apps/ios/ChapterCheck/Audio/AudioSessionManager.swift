@@ -1,6 +1,5 @@
 import AVFoundation
 import Foundation
-import os
 
 /// Manages the shared `AVAudioSession` for audiobook playback.
 ///
@@ -18,7 +17,7 @@ final class AudioSessionManager {
     /// - Parameter deviceName: The name of the current output device, or `nil` for built-in speaker.
     var onRouteChange: ((_ deviceName: String?) -> Void)?
 
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "AudioSession")
+    private let logger = AppLogger(category: "AudioSession")
 
     init() {
         registerForInterruptions()

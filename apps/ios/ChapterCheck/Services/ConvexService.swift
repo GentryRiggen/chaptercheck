@@ -2,7 +2,6 @@ import Combine
 import ClerkKit
 import ConvexMobile
 import Foundation
-import os
 
 /// Flexible decodable that accepts any JSON value, used to discard mutation results.
 private struct DiscardedResult: Decodable {
@@ -37,7 +36,7 @@ final class ConvexService: ObservableObject {
 
     // MARK: - Private
 
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "ConvexService")
+    private let logger = AppLogger(category: "ConvexService")
     private let networkMonitor = NetworkMonitor.shared
     private var authStateCancellable: AnyCancellable?
     private var webSocketStateCancellable: AnyCancellable?
@@ -286,13 +285,13 @@ final class ConvexService: ObservableObject {
 
         let now = Date()
         guard now.timeIntervalSince(lastResetAt) >= Self.resetCooldownSeconds else {
-            logger.debug("Skipping reset (\(reason, privacy: .public)) — cooldown active")
+            logger.debug("Skipping reset (\(reason)) — cooldown active")
             return
         }
 
         lastResetAt = now
         isResetting = true
-        logger.notice("Resetting app session: \(reason, privacy: .public)")
+        logger.notice("Resetting app session: \(reason)")
         SentryService.addBreadcrumb(
             message: "App session reset: \(reason)",
             category: "convex",

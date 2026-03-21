@@ -1,7 +1,6 @@
 import Combine
 import ConvexMobile
 import Foundation
-import os
 
 /// View model for the home screen.
 ///
@@ -35,7 +34,7 @@ final class HomeViewModel {
     var downloadManager: DownloadManager?
     var audioPlayerManager: AudioPlayerManager!
     private let networkMonitor = NetworkMonitor.shared
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "HomeViewModel")
+    private let logger = AppLogger(category: "HomeViewModel")
     private let bookRepository = BookRepository()
     private let progressRepository = ProgressRepository()
     private let shelfRepository = ShelfRepository()

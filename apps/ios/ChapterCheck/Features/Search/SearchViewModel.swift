@@ -1,7 +1,6 @@
 import Combine
 import ConvexMobile
 import Foundation
-import os
 
 /// Filter categories for search results.
 enum SearchFilter: String, CaseIterable {
@@ -59,7 +58,7 @@ final class SearchViewModel {
 
     // MARK: - Dependencies
 
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "SearchViewModel")
+    private let logger = AppLogger(category: "SearchViewModel")
     private let searchRepository = SearchRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()

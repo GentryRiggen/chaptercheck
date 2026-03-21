@@ -1,7 +1,6 @@
 import CarPlay
 import Combine
 import ConvexMobile
-import os
 
 /// Manages the CarPlay scene lifecycle and template hierarchy.
 ///
@@ -19,7 +18,7 @@ import os
 @MainActor
 final class CarPlaySceneDelegate: UIResponder, @preconcurrency CPTemplateApplicationSceneDelegate {
 
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "CarPlay")
+    private let logger = AppLogger(category: "CarPlay")
 
     private var interfaceController: CPInterfaceController?
     private var cancellables = Set<AnyCancellable>()

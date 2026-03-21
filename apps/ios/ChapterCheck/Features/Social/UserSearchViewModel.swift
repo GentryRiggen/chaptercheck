@@ -1,7 +1,6 @@
 import Combine
 import ConvexMobile
 import Foundation
-import os
 
 @Observable
 @MainActor
@@ -27,7 +26,7 @@ final class UserSearchViewModel {
     private let userRepository = UserRepository()
     private let socialRepository = SocialRepository()
     private let authObserver = ConvexAuthObserver()
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "UserSearchViewModel")
+    private let logger = AppLogger(category: "UserSearchViewModel")
     private var cancellables = Set<AnyCancellable>()
     private var searchCancellable: AnyCancellable?
     private var searchDebounceTask: Task<Void, Never>?

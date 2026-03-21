@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Persists per-book playback progress locally so this device can treat
 /// on-device playback as the source of truth, even while offline or before
@@ -9,7 +8,7 @@ actor PlaybackProgressStore {
     static let shared = PlaybackProgressStore()
 
     private var entries: [String: CachedListeningProgress] = [:]
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "PlaybackProgressStore")
+    private let logger = AppLogger(category: "PlaybackProgressStore")
 
     private static var fileURL: URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]

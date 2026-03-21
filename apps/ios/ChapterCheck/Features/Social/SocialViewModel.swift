@@ -1,7 +1,6 @@
 import Combine
 import ConvexMobile
 import Foundation
-import os
 
 enum SocialTab: String, CaseIterable, Identifiable {
     case following = "Following"
@@ -108,7 +107,7 @@ final class SocialViewModel {
     // MARK: - Dependencies
 
     private let networkMonitor = NetworkMonitor.shared
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "SocialViewModel")
+    private let logger = AppLogger(category: "SocialViewModel")
     private let socialRepository = SocialRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()

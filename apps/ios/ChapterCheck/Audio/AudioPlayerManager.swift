@@ -1,7 +1,6 @@
 import AVFoundation
 import Combine
 import Foundation
-import os
 import UIKit
 
 /// Central manager for audiobook playback.
@@ -171,7 +170,7 @@ final class AudioPlayerManager {
     private let sessionManager: AudioSessionManager
     private let progressRepository: ProgressRepository
     private let preferencesRepository: PreferencesRepository
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "AudioPlayer")
+    private let logger = AppLogger(category: "AudioPlayer")
 
     /// Optional download manager for offline playback. Set after initialization
     /// from `MainView` once the download manager is available.
@@ -1168,7 +1167,7 @@ final class AudioPlayerManager {
             if let liveDuration = livePlayerDuration() {
                 if duration <= 0 || abs(duration - liveDuration) > 0.5 {
                     if duration > 0, abs(duration - liveDuration) > 1 {
-                        logger.warning("Player duration corrected from \(self.duration, format: .fixed(precision: 2))s to \(liveDuration, format: .fixed(precision: 2))s")
+                        logger.warning("Player duration corrected from \(String(format: "%.2f", self.duration))s to \(String(format: "%.2f", liveDuration))s")
                     }
                     duration = liveDuration
                 }
@@ -1211,7 +1210,7 @@ final class AudioPlayerManager {
     /// Returns the frame-accurate duration for a local audio file, or nil on failure.
     /// Uses `AVAudioFile` which reads the actual PCM frame count rather than
     /// relying on potentially inaccurate MP3 Xing/LAME headers.
-    private static let durationLogger = Logger(subsystem: "com.chaptercheck", category: "AudioDuration")
+    private static let durationLogger = AppLogger(category: "AudioDuration")
 
     private static func frameAccurateDuration(for url: URL) -> Double? {
         do {

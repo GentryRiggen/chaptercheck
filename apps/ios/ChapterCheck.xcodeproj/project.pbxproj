@@ -36,6 +36,7 @@
 		2807999D29D04D131C82C418 /* HomeBookCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEDE3197AE01A05CACB77CC6 /* HomeBookCard.swift */; };
 		2856611F1A0DF6F281736015 /* BookCoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F0EFC53921A04AB806FEF86 /* BookCoverView.swift */; };
 		2CE0B38F862BAED671FAAD5C /* StackedCoversView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8487FD0C5066038B51F6FF3 /* StackedCoversView.swift */; };
+		2FB44CBA525461ED1691890E /* Pulse in Frameworks */ = {isa = PBXBuildFile; productRef = 1AE2B43B5D5029430973F73E /* Pulse */; };
 		3055F72CEE1A11A5B8E5A52E /* NowPlayingDetailsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C488BD3F687AED3E9308105 /* NowPlayingDetailsCard.swift */; };
 		309678EA796129A5B445C0B8 /* BookMetadataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DD7B441A8A098AF914537C3 /* BookMetadataView.swift */; };
 		3108639415E4AABD93136CAF /* MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF0C9F0F9DBC035715F7BAB /* MiniPlayerView.swift */; };
@@ -50,6 +51,7 @@
 		3BCC2DDFC980DF2688D46634 /* StarRatingInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E5F7D3414AA63C43979B0D2 /* StarRatingInput.swift */; };
 		3D25C2F37ACC10EF5A347551 /* UserAvatarRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6137CB1312E5D3A6585B337 /* UserAvatarRow.swift */; };
 		3E45705D187756863A1AF94E /* AllReadingHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D677D1F7CAEEED450392D0 /* AllReadingHistoryViewModel.swift */; };
+		3E96CBA8A74BE26F76487596 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D39D59C9BD5DBC43AF1FF92 /* AppLogger.swift */; };
 		4059522AB0E79F5F33981131 /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 885F583AE8966140543E4447 /* AudioSessionManager.swift */; };
 		432229924A4CF6D95FF52027 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79A0B05CD5541CADB3E9CE10 /* SearchView.swift */; };
 		4823E26064901250F85E8F96 /* AppDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47F2E3DC3EB312E97FA30EBD /* AppDestination.swift */; };
@@ -72,6 +74,7 @@
 		60313DFCD1B2CA367B2699AF /* StorageStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6006448F988F14D9D4E78CE2 /* StorageStats.swift */; };
 		623E5EC2E9571EF65913E564 /* CommunitySignalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D48DF76387C420D272D79C /* CommunitySignalView.swift */; };
 		62D072FA5D37A98210E9FDC2 /* SocialViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD87F28833CC045B3CEFAB54 /* SocialViewModel.swift */; };
+		6304734FAB00900201545BCD /* PulseUI in Frameworks */ = {isa = PBXBuildFile; productRef = 2060830B4BDDC190EACA17D4 /* PulseUI */; };
 		68BEECA4B12340D02BCD9D14 /* SeriesDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCB12126F43DA09B1876DB55 /* SeriesDetailView.swift */; };
 		6994D983889CBA05C0902053 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 8EA54E4AC0F06EB691313938 /* Sentry */; };
 		69C6497EBEEA4D672944F5B0 /* ThemeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7162384D8B872D395DE51CD2 /* ThemeSettingsView.swift */; };
@@ -102,6 +105,7 @@
 		98528EA4814C305A14CA2806 /* RatingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2378962E933FABD7C0C295 /* RatingView.swift */; };
 		98FF49DA00CB7653A6439FE6 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6473F22AEC09FB226B51B669 /* ProfileViewModel.swift */; };
 		9A8A43C873AF394C94594DC0 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA97502AD85AF8872354E13B /* Haptics.swift */; };
+		9AAC44B4289085F2956EFCBC /* ShakeToShowLogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3BA217A9EE4C74FF830EE0 /* ShakeToShowLogs.swift */; };
 		9B1868DCAF1D61407DF53D1A /* NowPlayingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 692C9931AE04860DB229B0CD /* NowPlayingManager.swift */; };
 		9BDA7E203C3258842AB31DE6 /* AllUserReviewsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E7DF8071D10D2D6E6C1B81B /* AllUserReviewsViewModel.swift */; };
 		9BE7BE29C1A43950149C33C1 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65BC23B5B2CC5CF590F01849 /* SignInView.swift */; };
@@ -247,6 +251,7 @@
 		5A0C12489543394591DDBD2F /* AudioRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRepository.swift; sourceTree = "<group>"; };
 		5A2270CA0481AB114D83A86F /* LibraryBookCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryBookCard.swift; sourceTree = "<group>"; };
 		5B1BD01887EACA9AB86AD7DA /* AuthorsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorsViewModel.swift; sourceTree = "<group>"; };
+		5B3BA217A9EE4C74FF830EE0 /* ShakeToShowLogs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShakeToShowLogs.swift; sourceTree = "<group>"; };
 		5C037E6D8704725B117FC880 /* AuthorDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorDetailView.swift; sourceTree = "<group>"; };
 		5D22CEFC589F33A4E05E8BFB /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
 		5DF069F79095281A3066C4CC /* AddBookConfirmViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookConfirmViewModel.swift; sourceTree = "<group>"; };
@@ -292,6 +297,7 @@
 		8B323C73E764DCE9D0F57EA4 /* SleepTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepTimerSheet.swift; sourceTree = "<group>"; };
 		8C0AC95E23111F62CBE3BB3D /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		8CDF40C377EF042A143AFC35 /* OpenLibraryRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenLibraryRepository.swift; sourceTree = "<group>"; };
+		8D39D59C9BD5DBC43AF1FF92 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		8E5F7D3414AA63C43979B0D2 /* StarRatingInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarRatingInput.swift; sourceTree = "<group>"; };
 		8ED7B0E4066D3B887B24C8B4 /* SeriesDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesDetailViewModel.swift; sourceTree = "<group>"; };
 		8F0EFC53921A04AB806FEF86 /* BookCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverView.swift; sourceTree = "<group>"; };
@@ -386,6 +392,8 @@
 				BFC6D99406FF667B67E5FB93 /* ClerkKit in Frameworks */,
 				B17CC825C1BA4071C41FEAAB /* CropViewController in Frameworks */,
 				6994D983889CBA05C0902053 /* Sentry in Frameworks */,
+				2FB44CBA525461ED1691890E /* Pulse in Frameworks */,
+				6304734FAB00900201545BCD /* PulseUI in Frameworks */,
 				C209723CC2B5BE5FF8BC02FA /* CarPlay.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -799,8 +807,10 @@
 		EFB758EBD7CB004DEFF0CAEF /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				8D39D59C9BD5DBC43AF1FF92 /* AppLogger.swift */,
 				DA97502AD85AF8872354E13B /* Haptics.swift */,
 				06A3B31A69EFE47BC15F52A5 /* OfflineBanner.swift */,
+				5B3BA217A9EE4C74FF830EE0 /* ShakeToShowLogs.swift */,
 				1277AE5AAB42ECE08E81020B /* TimeFormatting.swift */,
 				65E343C151A1CEDFA88974A3 /* ToastEnvironment.swift */,
 				15E7F0C599C7203F7EF1B180 /* UserFacingError.swift */,
@@ -850,6 +860,8 @@
 				D4387DEBBC5B211CE0D3F8E3 /* ClerkKit */,
 				3D3BBED1A8B4D00029492745 /* CropViewController */,
 				8EA54E4AC0F06EB691313938 /* Sentry */,
+				1AE2B43B5D5029430973F73E /* Pulse */,
+				2060830B4BDDC190EACA17D4 /* PulseUI */,
 			);
 			productName = ChapterCheck;
 			productReference = CE38A99090831B755E8737E4 /* ChapterCheck.app */;
@@ -883,6 +895,7 @@
 				E8C649893FE3449F8A2300D7 /* XCRemoteSwiftPackageReference "clerk-ios" */,
 				5CDB1CFC35B8A7908D410F7F /* XCRemoteSwiftPackageReference "convex-swift" */,
 				D2A301828731C6576AD52FE6 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
+				38C4A65D855CD5143DE025C5 /* XCRemoteSwiftPackageReference "Pulse" */,
 				68291EA105A7409D3A5AD1B3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -923,6 +936,7 @@
 				760343BE4A8E1E7C223B3261 /* AllUserReviewsView.swift in Sources */,
 				9BDA7E203C3258842AB31DE6 /* AllUserReviewsViewModel.swift in Sources */,
 				4823E26064901250F85E8F96 /* AppDestination.swift in Sources */,
+				3E96CBA8A74BE26F76487596 /* AppLogger.swift in Sources */,
 				BF446679393D93DE1EFB8FFC /* AudioFile.swift in Sources */,
 				ABB828D17FF8FC56AC90AC57 /* AudioFileListView.swift in Sources */,
 				BB97E5B5D1D4F08F2A7F35F0 /* AudioFileRow.swift in Sources */,
@@ -1045,6 +1059,7 @@
 				7979FF730E90284C5A1F2E27 /* SeriesDetailViewModel.swift in Sources */,
 				A50D25449BF328A1F81202CB /* SeriesRepository.swift in Sources */,
 				CB06A06F653E338C7B18765A /* SettingsView.swift in Sources */,
+				9AAC44B4289085F2956EFCBC /* ShakeToShowLogs.swift in Sources */,
 				782FD0AD4489FFD85D82A72B /* SharedState.swift in Sources */,
 				C63F88E3285C32FC4C0431F0 /* Shelf.swift in Sources */,
 				B89A67ECD0FE8AC80AB8395D /* ShelfCard.swift in Sources */,
@@ -1296,6 +1311,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		38C4A65D855CD5143DE025C5 /* XCRemoteSwiftPackageReference "Pulse" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kean/Pulse";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		5CDB1CFC35B8A7908D410F7F /* XCRemoteSwiftPackageReference "convex-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/get-convex/convex-swift";
@@ -1331,6 +1354,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		1AE2B43B5D5029430973F73E /* Pulse */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 38C4A65D855CD5143DE025C5 /* XCRemoteSwiftPackageReference "Pulse" */;
+			productName = Pulse;
+		};
+		2060830B4BDDC190EACA17D4 /* PulseUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 38C4A65D855CD5143DE025C5 /* XCRemoteSwiftPackageReference "Pulse" */;
+			productName = PulseUI;
+		};
 		3D3BBED1A8B4D00029492745 /* CropViewController */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D2A301828731C6576AD52FE6 /* XCRemoteSwiftPackageReference "TOCropViewController" */;

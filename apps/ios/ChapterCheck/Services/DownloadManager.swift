@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import os
 
 /// Observable manager for download state, injected via `.environment()`.
 ///
@@ -40,7 +39,7 @@ final class DownloadManager {
     // MARK: - Dependencies
 
     private let downloadService: DownloadService
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "DownloadManager")
+    private let logger = AppLogger(category: "DownloadManager")
 
     /// Active download tasks per book, so we can cancel them.
     private var bookDownloadTasks: [String: Task<Void, Never>] = [:]

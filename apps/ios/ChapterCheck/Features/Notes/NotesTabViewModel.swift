@@ -1,7 +1,6 @@
 import Combine
 import ConvexMobile
 import Foundation
-import os
 
 enum NotesSortMode: String, CaseIterable, Identifiable {
     case recentlyUpdated = "Recently Updated"
@@ -32,7 +31,7 @@ final class NotesTabViewModel {
     // MARK: - Dependencies
 
     private let networkMonitor = NetworkMonitor.shared
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "NotesTabViewModel")
+    private let logger = AppLogger(category: "NotesTabViewModel")
     private let notesRepository = BookNotesRepository()
     private let audioRepository = AudioRepository()
     private let authObserver = ConvexAuthObserver()

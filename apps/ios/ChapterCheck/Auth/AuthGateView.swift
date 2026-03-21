@@ -1,6 +1,5 @@
 import SwiftUI
 import ClerkKit
-import os
 
 /// Root view that routes between loading, sign-in, and the main app based
 /// on the current Clerk authentication state.
@@ -14,7 +13,7 @@ import os
 struct AuthGateView: View {
     @ObservedObject private var convexService = ConvexService.shared
     @State private var hasAuthenticated = false
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "AuthGateView")
+    private let logger = AppLogger(category: "AuthGateView")
     private let networkMonitor = NetworkMonitor.shared
 
     /// Persisted flag: set `true` after the first successful Convex authentication.

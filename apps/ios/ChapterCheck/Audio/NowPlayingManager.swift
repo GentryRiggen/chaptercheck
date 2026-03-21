@@ -1,6 +1,5 @@
 import Foundation
 import MediaPlayer
-import os
 
 /// Manages the lock screen / Control Center "Now Playing" info and remote commands.
 ///
@@ -24,7 +23,7 @@ final class NowPlayingManager {
 
     var handlers = CommandHandlers()
 
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "NowPlaying")
+    private let logger = AppLogger(category: "NowPlaying")
 
     /// Skip interval in seconds for the forward command.
     private var skipForwardInterval: TimeInterval = 30

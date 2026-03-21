@@ -1,5 +1,6 @@
 import Combine
 import ConvexMobile
+import PulseUI
 import SwiftUI
 
 /// Settings screen with privacy toggle, account info, storage, and sign out.
@@ -63,6 +64,17 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Settings")
+                }
+
+                // Developer section
+                Section {
+                    NavigationLink {
+                        ConsoleView()
+                    } label: {
+                        Label("Logs", systemImage: "doc.text.magnifyingglass")
+                    }
+                } header: {
+                    Text("Developer")
                 }
 
                 // Storage section

@@ -1,7 +1,6 @@
 import Combine
 import ConvexMobile
 import Foundation
-import os
 
 /// View model for the authors browsing screen.
 ///
@@ -61,7 +60,7 @@ final class AuthorsViewModel {
     var isOffline: Bool { !networkMonitor.isConnected }
     private(set) var isShowingOfflineData = false
 
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "AuthorsViewModel")
+    private let logger = AppLogger(category: "AuthorsViewModel")
     private let authorRepository = AuthorRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()

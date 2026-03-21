@@ -1,7 +1,6 @@
 import Combine
 import ConvexMobile
 import Foundation
-import os
 
 // MARK: - Library Category
 
@@ -300,7 +299,7 @@ final class LibraryViewModel {
     var isOffline: Bool { !networkMonitor.isConnected }
     private(set) var isShowingOfflineData = false
 
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "LibraryViewModel")
+    private let logger = AppLogger(category: "LibraryViewModel")
     private let bookRepository = BookRepository()
     private let authorRepository = AuthorRepository()
     private let searchRepository = SearchRepository()

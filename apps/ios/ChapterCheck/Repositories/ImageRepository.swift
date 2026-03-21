@@ -1,7 +1,6 @@
 import ConvexMobile
 import CryptoKit
 import Foundation
-import os
 
 /// Actor that generates and caches presigned image URLs from R2 storage.
 ///
@@ -18,7 +17,7 @@ actor ImageRepository {
     static let shared = ImageRepository()
 
     private let convex: ConvexService
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "ImageRepository")
+    private let logger = AppLogger(category: "ImageRepository")
 
     /// Cached presigned URL with its generation timestamp.
     private struct CacheEntry {

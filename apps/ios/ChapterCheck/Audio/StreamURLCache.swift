@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Actor that caches presigned audio stream URLs.
 ///
@@ -13,7 +12,7 @@ import os
 actor StreamURLCache {
 
     private let audioRepository: AudioRepository
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "StreamURLCache")
+    private let logger = AppLogger(category: "StreamURLCache")
 
     /// Cached stream URL with its generation timestamp.
     private struct CacheEntry {

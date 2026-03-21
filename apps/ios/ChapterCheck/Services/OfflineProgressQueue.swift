@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Queued progress entry persisted to disk for offline playback.
 struct QueuedProgress: Codable, Sendable {
@@ -21,7 +20,7 @@ actor OfflineProgressQueue {
     static let shared = OfflineProgressQueue()
 
     private var entries: [QueuedProgress] = []
-    private let logger = Logger(subsystem: "com.chaptercheck", category: "OfflineProgressQueue")
+    private let logger = AppLogger(category: "OfflineProgressQueue")
     private var notificationObserver: NSObjectProtocol?
 
     private static var fileURL: URL {
