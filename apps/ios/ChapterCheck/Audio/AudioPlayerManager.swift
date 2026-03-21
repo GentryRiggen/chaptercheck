@@ -873,7 +873,6 @@ final class AudioPlayerManager {
         )
 
         lastSavedPosition = position
-        lastSavedAt = Date()
 
         persistLocalProgress(bookId: bookId, entry: localEntry)
 
@@ -921,7 +920,6 @@ final class AudioPlayerManager {
         )
 
         lastSavedPosition = position
-        lastSavedAt = Date()
 
         persistLocalProgress(bookId: bookId, entry: localEntry)
 
@@ -1037,6 +1035,7 @@ final class AudioPlayerManager {
                     audioDuration: entry.audioDuration,
                     clientTimestamp: entry.timestamp
                 )
+                self.lastSavedAt = Date()
             } catch {
                 self.logger.error("Failed to save progress: \(error.localizedDescription)")
                 Task {

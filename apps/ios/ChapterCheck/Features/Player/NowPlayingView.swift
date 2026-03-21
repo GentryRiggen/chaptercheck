@@ -215,7 +215,7 @@ struct NowPlayingView: View {
             // Bottom toolbar
             bottomToolbar
                 .padding(.horizontal, 24)
-                .padding(.bottom, 16)
+                .padding(.bottom, 32)
 
         }
         .overlay(alignment: .top) {
@@ -403,7 +403,7 @@ struct NowPlayingView: View {
         if isAutoDownloadNoticeVisible {
             AutoDownloadNoticeBanner(bookTitle: autoDownloadNoticeTitle)
                 .padding(.horizontal, 16)
-                .padding(.top, 36)
+                .padding(.top, 52)
                 .transition(.move(edge: .top).combined(with: .opacity))
         } else if showDownloadPrompt, let book = downloadPromptBook {
             DownloadPromptBanner(
@@ -418,7 +418,7 @@ struct NowPlayingView: View {
                 onDismiss: { dismissDownloadPrompt() }
             )
             .padding(.horizontal, 16)
-            .padding(.top, 36)
+            .padding(.top, 52)
             .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
