@@ -155,7 +155,9 @@ struct SettingsView: View {
             }
             .onDisappear { cancellables.removeAll() }
             .sheet(isPresented: $showLogs) {
-                ConsoleView()
+                NavigationStack {
+                    ConsoleView()
+                }
             }
         }
     }

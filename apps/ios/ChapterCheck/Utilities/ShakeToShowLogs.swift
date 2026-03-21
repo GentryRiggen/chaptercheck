@@ -32,7 +32,9 @@ private struct ShakeToShowLogsModifier: ViewModifier {
                 isShowingLogs = true
             }
             .sheet(isPresented: $isShowingLogs) {
-                ConsoleView()
+                NavigationStack {
+                    ConsoleView()
+                }
             }
     }
 }
