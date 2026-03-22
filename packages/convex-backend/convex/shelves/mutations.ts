@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
 import { mutation } from "../_generated/server";
-import { requireAuthMutation } from "../lib/auth";
+import { requireApprovedMutation } from "../lib/auth";
 import {
   ensureWantToReadShelf,
   findWantToReadShelf,
@@ -18,7 +18,7 @@ export const createShelf = mutation({
     isPublic: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
     const existingWantToReadShelf =
       args.name.trim().toLocaleLowerCase() === WANT_TO_READ_SHELF_NAME.toLocaleLowerCase()
         ? await findWantToReadShelf(ctx, user._id)
@@ -48,7 +48,7 @@ export const toggleWantToRead = mutation({
     bookId: v.id("books"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
 
     const book = await ctx.db.get(args.bookId);
     if (!book) {
@@ -92,7 +92,7 @@ export const updateShelf = mutation({
     isPublic: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
     const shelf = await ctx.db.get(args.shelfId);
 
     if (!shelf) throw new Error("Shelf not found");
@@ -112,7 +112,7 @@ export const updateShelf = mutation({
 export const deleteShelf = mutation({
   args: { shelfId: v.id("shelves") },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
     const shelf = await ctx.db.get(args.shelfId);
 
     if (!shelf) throw new Error("Shelf not found");
@@ -140,7 +140,7 @@ export const addBookToShelf = mutation({
     bookId: v.id("books"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
     const shelf = await ctx.db.get(args.shelfId);
 
     if (!shelf) throw new Error("Shelf not found");
@@ -187,7 +187,7 @@ export const removeBookFromShelf = mutation({
     bookId: v.id("books"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
     const shelf = await ctx.db.get(args.shelfId);
 
     if (!shelf) throw new Error("Shelf not found");
@@ -230,7 +230,7 @@ export const reorderShelfBooks = mutation({
     bookIds: v.array(v.id("books")),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
     const shelf = await ctx.db.get(args.shelfId);
 
     if (!shelf) throw new Error("Shelf not found");

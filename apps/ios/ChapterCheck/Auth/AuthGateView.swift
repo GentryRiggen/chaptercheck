@@ -13,6 +13,7 @@ import ClerkKit
 struct AuthGateView: View {
     @ObservedObject private var convexService = ConvexService.shared
     @State private var hasAuthenticated = false
+    @State private var showSignUp = false
     private let logger = AppLogger(category: "AuthGateView")
     private let networkMonitor = NetworkMonitor.shared
 
@@ -69,30 +70,36 @@ struct AuthGateView: View {
                         }
                     }
             } else {
-                // Either Clerk not loaded or no session — keep SignInView in a
+                // Either Clerk not loaded or no session — keep the auth views in a
                 // single structural branch so @State survives transient Clerk
                 // state changes during the OTP flow (isLoaded can briefly toggle
-                // when signInWithEmailCode mutates Clerk's @Observable state).
-                SignInView()
-                    .disabled(!Clerk.shared.isLoaded)
-                    .overlay {
-                        if !Clerk.shared.isLoaded {
-                            ZStack {
-                                Color(.systemBackground).ignoresSafeArea()
-                                loadingView
-                            }
-                            .transition(.opacity)
-                        }
+                // when signInWithEmailCode / verifyEmailCode mutates Clerk's @Observable state).
+                Group {
+                    if showSignUp {
+                        SignUpView(onShowSignIn: { showSignUp = false })
+                    } else {
+                        SignInView(onShowSignUp: { showSignUp = true })
                     }
-                    .animation(.default, value: Clerk.shared.isLoaded)
-                    .onAppear {
-                        hasAuthenticated = false
-                        if !Clerk.shared.isLoaded {
-                            logger.info("Clerk not loaded yet, showing loading overlay")
-                        } else {
-                            logger.info("Clerk loaded but no session, showing SignInView")
+                }
+                .disabled(!Clerk.shared.isLoaded)
+                .overlay {
+                    if !Clerk.shared.isLoaded {
+                        ZStack {
+                            Color(.systemBackground).ignoresSafeArea()
+                            loadingView
                         }
+                        .transition(.opacity)
                     }
+                }
+                .animation(.default, value: Clerk.shared.isLoaded)
+                .onAppear {
+                    hasAuthenticated = false
+                    if !Clerk.shared.isLoaded {
+                        logger.info("Clerk not loaded yet, showing loading overlay")
+                    } else {
+                        logger.info("Clerk loaded but no session, showing \(showSignUp ? "SignUpView" : "SignInView")")
+                    }
+                }
             }
         }
         .animation(.default, value: Clerk.shared.session != nil)

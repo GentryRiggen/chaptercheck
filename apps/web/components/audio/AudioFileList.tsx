@@ -159,7 +159,7 @@ function AudioFileRow({
   onMoveDown,
   onDelete,
 }: AudioFileRowProps) {
-  const { hasPremium } = usePermissions();
+  const { can } = usePermissions();
   const {
     isPlaying,
     isLoading,
@@ -264,7 +264,7 @@ function AudioFileRow({
         <div className="flex items-center gap-2">
           {isLoading ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
-          ) : hasPremium ? (
+          ) : can("canPlayAudio") ? (
             <>
               <Button
                 size="icon"
@@ -286,7 +286,7 @@ function AudioFileRow({
               variant="ghost"
               disabled
               className="h-8 w-8 cursor-not-allowed rounded-full"
-              title="Premium required to play audio"
+              title="Audio playback unavailable"
             >
               <Lock className="h-4 w-4" />
             </Button>

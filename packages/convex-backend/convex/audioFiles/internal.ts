@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { internalQuery } from "../_generated/server";
+import { isApprovedUser } from "../lib/auth";
 
 /**
  * Internal query to verify user has premium and access to an audio file
@@ -22,7 +23,11 @@ export const verifyAudioFileAccess = internalQuery({
       throw new Error("User not found");
     }
 
-    // Check premium status
+    // Check approval and premium status
+    if (!isApprovedUser(user)) {
+      throw new Error("Account pending approval");
+    }
+
     if (!user.hasPremium) {
       throw new Error("Premium access required to stream audio");
     }
@@ -68,6 +73,10 @@ export const verifyPremiumAccess = internalQuery({
 
     if (!user) {
       throw new Error("User not found");
+    }
+
+    if (!isApprovedUser(user)) {
+      throw new Error("Account pending approval");
     }
 
     if (!user.hasPremium) {

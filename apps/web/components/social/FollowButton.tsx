@@ -8,6 +8,7 @@ import { Loader2, UserCheck, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ApprovalGate } from "@/components/permissions/ApprovalGate";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -81,28 +82,30 @@ export function FollowButton({ targetUserId, compact = false, className }: Follo
   };
 
   return (
-    <Button
-      variant={isFollowing ? "outline" : "default"}
-      size={compact ? "sm" : "default"}
-      onClick={handleToggle}
-      disabled={isPending}
-      className={cn(
-        "min-w-[100px] transition-all",
-        isFollowing && "hover:border-destructive hover:bg-destructive/10 hover:text-destructive",
-        className
-      )}
-    >
-      {isFollowing ? (
-        <>
-          <UserCheck className="mr-1.5 h-4 w-4" />
-          Following
-        </>
-      ) : (
-        <>
-          <UserPlus className="mr-1.5 h-4 w-4" />
-          Follow
-        </>
-      )}
-    </Button>
+    <ApprovalGate>
+      <Button
+        variant={isFollowing ? "outline" : "default"}
+        size={compact ? "sm" : "default"}
+        onClick={handleToggle}
+        disabled={isPending}
+        className={cn(
+          "min-w-[100px] transition-all",
+          isFollowing && "hover:border-destructive hover:bg-destructive/10 hover:text-destructive",
+          className
+        )}
+      >
+        {isFollowing ? (
+          <>
+            <UserCheck className="mr-1.5 h-4 w-4" />
+            Following
+          </>
+        ) : (
+          <>
+            <UserPlus className="mr-1.5 h-4 w-4" />
+            Follow
+          </>
+        )}
+      </Button>
+    </ApprovalGate>
   );
 }

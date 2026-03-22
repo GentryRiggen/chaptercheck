@@ -25,3 +25,11 @@ export const editUserSchema = z.object({
 });
 
 export type EditUserFormValues = z.infer<typeof editUserSchema>;
+
+export const approveUserSchema = z.object({
+  role: z.enum(["admin", "editor", "viewer"]),
+  hasPremium: z.boolean(),
+  storageAccountId: z.string().optional().or(z.literal("")),
+});
+
+export type ApproveUserFormValues = z.infer<typeof approveUserSchema>;

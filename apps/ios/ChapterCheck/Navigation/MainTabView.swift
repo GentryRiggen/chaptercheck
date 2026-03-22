@@ -157,6 +157,18 @@ struct MainView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
+            // Pending-approval banner — floats at the top of the screen (above the
+            // TabView content, below the status bar) when the account is awaiting approval.
+            if currentUserProvider.currentUser?.permissions.isPending == true {
+                VStack(spacing: 0) {
+                    pendingApprovalBanner
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .zIndex(50)
+                .allowsHitTesting(false) // Banner is informational; don't block taps on content below
+            }
+
             TabView(selection: $selectedTab) {
                 SwiftUI.Tab("Home", systemImage: "house", value: Tab.home) {
                     NavigationStack(path: $homePath) {
@@ -447,6 +459,23 @@ struct MainView: View {
                 .environment(downloadManager)
                 .preferredColorScheme(themeManager.preferredColorScheme)
         }
+    }
+
+    // MARK: - Pending Approval Banner
+
+    private var pendingApprovalBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock")
+                .font(.caption)
+            Text("Your account is pending approval. Some features are limited.")
+                .font(.caption)
+                .multilineTextAlignment(.leading)
+        }
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.yellow.opacity(0.15))
     }
 
     private var navigateAction: NavigateToDestinationAction {

@@ -21,7 +21,7 @@ import { BookRatingStats } from "@/components/books/BookRatingStats";
 import { BookReadStatus } from "@/components/books/BookReadStatus";
 import { ReviewsList } from "@/components/books/ReviewsList";
 import { WantToReadButton } from "@/components/books/WantToReadButton";
-import { PremiumGate, RoleGate } from "@/components/permissions";
+import { ApprovalGate, PremiumGate, RoleGate } from "@/components/permissions";
 import { AddToShelfPopover } from "@/components/shelves/AddToShelfPopover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -204,7 +204,9 @@ export default function BookDetailPage() {
           {/* Mark as Read + Shelves - top right */}
           <div className="absolute -top-1 right-0 z-10 flex flex-wrap justify-end gap-2">
             <WantToReadButton bookId={bookId} />
-            <AddToShelfPopover bookId={bookId} />
+            <ApprovalGate>
+              <AddToShelfPopover bookId={bookId} />
+            </ApprovalGate>
             <BookReadStatus bookId={bookId} />
           </div>
 

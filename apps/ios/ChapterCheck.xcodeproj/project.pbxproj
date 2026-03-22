@@ -67,6 +67,7 @@
 		529A084116E2F16696CE8A13 /* BookNotesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5885A7CBA7EDE1E8D498D968 /* BookNotesRepository.swift */; };
 		57311381093B29F7E9977B26 /* AddBookViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC3C134DB5104CCB61CE6EB5 /* AddBookViewModel.swift */; };
 		57A16FC2E3A41E5C536CE235 /* AddBookConfirmViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DF069F79095281A3066C4CC /* AddBookConfirmViewModel.swift */; };
+		57B2F59F7B76B1A66FAEA97D /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C26EA90142FE3A63013E3792 /* SignUpView.swift */; };
 		5B62E83E2B25ED79934F9956 /* ChangeEmailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24FF19BF0F93062611B282A8 /* ChangeEmailView.swift */; };
 		5C7A481B5A830651A4A56972 /* ChapterCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3349F3E559343AC156177798 /* ChapterCheckApp.swift */; };
 		5E118DAF9ABB9AE08BD1DB72 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE4D41FB4E6B82B28C75571 /* LoadingView.swift */; };
@@ -337,6 +338,7 @@
 		BEDE3197AE01A05CACB77CC6 /* HomeBookCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBookCard.swift; sourceTree = "<group>"; };
 		BF8D27F520C614DDEB97723E /* YourMemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YourMemoryView.swift; sourceTree = "<group>"; };
 		C1EDE993B6FC208B50C71598 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
+		C26EA90142FE3A63013E3792 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		C4E1FB2AA73F3411E34E14C8 /* AudioPlayerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerManager.swift; sourceTree = "<group>"; };
 		C5649355EC3354C073E1C562 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		C8264206B98AF684281F527A /* ProfileTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTabView.swift; sourceTree = "<group>"; };
@@ -453,6 +455,7 @@
 				A6DDE8C025AE19E72BA356F1 /* AuthGateView.swift */,
 				F89B6DD8370A5A1538DBF40B /* ClerkConvexAuthProvider.swift */,
 				65BC23B5B2CC5CF590F01849 /* SignInView.swift */,
+				C26EA90142FE3A63013E3792 /* SignUpView.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -1066,6 +1069,7 @@
 				5E1ECCFB96CA646D4863074D /* ShelfRepository.swift in Sources */,
 				1C74FF5B3E52609BA9281358 /* ShelfRowSection.swift in Sources */,
 				9BE7BE29C1A43950149C33C1 /* SignInView.swift in Sources */,
+				57B2F59F7B76B1A66FAEA97D /* SignUpView.swift in Sources */,
 				F3A7F56C4FB74B7F09A64527 /* SkeletonView.swift in Sources */,
 				DC234313D7578CBA03739D50 /* SleepTimerSheet.swift in Sources */,
 				C377BE223C39BC7F261F4B38 /* SliderSeekUndoBanner.swift in Sources */,

@@ -6,6 +6,20 @@ export const emailSchema = z.object({
 
 export type EmailFormValues = z.infer<typeof emailSchema>;
 
+export const signUpSchema = z.object({
+  firstName: z
+    .string()
+    .min(1, "First name is required")
+    .max(100, "First name must be at most 100 characters"),
+  lastName: z
+    .string()
+    .min(1, "Last name is required")
+    .max(100, "Last name must be at most 100 characters"),
+  email: z.string().trim().min(1, "Email is required").email("Please enter a valid email address"),
+});
+
+export type SignUpFormData = z.infer<typeof signUpSchema>;
+
 export const otpSchema = z.object({
   code: z
     .string()

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { cn } from "@/lib/utils";
 
 import { GlobalSearch } from "./GlobalSearch";
@@ -19,6 +20,7 @@ export function Navigation() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { isSignedIn } = useAuth();
+  const { isPending } = usePermissions();
 
   // Don't show navigation on auth pages
   if (pathname?.startsWith("/sign-in") || pathname?.startsWith("/sign-up")) {
@@ -45,97 +47,109 @@ export function Navigation() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl backdrop-saturate-150">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-14 items-center sm:h-16">
-          {/* Mobile Menu Button */}
-          <div className="sm:hidden">
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="-ml-2">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64">
-                <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2 text-left">
-                    <Logo size={24} />
-                    Chapter Check
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="mt-6 flex flex-col gap-1">
-                  {navLinks.map((link) => {
-                    const Icon = link.icon;
-                    return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        onClick={() => setOpen(false)}
-                        className={cn(
-                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                          isActive(link.href)
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-                        {link.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+    <>
+      <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl backdrop-saturate-150">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-14 items-center sm:h-16">
+            {/* Mobile Menu Button */}
+            <div className="sm:hidden">
+              <Sheet open={open} onOpenChange={setOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="-ml-2">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2 text-left">
+                      <Logo size={24} />
+                      Chapter Check
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6 flex flex-col gap-1">
+                    {navLinks.map((link) => {
+                      const Icon = link.icon;
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                            isActive(link.href)
+                              ? "bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {link.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
 
-          {/* Logo/Brand */}
-          <Link href="/" className="flex items-center gap-2">
-            <Logo size={28} />
-            <span className="text-lg font-bold sm:text-xl">Chapter Check</span>
-          </Link>
+            {/* Logo/Brand */}
+            <Link href="/" className="flex items-center gap-2">
+              <Logo size={28} />
+              <span className="text-lg font-bold sm:text-xl">Chapter Check</span>
+            </Link>
 
-          {/* Desktop Navigation Links */}
-          <div className="ml-8 hidden items-center gap-1 sm:flex">
-            {navLinks.slice(1).map((link) => {
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    isActive(link.href)
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {link.label}
-                </Link>
-              );
-            })}
-          </div>
+            {/* Desktop Navigation Links */}
+            <div className="ml-8 hidden items-center gap-1 sm:flex">
+              {navLinks.slice(1).map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      isActive(link.href)
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
 
-          {/* Spacer */}
-          <div className="flex-1" />
+            {/* Spacer */}
+            <div className="flex-1" />
 
-          {/* Search & User Menu */}
-          <div className="flex items-center gap-2">
-            {isSignedIn && <GlobalSearch />}
-            {isSignedIn ? (
-              <UserMenu />
-            ) : (
-              <>
-                <ThemeToggle />
-                <Link href="/sign-in">
-                  <Button size="sm">Sign In</Button>
-                </Link>
-              </>
-            )}
+            {/* Search & User Menu */}
+            <div className="flex items-center gap-2">
+              {isSignedIn && <GlobalSearch />}
+              {isSignedIn ? (
+                <UserMenu />
+              ) : (
+                <>
+                  <ThemeToggle />
+                  <Link href="/sign-up">
+                    <Button size="sm" variant="outline">
+                      Sign Up
+                    </Button>
+                  </Link>
+                  <Link href="/sign-in">
+                    <Button size="sm">Sign In</Button>
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+      {isSignedIn && isPending && (
+        <div className="border-b border-yellow-200 bg-yellow-50 px-4 py-2 text-center text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
+          Your account is pending approval. Some features are limited.
+        </div>
+      )}
+    </>
   );
 }

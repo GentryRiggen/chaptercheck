@@ -20,6 +20,7 @@ struct BookDetailView: View {
     @State private var isAudioUploadQueuePresented = false
     @State private var audioUploadQueueItems: [AudioUploadQueueItem] = []
     @State private var audioUploadError: String?
+    @State private var showPendingPlaybackAlert = false
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(\.showNowPlaying) private var showNowPlaying
@@ -30,6 +31,54 @@ struct BookDetailView: View {
     private let networkMonitor = NetworkMonitor.shared
 
     var body: some View {
+        mainContent
+            .navigationTitle(viewModel.book?.title ?? "Book")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { bookmarkToolbarItem }
+            .onAppear(perform: handleOnAppear)
+            .onDisappear { viewModel.unsubscribe() }
+            .onChange(of: networkMonitor.isConnected) { _, isConnected in
+                if isConnected { viewModel.recoverFromOffline() }
+            }
+            .onChange(of: currentUserProvider.currentUser?.id) { _, _ in
+                viewModel.currentUser = currentUserProvider.currentUser
+            }
+            .onChange(of: genreProvider.allGenres) { _, genres in
+                viewModel.allGenres = genres
+            }
+            .onChange(of: tagProvider.tags) { _, tags in
+                viewModel.noteTags = tags
+                let existingIds = Set(tags.map(\._id))
+                viewModel.selectedNoteTagIds = viewModel.selectedNoteTagIds.intersection(existingIds)
+            }
+            .modifier(BookDetailSheets(
+                bookId: bookId,
+                viewModel: viewModel,
+                isAddToShelfPresented: $isAddToShelfPresented,
+                isReviewSheetPresented: $isReviewSheetPresented,
+                noteToEdit: $noteToEdit,
+                noteToPreview: $noteToPreview,
+                isFreeformNoteComposerPresented: $isFreeformNoteComposerPresented,
+                isAudioUploadQueuePresented: $isAudioUploadQueuePresented,
+                audioUploadQueueItems: $audioUploadQueueItems,
+                isAudioImporterPresented: $isAudioImporterPresented,
+                onImportedFiles: handleImportedAudioFiles,
+                onReleaseFiles: releaseImportedAudioFiles
+            ))
+            .modifier(BookDetailAlerts(
+                showDeleteDownloadConfirmation: $showDeleteDownloadConfirmation,
+                noteToDelete: $noteToDelete,
+                audioUploadError: $audioUploadError,
+                showPendingPlaybackAlert: $showPendingPlaybackAlert,
+                downloadManager: downloadManager,
+                bookId: bookId,
+                viewModel: viewModel
+            ))
+    }
+
+    // MARK: - Body Subviews
+
+    private var mainContent: some View {
         Group {
             if viewModel.isLoading {
                 LoadingView()
@@ -48,202 +97,34 @@ struct BookDetailView: View {
                 )
             }
         }
-        .navigationTitle(viewModel.book?.title ?? "Book")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isAddToShelfPresented = true
-                } label: {
-                    Image(systemName: viewModel.isOnAnyShelf ? "bookmark.fill" : "bookmark")
-                }
-                .disabled(viewModel.isOffline)
-            }
-        }
-        .onAppear {
-            viewModel.downloadManager = downloadManager
-            viewModel.audioPlayerManager = audioPlayer
-            viewModel.showToast = { toast in showToast(toast) }
-            viewModel.currentUser = currentUserProvider.currentUser
-            viewModel.allGenres = genreProvider.allGenres
-            viewModel.noteTags = tagProvider.tags
-            viewModel.subscribe(bookId: bookId)
+    }
 
-            if downloadManager.pendingDeletePromptBookId == bookId {
-                downloadManager.pendingDeletePromptBookId = nil
-                showDeleteDownloadConfirmation = true
+    @ToolbarContentBuilder
+    private var bookmarkToolbarItem: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            let canManageShelves = currentUserProvider.currentUser?.permissions.canManageShelves != false
+            Button {
+                isAddToShelfPresented = true
+            } label: {
+                Image(systemName: viewModel.isOnAnyShelf ? "bookmark.fill" : "bookmark")
             }
+            .disabled(viewModel.isOffline || !canManageShelves)
+            .opacity(canManageShelves ? 1 : 0.4)
         }
-        .onDisappear {
-            viewModel.unsubscribe()
-        }
-        .onChange(of: networkMonitor.isConnected) { _, isConnected in
-            if isConnected {
-                viewModel.recoverFromOffline()
-            }
-        }
-        .onChange(of: currentUserProvider.currentUser?.id) { _, _ in
-            viewModel.currentUser = currentUserProvider.currentUser
-        }
-        .onChange(of: genreProvider.allGenres) { _, genres in
-            viewModel.allGenres = genres
-        }
-        .onChange(of: tagProvider.tags) { _, tags in
-            viewModel.noteTags = tags
-            // Prune selected tag IDs that no longer exist
-            let existingIds = Set(tags.map(\._id))
-            viewModel.selectedNoteTagIds = viewModel.selectedNoteTagIds.intersection(existingIds)
-        }
-        .sheet(isPresented: $isAddToShelfPresented) {
-            AddToShelfSheet(bookId: bookId)
-        }
-        .sheet(isPresented: $isReviewSheetPresented) {
-            BookReviewSheet(
-                bookId: bookId,
-                existingUserData: viewModel.userData,
-                allGenres: viewModel.allGenres,
-                existingGenreVoteIds: viewModel.myGenreVoteIds,
-                canCreateGenres: viewModel.currentUser?.permissions.canCreateContent == true,
-                genreRepository: viewModel.genreRepository,
-                onSave: { formData in
-                    isReviewSheetPresented = false
-                    Task { await viewModel.saveReview(formData) }
-                },
-                onCancel: {
-                    isReviewSheetPresented = false
-                }
-            )
-        }
-        .sheet(item: $noteToEdit) { note in
-            if note.isAudioAnchored {
-                BookNoteComposerSheet(
-                    context: noteComposerContext(for: note),
-                    tags: viewModel.noteTags,
-                    onSave: { payload in
-                        try await viewModel.updateNote(
-                            noteId: note._id,
-                            audioFileId: payload.audioFileId,
-                            tagIds: payload.tagIds.isEmpty ? nil : payload.tagIds,
-                            startSeconds: payload.startSeconds,
-                            endSeconds: payload.endSeconds,
-                            noteText: payload.noteText,
-                            isPublic: payload.isPublic
-                        )
-                        Haptics.success()
-                    },
-                    onCreateTag: { name in
-                        try await viewModel.createTag(name: name)
-                    }
-                )
-            } else {
-                FreeformNoteComposerSheet(
-                    bookId: bookId,
-                    tags: viewModel.noteTags,
-                    existingNote: note,
-                    onSave: { noteText, entryType, sourceText, tagIds, isPublic in
-                        try await viewModel.updateNote(
-                            noteId: note._id,
-                            audioFileId: nil,
-                            tagIds: tagIds.isEmpty ? nil : tagIds,
-                            startSeconds: nil,
-                            endSeconds: nil,
-                            noteText: noteText,
-                            entryType: entryType,
-                            sourceText: sourceText,
-                            isPublic: isPublic
-                        )
-                        Haptics.success()
-                    },
-                    onCreateTag: { name in
-                        try await viewModel.createTag(name: name)
-                    }
-                )
-            }
-        }
-        .sheet(item: $noteToPreview) { note in
-            BookNotePreviewSheet(note: note)
-        }
-        .sheet(isPresented: $isFreeformNoteComposerPresented) {
-            FreeformNoteComposerSheet(
-                bookId: bookId,
-                tags: viewModel.noteTags,
-                onSave: { noteText, entryType, sourceText, tagIds, isPublic in
-                    try await viewModel.createNote(
-                        audioFileId: nil,
-                        tagIds: tagIds.isEmpty ? nil : tagIds,
-                        startSeconds: nil,
-                        endSeconds: nil,
-                        noteText: noteText,
-                        entryType: entryType,
-                        sourceText: sourceText,
-                        isPublic: isPublic
-                    )
-                    Haptics.success()
-                },
-                onCreateTag: { name in
-                    try await viewModel.createTag(name: name)
-                }
-            )
-        }
-        .sheet(isPresented: $isAudioUploadQueuePresented, onDismiss: releaseImportedAudioFiles) {
-            if let book = viewModel.book {
-                AudioUploadQueueSheet(
-                    bookId: book._id,
-                    initialItems: audioUploadQueueItems,
-                    onFinished: {
-                        isAudioUploadQueuePresented = false
-                    }
-                )
-            }
-        }
-        .fileImporter(
-            isPresented: $isAudioImporterPresented,
-            allowedContentTypes: [.audio],
-            allowsMultipleSelection: true
-        ) { result in
-            handleImportedAudioFiles(result)
-        }
-        .confirmationDialog(
-            "Delete Download?",
-            isPresented: $showDeleteDownloadConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Delete Download", role: .destructive) {
-                downloadManager.deleteBookDownload(bookId: bookId)
-            }
-            Button("No, Thank You") {}
-        } message: {
-            Text("You've finished this book. Delete the downloaded files to free up storage?")
-        }
-        .confirmationDialog(
-            "Delete note?",
-            isPresented: Binding(
-                get: { noteToDelete != nil },
-                set: { if !$0 { noteToDelete = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete Note", role: .destructive) {
-                guard let noteToDelete else { return }
-                Task {
-                    try? await viewModel.deleteNote(noteId: noteToDelete._id)
-                    Haptics.success()
-                    self.noteToDelete = nil
-                }
-            }
-            Button("Cancel", role: .cancel) {
-                noteToDelete = nil
-            }
-        }
-        .alert("Upload Error", isPresented: Binding(
-            get: { audioUploadError != nil },
-            set: { if !$0 { audioUploadError = nil } }
-        )) {
-            Button("OK", role: .cancel) {
-                audioUploadError = nil
-            }
-        } message: {
-            Text(audioUploadError ?? "")
+    }
+
+    private func handleOnAppear() {
+        viewModel.downloadManager = downloadManager
+        viewModel.audioPlayerManager = audioPlayer
+        viewModel.showToast = { toast in showToast(toast) }
+        viewModel.currentUser = currentUserProvider.currentUser
+        viewModel.allGenres = genreProvider.allGenres
+        viewModel.noteTags = tagProvider.tags
+        viewModel.subscribe(bookId: bookId)
+
+        if downloadManager.pendingDeletePromptBookId == bookId {
+            downloadManager.pendingDeletePromptBookId = nil
+            showDeleteDownloadConfirmation = true
         }
     }
 
@@ -434,8 +315,16 @@ struct BookDetailView: View {
 
     // MARK: - Play Button
 
+    private var canPlayAudio: Bool {
+        currentUserProvider.currentUser?.permissions.canPlayAudio != false
+    }
+
     private func playButton(_ book: BookWithDetails) -> some View {
         Button {
+            guard canPlayAudio else {
+                showPendingPlaybackAlert = true
+                return
+            }
             if audioPlayer.currentBook?._id == book._id {
                 if !audioPlayer.isPlaying { audioPlayer.resume() }
                 showNowPlaying()
@@ -453,14 +342,15 @@ struct BookDetailView: View {
             showNowPlaying()
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "play.fill")
-                Text(hasExistingProgress ? "Resume" : "Play")
+                Image(systemName: canPlayAudio ? "play.fill" : "lock.fill")
+                Text(hasExistingProgress && canPlayAudio ? "Resume" : (canPlayAudio ? "Play" : "Pending Approval"))
                     .fontWeight(.semibold)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
         }
         .buttonStyle(.borderedProminent)
+        .opacity(canPlayAudio ? 1 : 0.6)
     }
 
     private var hasExistingProgress: Bool {
@@ -658,5 +548,206 @@ struct BookDetailView: View {
         }
 
         return "application/octet-stream"
+    }
+}
+
+// MARK: - Sheets ViewModifier
+
+private struct BookDetailSheets: ViewModifier {
+    let bookId: String
+    @Bindable var viewModel: BookDetailViewModel
+    @Binding var isAddToShelfPresented: Bool
+    @Binding var isReviewSheetPresented: Bool
+    @Binding var noteToEdit: BookNote?
+    @Binding var noteToPreview: BookNote?
+    @Binding var isFreeformNoteComposerPresented: Bool
+    @Binding var isAudioUploadQueuePresented: Bool
+    @Binding var audioUploadQueueItems: [AudioUploadQueueItem]
+    @Binding var isAudioImporterPresented: Bool
+    var onImportedFiles: (Result<[URL], Error>) -> Void
+    var onReleaseFiles: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $isAddToShelfPresented) {
+                AddToShelfSheet(bookId: bookId)
+            }
+            .sheet(isPresented: $isReviewSheetPresented) {
+                BookReviewSheet(
+                    bookId: bookId,
+                    existingUserData: viewModel.userData,
+                    allGenres: viewModel.allGenres,
+                    existingGenreVoteIds: viewModel.myGenreVoteIds,
+                    canCreateGenres: viewModel.currentUser?.permissions.canCreateContent == true,
+                    genreRepository: viewModel.genreRepository,
+                    onSave: { formData in
+                        isReviewSheetPresented = false
+                        Task { await viewModel.saveReview(formData) }
+                    },
+                    onCancel: {
+                        isReviewSheetPresented = false
+                    }
+                )
+            }
+            .sheet(item: $noteToEdit) { note in
+                if note.isAudioAnchored {
+                    BookNoteComposerSheet(
+                        context: BookNoteComposerContext(
+                            bookId: bookId,
+                            audioFiles: viewModel.audioFiles,
+                            anchorSeconds: ((note.startSeconds ?? 0) + (note.endSeconds ?? 0)) / 2,
+                            initialAudioFileId: note.audioFileId ?? "",
+                            initialStartSeconds: note.startSeconds ?? 0,
+                            initialEndSeconds: note.endSeconds ?? 0,
+                            existingNote: note
+                        ),
+                        tags: viewModel.noteTags,
+                        onSave: { payload in
+                            try await viewModel.updateNote(
+                                noteId: note._id,
+                                audioFileId: payload.audioFileId,
+                                tagIds: payload.tagIds.isEmpty ? nil : payload.tagIds,
+                                startSeconds: payload.startSeconds,
+                                endSeconds: payload.endSeconds,
+                                noteText: payload.noteText,
+                                isPublic: payload.isPublic
+                            )
+                            Haptics.success()
+                        },
+                        onCreateTag: { name in
+                            try await viewModel.createTag(name: name)
+                        }
+                    )
+                } else {
+                    FreeformNoteComposerSheet(
+                        bookId: bookId,
+                        tags: viewModel.noteTags,
+                        existingNote: note,
+                        onSave: { noteText, entryType, sourceText, tagIds, isPublic in
+                            try await viewModel.updateNote(
+                                noteId: note._id,
+                                audioFileId: nil,
+                                tagIds: tagIds.isEmpty ? nil : tagIds,
+                                startSeconds: nil,
+                                endSeconds: nil,
+                                noteText: noteText,
+                                entryType: entryType,
+                                sourceText: sourceText,
+                                isPublic: isPublic
+                            )
+                            Haptics.success()
+                        },
+                        onCreateTag: { name in
+                            try await viewModel.createTag(name: name)
+                        }
+                    )
+                }
+            }
+            .sheet(item: $noteToPreview) { note in
+                BookNotePreviewSheet(note: note)
+            }
+            .sheet(isPresented: $isFreeformNoteComposerPresented) {
+                FreeformNoteComposerSheet(
+                    bookId: bookId,
+                    tags: viewModel.noteTags,
+                    onSave: { noteText, entryType, sourceText, tagIds, isPublic in
+                        try await viewModel.createNote(
+                            audioFileId: nil,
+                            tagIds: tagIds.isEmpty ? nil : tagIds,
+                            startSeconds: nil,
+                            endSeconds: nil,
+                            noteText: noteText,
+                            entryType: entryType,
+                            sourceText: sourceText,
+                            isPublic: isPublic
+                        )
+                        Haptics.success()
+                    },
+                    onCreateTag: { name in
+                        try await viewModel.createTag(name: name)
+                    }
+                )
+            }
+            .sheet(isPresented: $isAudioUploadQueuePresented, onDismiss: onReleaseFiles) {
+                if let book = viewModel.book {
+                    AudioUploadQueueSheet(
+                        bookId: book._id,
+                        initialItems: audioUploadQueueItems,
+                        onFinished: {
+                            isAudioUploadQueuePresented = false
+                        }
+                    )
+                }
+            }
+            .fileImporter(
+                isPresented: $isAudioImporterPresented,
+                allowedContentTypes: [.audio],
+                allowsMultipleSelection: true
+            ) { result in
+                onImportedFiles(result)
+            }
+    }
+}
+
+// MARK: - Alerts ViewModifier
+
+private struct BookDetailAlerts: ViewModifier {
+    @Binding var showDeleteDownloadConfirmation: Bool
+    @Binding var noteToDelete: BookNote?
+    @Binding var audioUploadError: String?
+    @Binding var showPendingPlaybackAlert: Bool
+    var downloadManager: DownloadManager
+    let bookId: String
+    var viewModel: BookDetailViewModel
+
+    func body(content: Content) -> some View {
+        content
+            .confirmationDialog(
+                "Delete Download?",
+                isPresented: $showDeleteDownloadConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete Download", role: .destructive) {
+                    downloadManager.deleteBookDownload(bookId: bookId)
+                }
+                Button("No, Thank You") {}
+            } message: {
+                Text("You've finished this book. Delete the downloaded files to free up storage?")
+            }
+            .confirmationDialog(
+                "Delete note?",
+                isPresented: Binding(
+                    get: { noteToDelete != nil },
+                    set: { if !$0 { noteToDelete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete Note", role: .destructive) {
+                    guard let noteToDelete else { return }
+                    Task {
+                        try? await viewModel.deleteNote(noteId: noteToDelete._id)
+                        Haptics.success()
+                        self.noteToDelete = nil
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    noteToDelete = nil
+                }
+            }
+            .alert("Upload Error", isPresented: Binding(
+                get: { audioUploadError != nil },
+                set: { if !$0 { audioUploadError = nil } }
+            )) {
+                Button("OK", role: .cancel) {
+                    audioUploadError = nil
+                }
+            } message: {
+                Text(audioUploadError ?? "")
+            }
+            .alert("Account Pending Approval", isPresented: $showPendingPlaybackAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Audio playback will be available after your account is approved.")
+            }
     }
 }

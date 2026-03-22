@@ -13,6 +13,46 @@ struct UserPermissions: Decodable, Sendable {
     let canUploadAudio: Bool
     let canPlayAudio: Bool
     let canManageUsers: Bool
+
+    // MARK: - Approval Status
+
+    /// `true` when the user has self-registered and is awaiting admin approval.
+    let isPending: Bool
+    /// `true` when the user is approved (existing users without `approvalStatus` are treated as approved).
+    let isApproved: Bool
+    /// `true` when the user can create, rename, and delete bookshelves. Requires approval.
+    let canManageShelves: Bool
+    /// `true` when the user can follow other users. Requires approval.
+    let canFollow: Bool
+
+    // MARK: - Decoding
+
+    private enum CodingKeys: String, CodingKey {
+        case isAdmin, isEditor, isViewer, hasPremium
+        case canCreateContent, canEditContent, canDeleteContent
+        case canUploadAudio, canPlayAudio, canManageUsers
+        case isPending, isApproved, canManageShelves, canFollow
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        isAdmin = try container.decode(Bool.self, forKey: .isAdmin)
+        isEditor = try container.decode(Bool.self, forKey: .isEditor)
+        isViewer = try container.decode(Bool.self, forKey: .isViewer)
+        hasPremium = try container.decode(Bool.self, forKey: .hasPremium)
+        canCreateContent = try container.decode(Bool.self, forKey: .canCreateContent)
+        canEditContent = try container.decode(Bool.self, forKey: .canEditContent)
+        canDeleteContent = try container.decode(Bool.self, forKey: .canDeleteContent)
+        canUploadAudio = try container.decode(Bool.self, forKey: .canUploadAudio)
+        canPlayAudio = try container.decode(Bool.self, forKey: .canPlayAudio)
+        canManageUsers = try container.decode(Bool.self, forKey: .canManageUsers)
+        // New approval-gating fields — default to non-pending/approved for
+        // backward compatibility with older backend deployments.
+        isPending = try container.decodeIfPresent(Bool.self, forKey: .isPending) ?? false
+        isApproved = try container.decodeIfPresent(Bool.self, forKey: .isApproved) ?? true
+        canManageShelves = try container.decodeIfPresent(Bool.self, forKey: .canManageShelves) ?? true
+        canFollow = try container.decodeIfPresent(Bool.self, forKey: .canFollow) ?? true
+    }
 }
 
 /// The current authenticated user with computed permissions.

@@ -6,6 +6,9 @@ import ClerkKit
 /// Step 1: The user enters their email and taps "Send Code".
 /// Step 2: The user enters the 6-digit code they received and taps "Verify".
 struct SignInView: View {
+    /// Callback invoked when the user taps "Don't have an account? Create one".
+    var onShowSignUp: (() -> Void)? = nil
+
     @State private var email = ""
     @State private var otpCode = ""
     @State private var signIn: SignIn?
@@ -53,6 +56,27 @@ struct SignInView: View {
 
             Spacer()
             Spacer()
+
+            // Sign-up link — only shown on the email entry step
+            if !isVerifyingCode, let onShowSignUp {
+                VStack(spacing: 12) {
+                    Text("Don't have an account?")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        onShowSignUp()
+                    } label: {
+                        Text("Create Account")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
+            }
         }
     }
 

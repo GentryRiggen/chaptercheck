@@ -6,6 +6,7 @@ import {
   getEffectiveRole,
   hasPremium,
   hasRoleLevel,
+  isApprovedUser,
   requireAdmin,
   requireAuth,
 } from "../lib/auth";
@@ -21,6 +22,10 @@ export interface UserPermissions {
   isEditor: boolean;
   isViewer: boolean;
 
+  // Approval checks
+  isPending: boolean;
+  isApproved: boolean;
+
   // Premium check
   hasPremium: boolean;
 
@@ -28,9 +33,11 @@ export interface UserPermissions {
   canCreateContent: boolean; // Create books, authors, series
   canEditContent: boolean; // Edit books, authors, series
   canDeleteContent: boolean; // Delete books, authors, series
-  canUploadAudio: boolean; // Upload audio files (requires premium)
-  canPlayAudio: boolean; // Play audio files (requires premium)
+  canUploadAudio: boolean; // Upload audio files (requires premium + approved)
+  canPlayAudio: boolean; // Play audio files (requires premium + approved)
   canManageUsers: boolean; // Admin-only: change user roles/premium
+  canManageShelves: boolean; // Requires approved
+  canFollow: boolean; // Requires approved
 }
 
 /**
@@ -48,6 +55,7 @@ export const getCurrentUserWithPermissions = query({
 
     const effectiveRole = getEffectiveRole(user);
     const isPremium = hasPremium(user);
+    const approved = isApprovedUser(user);
 
     const isAdmin = hasRoleLevel(user, "admin");
     const isEditor = hasRoleLevel(user, "editor");
@@ -58,6 +66,10 @@ export const getCurrentUserWithPermissions = query({
       isEditor,
       isViewer: true, // All authenticated users are at least viewers
 
+      // Approval checks
+      isPending: !approved,
+      isApproved: approved,
+
       // Premium check
       hasPremium: isPremium,
 
@@ -65,9 +77,11 @@ export const getCurrentUserWithPermissions = query({
       canCreateContent: isEditor,
       canEditContent: isEditor,
       canDeleteContent: isEditor,
-      canUploadAudio: isPremium,
-      canPlayAudio: isPremium,
+      canUploadAudio: isPremium && approved,
+      canPlayAudio: isPremium && approved,
       canManageUsers: isAdmin,
+      canManageShelves: approved,
+      canFollow: approved,
     };
 
     return {
@@ -79,6 +93,7 @@ export const getCurrentUserWithPermissions = query({
       role: effectiveRole,
       hasPremium: isPremium,
       isProfilePrivate: user.isProfilePrivate ?? false,
+      approvalStatus: user.approvalStatus ?? "approved",
       permissions,
     };
   },
@@ -108,6 +123,7 @@ export const listAllUsers = query({
           imageUrl: user.imageUrl,
           role: getEffectiveRole(user),
           hasPremium: hasPremium(user),
+          approvalStatus: user.approvalStatus ?? "approved",
           storageAccountId: user.storageAccountId,
           storageAccount: storageAccount
             ? {
@@ -266,6 +282,7 @@ export const getAdminUserDetail = query({
       imageUrl: targetUser.imageUrl,
       role: getEffectiveRole(targetUser),
       hasPremium: hasPremium(targetUser),
+      approvalStatus: targetUser.approvalStatus ?? "approved",
       isProfilePrivate: targetUser.isProfilePrivate ?? false,
       createdAt: targetUser.createdAt,
       storageAccountId: targetUser.storageAccountId,
@@ -312,5 +329,50 @@ export const searchUsers = query({
         name: u.name,
         imageUrl: u.imageUrl,
       }));
+  },
+});
+
+/**
+ * List users pending approval (admin-only)
+ */
+export const listPendingUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const pendingUsers = await ctx.db
+      .query("users")
+      .withIndex("by_approvalStatus", (q) => q.eq("approvalStatus", "pending"))
+      .collect();
+
+    return Promise.all(
+      pendingUsers.map(async (user) => {
+        const storageAccount = user.storageAccountId
+          ? await ctx.db.get(user.storageAccountId)
+          : null;
+
+        return {
+          _id: user._id,
+          clerkId: user.clerkId,
+          email: user.email,
+          name: user.name,
+          imageUrl: user.imageUrl,
+          role: getEffectiveRole(user),
+          hasPremium: hasPremium(user),
+          approvalStatus: "pending" as const,
+          storageAccountId: user.storageAccountId,
+          storageAccount: storageAccount
+            ? {
+                _id: storageAccount._id,
+                name: storageAccount.name,
+                r2PathPrefix: storageAccount.r2PathPrefix,
+                totalBytesUsed: storageAccount.totalBytesUsed,
+                fileCount: storageAccount.fileCount,
+              }
+            : null,
+          createdAt: user.createdAt,
+        };
+      })
+    );
   },
 });

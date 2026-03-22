@@ -4,11 +4,24 @@ import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { formatBytes } from "@chaptercheck/shared/utils";
 import { useQuery } from "convex/react";
-import { Crown, Eye, HardDrive, Loader2, Pencil, Plus, ShieldAlert, Users } from "lucide-react";
+import {
+  Check,
+  Clock,
+  Crown,
+  HardDrive,
+  Loader2,
+  Pencil,
+  Plus,
+  ShieldAlert,
+  Users,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { ApproveUserDialog } from "@/components/admin/ApproveUserDialog";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { DenyUserDialog } from "@/components/admin/DenyUserDialog";
 import { EditUserDialog } from "@/components/admin/EditUserDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +44,7 @@ export default function AdminPage() {
   const scrolled = useScrolled();
   const { isAdmin, isLoading: permissionsLoading } = usePermissions();
   const users = useQuery(api.users.queries.listAllUsers);
+  const pendingUsers = useQuery(api.users.queries.listPendingUsers);
   const [createOpen, setCreateOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<{
     _id: Id<"users">;
@@ -39,6 +53,16 @@ export default function AdminPage() {
     role: UserRole;
     hasPremium: boolean;
     storageAccountId?: Id<"storageAccounts">;
+  } | null>(null);
+  const [approvingUser, setApprovingUser] = useState<{
+    _id: Id<"users">;
+    name?: string;
+    email: string;
+  } | null>(null);
+  const [denyingUser, setDenyingUser] = useState<{
+    _id: Id<"users">;
+    name?: string;
+    email: string;
   } | null>(null);
 
   if (permissionsLoading) {
@@ -108,6 +132,146 @@ export default function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-3 py-4 pb-24 sm:px-6 lg:px-8">
+        {/* Pending Users Section */}
+        {pendingUsers === undefined ? null : pendingUsers.length > 0 ? (
+          <section className="mb-6">
+            <div className="mb-3 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">Pending Users</h2>
+              <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+                {pendingUsers.length}
+              </Badge>
+            </div>
+
+            {/* Mobile list */}
+            <div className="divide-y divide-border/50 rounded-lg border border-yellow-500/20 bg-yellow-500/5 sm:hidden">
+              {pendingUsers.map((user) => (
+                <div key={user._id} className="flex items-center gap-3 px-3 py-3">
+                  <UserAvatar name={user.name} imageUrl={user.imageUrl} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{user.name || "Unnamed"}</p>
+                    <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                    {user.createdAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Registered {new Date(user.createdAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0 text-green-600 hover:bg-green-500/10 hover:text-green-600"
+                    onClick={() =>
+                      setApprovingUser({
+                        _id: user._id,
+                        name: user.name,
+                        email: user.email,
+                      })
+                    }
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() =>
+                      setDenyingUser({
+                        _id: user._id,
+                        name: user.name,
+                        email: user.email,
+                      })
+                    }
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden overflow-hidden rounded-lg border border-yellow-500/20 bg-yellow-500/5 sm:block">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      User
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      Registered
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {pendingUsers.map((user) => (
+                    <tr key={user._id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar name={user.name} imageUrl={user.imageUrl} size="sm" />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{user.name || "Unnamed"}</p>
+                            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-muted-foreground">
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-green-600 hover:bg-green-500/10 hover:text-green-600"
+                            onClick={() =>
+                              setApprovingUser({
+                                _id: user._id,
+                                name: user.name,
+                                email: user.email,
+                              })
+                            }
+                          >
+                            <Check className="mr-1.5 h-3.5 w-3.5" />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() =>
+                              setDenyingUser({
+                                _id: user._id,
+                                name: user.name,
+                                email: user.email,
+                              })
+                            }
+                          >
+                            <X className="mr-1.5 h-3.5 w-3.5" />
+                            Deny
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : (
+          <section className="mb-6">
+            <div className="mb-3 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">Pending Users</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">No pending users</p>
+          </section>
+        )}
+
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -123,9 +287,11 @@ export default function AdminPage() {
               {users.map((user) => (
                 <div key={user._id} className="flex items-center gap-3 px-3 py-3">
                   <UserAvatar name={user.name} imageUrl={user.imageUrl} size="sm" />
-                  <div className="min-w-0 flex-1">
+                  <Link href={`/admin/users/${user._id}`} className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="truncate text-sm font-medium">{user.name || "Unnamed"}</span>
+                      <span className="truncate text-sm font-medium hover:underline">
+                        {user.name || "Unnamed"}
+                      </span>
                       <Badge
                         variant={roleBadgeVariant[user.role]}
                         className="px-1 py-0 text-[10px]"
@@ -141,12 +307,7 @@ export default function AdminPage() {
                         {formatBytes(user.storageAccount.totalBytesUsed)}
                       </p>
                     )}
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-                    <Link href={`/admin/users/${user._id}`}>
-                      <Eye className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
+                  </Link>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -194,13 +355,18 @@ export default function AdminPage() {
                   {users.map((user) => (
                     <tr key={user._id} className="hover:bg-muted/30">
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
+                        <Link
+                          href={`/admin/users/${user._id}`}
+                          className="flex items-center gap-3 hover:opacity-80"
+                        >
                           <UserAvatar name={user.name} imageUrl={user.imageUrl} size="sm" />
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{user.name || "Unnamed"}</p>
+                            <p className="truncate text-sm font-medium hover:underline">
+                              {user.name || "Unnamed"}
+                            </p>
                             <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                           </div>
-                        </div>
+                        </Link>
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={roleBadgeVariant[user.role]}>{user.role}</Badge>
@@ -225,12 +391,6 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/admin/users/${user._id}`}>
-                              <Eye className="mr-1.5 h-3.5 w-3.5" />
-                              View
-                            </Link>
-                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -268,6 +428,28 @@ export default function AdminPage() {
           open={true}
           onOpenChange={(open) => {
             if (!open) setEditingUser(null);
+          }}
+        />
+      )}
+
+      {approvingUser && (
+        <ApproveUserDialog
+          key={approvingUser._id}
+          user={approvingUser}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setApprovingUser(null);
+          }}
+        />
+      )}
+
+      {denyingUser && (
+        <DenyUserDialog
+          key={denyingUser._id}
+          user={denyingUser}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setDenyingUser(null);
           }}
         />
       )}

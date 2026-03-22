@@ -59,6 +59,13 @@ export function hasPremium(user: Doc<"users">): boolean {
   return user.hasPremium === true;
 }
 
+/**
+ * Check if user is approved (undefined or "approved" = approved, "pending" = not)
+ */
+export function isApprovedUser(user: Doc<"users">): boolean {
+  return user.approvalStatus === undefined || user.approvalStatus === "approved";
+}
+
 export interface AuthenticatedUser {
   user: Doc<"users">;
   identity: NonNullable<Awaited<ReturnType<QueryCtx["auth"]["getUserIdentity"]>>>;
@@ -115,6 +122,7 @@ export async function requireAuthMutation(ctx: MutationCtx): Promise<Authenticat
       imageUrl: identity.pictureUrl,
       role: "viewer", // New users start as viewers
       hasPremium: false, // Premium must be granted by admin
+      approvalStatus: "pending", // Self-signup users require admin approval
       createdAt: now,
       updatedAt: now,
     });
@@ -205,6 +213,44 @@ export async function requirePremiumMutation(ctx: MutationCtx): Promise<Authenti
   }
 
   return auth;
+}
+
+/**
+ * Require approved status for queries
+ */
+export async function requireApproved(ctx: QueryCtx): Promise<AuthenticatedUser> {
+  const auth = await requireAuth(ctx);
+
+  if (!isApprovedUser(auth.user)) {
+    throw new Error("Account pending approval");
+  }
+
+  return auth;
+}
+
+/**
+ * Require approved status for mutations
+ */
+export async function requireApprovedMutation(ctx: MutationCtx): Promise<AuthenticatedUser> {
+  const auth = await requireAuthMutation(ctx);
+
+  if (!isApprovedUser(auth.user)) {
+    throw new Error("Account pending approval");
+  }
+
+  return auth;
+}
+
+/**
+ * Check if the current user is approved (non-throwing)
+ */
+export async function isApproved(ctx: QueryCtx): Promise<boolean> {
+  try {
+    const auth = await requireAuth(ctx);
+    return isApprovedUser(auth.user);
+  } catch {
+    return false;
+  }
 }
 
 /**

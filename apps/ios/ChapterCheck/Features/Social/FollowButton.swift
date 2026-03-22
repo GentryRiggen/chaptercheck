@@ -8,12 +8,22 @@ struct FollowButton: View {
     @State private var isFollowing = false
     @State private var isLoading = true
     @State private var showUnfollowConfirmation = false
+    @State private var showPendingFollowAlert = false
     @State private var cancellable: AnyCancellable?
     @State private var authObserver = ConvexAuthObserver()
+    @Environment(CurrentUserProvider.self) private var currentUserProvider
     private let socialRepository = SocialRepository()
+
+    private var canFollow: Bool {
+        currentUserProvider.currentUser?.permissions.canFollow != false
+    }
 
     var body: some View {
         Button {
+            guard canFollow else {
+                showPendingFollowAlert = true
+                return
+            }
             if isFollowing {
                 showUnfollowConfirmation = true
             } else {
@@ -31,12 +41,17 @@ struct FollowButton: View {
                 .foregroundStyle(isFollowing ? AnyShapeStyle(.primary) : AnyShapeStyle(Color.white))
         }
         .buttonStyle(.plain)
-        .opacity(isLoading ? 0.5 : 1)
-        .disabled(isLoading)
+        .opacity((isLoading || !canFollow) ? 0.5 : 1)
+        .disabled(isLoading || !canFollow)
         .confirmationDialog("Unfollow this person?", isPresented: $showUnfollowConfirmation, titleVisibility: .visible) {
             Button("Unfollow", role: .destructive) {
                 Task { await toggleFollow() }
             }
+        }
+        .alert("Account Pending Approval", isPresented: $showPendingFollowAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Following other users will be available after your account is approved.")
         }
         .onAppear { startSubscription() }
         .onDisappear {

@@ -10,6 +10,11 @@ struct MyShelvesBrowseView: View {
     @State private var isCreateShelfPresented = false
     @State private var createdShelfId: String?
     @State private var navigateToShelfId: String?
+    @Environment(CurrentUserProvider.self) private var currentUserProvider
+
+    private var canManageShelves: Bool {
+        currentUserProvider.currentUser?.permissions.canManageShelves != false
+    }
 
     var body: some View {
         Group {
@@ -29,6 +34,8 @@ struct MyShelvesBrowseView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .disabled(!canManageShelves)
+                .opacity(canManageShelves ? 1 : 0.4)
             }
         }
         .sheet(isPresented: $isCreateShelfPresented, onDismiss: {
@@ -92,24 +99,31 @@ struct MyShelvesBrowseView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
 
-            Text("Create a bookshelf to organize your audiobooks into custom collections.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            Button {
-                isCreateShelfPresented = true
-            } label: {
-                Text("Create Bookshelf")
+            if canManageShelves {
+                Text("Create a bookshelf to organize your audiobooks into custom collections.")
                     .font(.subheadline)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(.tint)
-                    .foregroundStyle(.white)
-                    .clipShape(Capsule())
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    isCreateShelfPresented = true
+                } label: {
+                    Text("Create Bookshelf")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(.tint)
+                        .foregroundStyle(.white)
+                        .clipShape(Capsule())
+                }
+                .padding(.top, 4)
+            } else {
+                Text("Bookshelves are available after your account is approved.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 20)

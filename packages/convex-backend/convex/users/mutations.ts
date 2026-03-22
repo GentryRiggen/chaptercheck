@@ -91,6 +91,53 @@ export const adminUpdateUser = mutation({
 });
 
 /**
+ * Approve a pending user (admin-only)
+ */
+export const approveUser = mutation({
+  args: {
+    userId: v.id("users"),
+    role: v.union(v.literal("admin"), v.literal("editor"), v.literal("viewer")),
+    hasPremium: v.boolean(),
+    storageAccountId: v.optional(v.id("storageAccounts")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminMutation(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+    if (user.approvalStatus !== "pending") throw new Error("User is not pending approval");
+
+    await ctx.db.patch(args.userId, {
+      approvalStatus: "approved",
+      role: args.role,
+      hasPremium: args.hasPremium,
+      storageAccountId: args.storageAccountId,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Deny a pending user (admin-only) — deletes the user record
+ */
+export const denyUser = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdminMutation(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+    if (user.approvalStatus !== "pending") throw new Error("User is not pending approval");
+
+    await ctx.db.delete(args.userId);
+
+    return { success: true };
+  },
+});
+
+/**
  * Update current user's profile privacy setting
  */
 export const updateProfilePrivacy = mutation({
@@ -116,5 +163,18 @@ export const updateProfilePrivacy = mutation({
     }
 
     return { success: true };
+  },
+});
+
+/**
+ * Ensure the current user exists in Convex.
+ * Call after Clerk sign-up/sign-in to handle the webhook race condition —
+ * requireAuthMutation creates the user if the webhook hasn't fired yet.
+ */
+export const ensureUser = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { user } = await requireAuthMutation(ctx);
+    return { _id: user._id };
   },
 });

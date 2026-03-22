@@ -1,8 +1,9 @@
 import { type WebhookEvent } from "@clerk/nextjs/server";
+import { v } from "convex/values";
 import { Webhook } from "svix";
 
 import { internal } from "../_generated/api";
-import { httpAction } from "../_generated/server";
+import { httpAction, internalMutation } from "../_generated/server";
 
 export const handleClerkWebhook = httpAction(async (ctx, request) => {
   const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
@@ -44,7 +45,7 @@ export const handleClerkWebhook = httpAction(async (ctx, request) => {
   const eventType = evt.type;
 
   if (eventType === "user.created") {
-    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
+    const { id, email_addresses, first_name, last_name, image_url, public_metadata } = evt.data;
 
     const email = email_addresses[0]?.email_address;
     const name = [first_name, last_name].filter(Boolean).join(" ");
@@ -54,6 +55,7 @@ export const handleClerkWebhook = httpAction(async (ctx, request) => {
       email: email || "",
       name: name || undefined,
       imageUrl: image_url || undefined,
+      adminCreated: (public_metadata as Record<string, unknown>)?.adminCreated === true,
     });
   }
 
@@ -91,6 +93,7 @@ export const createUser = internalMutation({
     email: v.string(),
     name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    adminCreated: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // Check for existing user (idempotent: admin may pre-configure before webhook fires)
@@ -100,7 +103,7 @@ export const createUser = internalMutation({
       .unique();
 
     if (existing) {
-      // Update profile fields but preserve role/premium/storageAccountId
+      // Update profile fields but preserve role/premium/storageAccountId/approvalStatus
       await ctx.db.patch(existing._id, {
         email: args.email,
         name: args.name,
@@ -119,6 +122,7 @@ export const createUser = internalMutation({
       imageUrl: args.imageUrl,
       role: "viewer", // New users start as viewers
       hasPremium: false, // Premium must be granted by admin
+      approvalStatus: args.adminCreated ? "approved" : "pending",
       createdAt: now,
       updatedAt: now,
     });
@@ -164,8 +168,3 @@ export const deleteUser = internalMutation({
     }
   },
 });
-
-// Import required dependencies
-import { v } from "convex/values";
-
-import { internalMutation } from "../_generated/server";

@@ -34,6 +34,10 @@ interface PermissionsContextValue {
   isEditor: boolean;
   hasPremium: boolean;
   hasRoleLevel: (role: UserRole) => boolean;
+
+  // Approval status
+  isPending: boolean;
+  isApproved: boolean;
 }
 
 // Role levels for comparison (higher = more permissions)
@@ -91,6 +95,8 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
       isEditor: permissions?.isEditor ?? false,
       hasPremium: permissions?.hasPremium ?? false,
       hasRoleLevel,
+      isPending: permissions?.isPending ?? false,
+      isApproved: permissions?.isApproved ?? true, // default true so UI doesn't flash disabled during loading
     };
   }, [userWithPermissions]);
 

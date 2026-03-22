@@ -6,6 +6,7 @@ import { BookDetailPage } from "../pages/book-detail.page";
 import { BooksListPage } from "../pages/books-list.page";
 import { DashboardPage } from "../pages/dashboard.page";
 import { NavigationPage } from "../pages/navigation.page";
+import { SignUpPage } from "../pages/sign-up.page";
 
 type Fixtures = {
   nav: NavigationPage;
@@ -13,6 +14,7 @@ type Fixtures = {
   bookDetailPage: BookDetailPage;
   authorsListPage: AuthorsListPage;
   dashboardPage: DashboardPage;
+  signUpPage: SignUpPage;
 };
 
 const dashboardGreetingPattern = /^Good (morning|afternoon|evening), .+/;
@@ -45,6 +47,9 @@ export const test = base.extend<Fixtures>({
   },
   dashboardPage: async ({ page }, use) => {
     await use(new DashboardPage(page));
+  },
+  signUpPage: async ({ page }, use) => {
+    await use(new SignUpPage(page));
   },
 });
 

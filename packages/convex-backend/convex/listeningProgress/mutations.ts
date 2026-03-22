@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import { type Id } from "../_generated/dataModel";
 import { mutation, type MutationCtx } from "../_generated/server";
-import { requireAuthMutation } from "../lib/auth";
+import { requireApprovedMutation } from "../lib/auth";
 
 /**
  * Save or update listening progress for a book.
@@ -20,7 +20,7 @@ export const saveProgress = mutation({
     clientTimestamp: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
     const now = Date.now();
     const clientTimestamp = args.clientTimestamp ?? now;
 
@@ -104,7 +104,7 @@ export const markListening = mutation({
     audioFileId: v.id("audioFiles"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
     const now = Date.now();
 
     const audioFile = await ctx.db.get(args.audioFileId);

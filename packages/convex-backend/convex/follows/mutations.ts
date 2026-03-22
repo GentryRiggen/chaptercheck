@@ -1,12 +1,12 @@
 import { v } from "convex/values";
 
 import { mutation } from "../_generated/server";
-import { requireAuthMutation } from "../lib/auth";
+import { requireApprovedMutation } from "../lib/auth";
 
 export const followUser = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
 
     if (user._id === args.userId) {
       throw new Error("Cannot follow yourself");
@@ -44,7 +44,7 @@ export const followUser = mutation({
 export const unfollowUser = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const { user } = await requireAuthMutation(ctx);
+    const { user } = await requireApprovedMutation(ctx);
 
     const existing = await ctx.db
       .query("follows")

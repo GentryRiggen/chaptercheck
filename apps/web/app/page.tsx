@@ -183,11 +183,18 @@ function LandingPage() {
             Organize your book collection, track your reading progress, and discover your next
             favorite read.
           </p>
-          <Link href="/sign-in">
-            <Button size="lg" className="gap-2">
-              Get Started <ArrowRight className="h-5 w-5" />
-            </Button>
-          </Link>
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link href="/sign-up">
+              <Button size="lg" className="gap-2">
+                Get Started <ArrowRight className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/sign-in">
+              <Button size="lg" variant="outline">
+                Sign In
+              </Button>
+            </Link>
+          </div>
         </section>
 
         <section className="border-t py-16">
