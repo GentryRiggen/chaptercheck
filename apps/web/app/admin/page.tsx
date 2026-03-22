@@ -43,8 +43,8 @@ export default function AdminPage() {
   usePageTitle("Admin");
   const scrolled = useScrolled();
   const { isAdmin, isLoading: permissionsLoading } = usePermissions();
-  const users = useQuery(api.users.queries.listAllUsers);
-  const pendingUsers = useQuery(api.users.queries.listPendingUsers);
+  const users = useQuery(api.users.queries.listAllUsers, isAdmin ? undefined : "skip");
+  const pendingUsers = useQuery(api.users.queries.listPendingUsers, isAdmin ? undefined : "skip");
   const [createOpen, setCreateOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<{
     _id: Id<"users">;
