@@ -63,6 +63,12 @@ struct SettingsView: View {
                     } label: {
                         Label("Download Preferences", systemImage: "arrow.down.to.line.circle")
                     }
+
+                    NavigationLink {
+                        BlockedUsersView()
+                    } label: {
+                        Label("Blocked Users", systemImage: "person.crop.circle.badge.minus")
+                    }
                 } header: {
                     Text("Settings")
                 }

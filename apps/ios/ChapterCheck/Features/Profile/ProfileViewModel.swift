@@ -24,12 +24,21 @@ final class ProfileViewModel {
     var followersCount: Int = 0
     var followingCount: Int = 0
 
+    /// Block relationship between the current user and the viewed profile.
+    var blockStatus: BlockStatus?
+
+    /// `true` when the current user has blocked the viewed profile's owner.
+    var isBlocked: Bool { blockStatus?.isBlocked ?? false }
+    /// `true` when the viewed profile's owner has blocked the current user.
+    var isBlockedBy: Bool { blockStatus?.isBlockedBy ?? false }
+
     // MARK: - Private State
 
     private let userRepository = UserRepository()
     private let shelfRepository = ShelfRepository()
     private let bookUserDataRepository = BookUserDataRepository()
     private let socialRepository = SocialRepository()
+    private let blockRepository = BlockRepository()
     private let authObserver = ConvexAuthObserver()
     private var cancellables = Set<AnyCancellable>()
     private var currentUserId: String?
@@ -49,6 +58,7 @@ final class ProfileViewModel {
                 subscribeToReadBooks(userId: userId)
                 subscribeToReviews(userId: userId)
                 subscribeToFollowStatus(userId: userId)
+                subscribeToBlockStatus(userId: userId)
             },
             onUnauthenticated: { [weak self] in
                 self?.cancellables.removeAll()
@@ -72,6 +82,18 @@ final class ProfileViewModel {
         while isLoading && !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(50))
         }
+    }
+
+    // MARK: - Block / Unblock
+
+    func blockUser() async throws {
+        guard let userId = currentUserId else { return }
+        try await blockRepository.blockUser(blockedUserId: userId)
+    }
+
+    func unblockUser() async throws {
+        guard let userId = currentUserId else { return }
+        try await blockRepository.unblockUser(blockedUserId: userId)
     }
 
     // MARK: - Private Subscriptions
@@ -187,13 +209,34 @@ final class ProfileViewModel {
             .store(in: &cancellables)
     }
 
+    private func subscribeToBlockStatus(userId: String) {
+        guard let publisher = blockRepository.subscribeToBlockStatus(otherUserId: userId) else {
+            markLoaded(section: "blockStatus")
+            return
+        }
+        publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure = completion {
+                        self?.markLoaded(section: "blockStatus")
+                    }
+                },
+                receiveValue: { [weak self] status in
+                    self?.blockStatus = status
+                    self?.markLoaded(section: "blockStatus")
+                }
+            )
+            .store(in: &cancellables)
+    }
+
     // MARK: - Loading State
 
     /// Marks a section as having loaded and dismisses the global loading state
-    /// once all five sections have received their first value.
+    /// once all six sections have received their first value.
     private func markLoaded(section: String) {
         loadedSections.insert(section)
-        if loadedSections.count >= 5 {
+        if loadedSections.count >= 6 {
             isLoading = false
         }
     }

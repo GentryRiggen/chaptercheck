@@ -6,6 +6,7 @@ import { EyeOff, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { UserActionMenu } from "@/components/social/UserActionMenu";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
@@ -120,6 +121,9 @@ export function ReviewCard({
             >
               <Trash2 className="h-4 w-4" />
             </Button>
+          )}
+          {!isOwnReview && review.user && (
+            <UserActionMenu userId={review.user._id} userName={review.user.name || "Anonymous"} />
           )}
         </div>
       </div>

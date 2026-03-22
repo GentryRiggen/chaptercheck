@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 import { type Doc, type Id } from "../_generated/dataModel";
 import { query, type QueryCtx } from "../_generated/server";
+import { getBlockedUserIdsForUser } from "../blocks/helpers";
 import { getCurrentUser, requireAdmin, requireAuth } from "../lib/auth";
 
 type BookUserDataLike = {
@@ -135,7 +136,8 @@ export const getMyBookData = query({
 export const getPublicReviewsForBook = query({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    const { user } = await requireAuth(ctx);
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
 
     // Get all reviews for this book that have a review (rating or text) and are public
     const allBookUserData = await ctx.db
@@ -143,9 +145,12 @@ export const getPublicReviewsForBook = query({
       .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
       .collect();
 
-    // Filter to public reviews that have actual review content
+    // Filter to public reviews that have actual review content, excluding blocked users
     const publicReviews = allBookUserData.filter(
-      (data) => !data.isReviewPrivate && (data.rating !== undefined || data.reviewText)
+      (data) =>
+        !data.isReviewPrivate &&
+        (data.rating !== undefined || data.reviewText) &&
+        !blockedIds.has(data.userId)
     );
 
     // Sort by reviewedAt descending (most recent first)
@@ -198,6 +203,7 @@ export const getPublicReviewsForBookPaginated = query({
     const { user } = await requireAuth(ctx);
     const sortBy = args.sortBy ?? "recent";
     const withTextOnly = args.withTextOnly ?? false;
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
 
     // Get all reviews for this book
     const allBookUserData = await ctx.db
@@ -205,9 +211,12 @@ export const getPublicReviewsForBookPaginated = query({
       .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
       .collect();
 
-    // Filter to public reviews that have actual review content
+    // Filter to public reviews that have actual review content, excluding blocked users
     let publicReviews = allBookUserData.filter(
-      (data) => !data.isReviewPrivate && (data.rating !== undefined || data.reviewText)
+      (data) =>
+        !data.isReviewPrivate &&
+        (data.rating !== undefined || data.reviewText) &&
+        !blockedIds.has(data.userId)
     );
 
     // Apply withTextOnly filter

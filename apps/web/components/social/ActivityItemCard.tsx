@@ -1,5 +1,6 @@
 "use client";
 
+import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { formatRelativeDate } from "@chaptercheck/shared/utils";
 import { BookmarkPlus, MessageSquareText, Star } from "lucide-react";
 import Link from "next/link";
@@ -7,6 +8,7 @@ import Link from "next/link";
 import { BookCover } from "@/components/books/BookCover";
 import { EntryTypeBadge } from "@/components/books/NoteEntryType";
 import { StarRating } from "@/components/books/StarRating";
+import { UserActionMenu } from "@/components/social/UserActionMenu";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,8 @@ export interface ActivityItem {
 interface ActivityItemCardProps {
   item: ActivityItem;
   className?: string;
+  /** Whether to show the report/block action menu. Set to false for own activity. */
+  showActions?: boolean;
 }
 
 function getActionIcon(type: ActivityItem["type"]) {
@@ -93,7 +97,7 @@ function getActionText(item: ActivityItem): React.ReactNode {
   }
 }
 
-export function ActivityItemCard({ item, className }: ActivityItemCardProps) {
+export function ActivityItemCard({ item, className, showActions = true }: ActivityItemCardProps) {
   const ActionIcon = getActionIcon(item.type);
 
   return (
@@ -135,6 +139,14 @@ export function ActivityItemCard({ item, className }: ActivityItemCardProps) {
             size="xs"
           />
         </Link>
+
+        {/* Report/Block menu */}
+        {showActions && (
+          <UserActionMenu
+            userId={item.user._id as Id<"users">}
+            userName={item.user.name || "Anonymous"}
+          />
+        )}
       </div>
 
       {/* Content area based on activity type */}

@@ -4,8 +4,9 @@ import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { useDebounce } from "@chaptercheck/shared/hooks/useDebounce";
 import { formatRelativeDate } from "@chaptercheck/shared/utils";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
+  Ban,
   Book,
   BookOpen,
   Calendar,
@@ -22,6 +23,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { BookCover } from "@/components/books/BookCover";
 import { LibraryBookCard } from "@/components/books/LibraryBookCard";
@@ -29,6 +31,7 @@ import { StarRating } from "@/components/books/StarRating";
 import { ShelfCard } from "@/components/shelves/ShelfCard";
 import { ShelfDialog } from "@/components/shelves/ShelfDialog";
 import { FollowButton } from "@/components/social/FollowButton";
+import { UserActionMenu } from "@/components/social/UserActionMenu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -39,6 +42,28 @@ export default function UserProfilePage() {
   const userId = (params?.userId as Id<"users"> | undefined) ?? null;
 
   const profile = useQuery(api.users.queries.getUserProfile, userId ? { userId } : "skip");
+
+  // Block status for other users' profiles
+  const isOtherUser = profile !== undefined && profile !== null && !profile.isOwnProfile;
+  const blockStatus = useQuery(
+    api.blocks.queries.getBlockStatus,
+    isOtherUser && userId ? { otherUserId: userId } : "skip"
+  );
+  const unblockUser = useMutation(api.blocks.mutations.unblockUser);
+  const [isUnblocking, setIsUnblocking] = useState(false);
+
+  const handleUnblock = async () => {
+    if (!userId) return;
+    setIsUnblocking(true);
+    try {
+      await unblockUser({ blockedUserId: userId });
+      toast.success(`Unblocked ${profile?.name || "user"}`);
+    } catch {
+      toast.error("Failed to unblock user. Please try again.");
+    } finally {
+      setIsUnblocking(false);
+    }
+  };
 
   // Skip fetching books if profile is private and not own profile
   const shouldSkipBooks = !userId || (profile?.isProfilePrivate === true && !profile?.isOwnProfile);
@@ -120,6 +145,8 @@ export default function UserProfilePage() {
   }
 
   const memberSince = formatRelativeDate(profile.createdAt);
+  const isBlockedByMe = blockStatus?.isBlocked === true;
+  const canViewContent = (!profile.isProfilePrivate || profile.isOwnProfile) && !isBlockedByMe;
 
   return (
     <div className="min-h-screen">
@@ -143,7 +170,12 @@ export default function UserProfilePage() {
           <div className="flex-1 text-center sm:text-left">
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
               <h1 className="text-2xl font-bold sm:text-3xl">{profile.name || "Anonymous User"}</h1>
-              {!profile.isOwnProfile && userId && <FollowButton targetUserId={userId} />}
+              {!profile.isOwnProfile && userId && (
+                <div className="flex items-center gap-2">
+                  {!blockStatus?.isBlocked && <FollowButton targetUserId={userId} />}
+                  <UserActionMenu userId={userId} userName={profile.name || "Anonymous User"} />
+                </div>
+              )}
             </div>
 
             {/* Follower / Following counts */}
@@ -218,6 +250,26 @@ export default function UserProfilePage() {
           </div>
         </div>
 
+        {/* Blocked user banner */}
+        {blockStatus?.isBlocked && !profile.isOwnProfile && (
+          <div className="mb-8 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/50">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Ban className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                  You have blocked this user
+                </span>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleUnblock} disabled={isUnblocking}>
+                {isUnblocking ? "Unblocking..." : "Unblock"}
+              </Button>
+            </div>
+            <p className="mt-1 pl-6 text-sm text-amber-700 dark:text-amber-400">
+              Their content is hidden from your feeds. Unblock to see it again.
+            </p>
+          </div>
+        )}
+
         {/* Private profile message */}
         {profile.isProfilePrivate && !profile.isOwnProfile && (
           <div className="rounded-lg border border-border/50 bg-card/50 p-8 text-center">
@@ -230,7 +282,7 @@ export default function UserProfilePage() {
         )}
 
         {/* Shelves section - only show if profile is public or own profile */}
-        {(!profile.isProfilePrivate || profile.isOwnProfile) && (
+        {canViewContent && (
           <div className="mb-8">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -281,7 +333,7 @@ export default function UserProfilePage() {
         )}
 
         {/* Reviews section - only show if profile is public or own profile */}
-        {(!profile.isProfilePrivate || profile.isOwnProfile) && (
+        {canViewContent && (
           <div className="mb-8">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -436,7 +488,7 @@ export default function UserProfilePage() {
         )}
 
         {/* Books grid - only show if profile is public or own profile */}
-        {(!profile.isProfilePrivate || profile.isOwnProfile) && (
+        {canViewContent && (
           <div>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">

@@ -298,6 +298,41 @@ export default defineSchema({
     .index("by_user_and_tag", ["userId", "tagId"])
     .index("by_note_and_tag", ["noteId", "tagId"]),
 
+  // Blocks (user-to-user blocking)
+  blocks: defineTable({
+    blockerId: v.id("users"),
+    blockedUserId: v.id("users"),
+    createdAt: v.number(),
+    source: v.union(v.literal("explicit"), v.literal("report")),
+  })
+    .index("by_blocker", ["blockerId"])
+    .index("by_blocked", ["blockedUserId"])
+    .index("by_blocker_and_blocked", ["blockerId", "blockedUserId"]),
+
+  // Reports (user-to-user reporting)
+  reports: defineTable({
+    reporterId: v.id("users"),
+    reportedUserId: v.id("users"),
+    reason: v.union(
+      v.literal("spam"),
+      v.literal("inappropriate_content"),
+      v.literal("harassment"),
+      v.literal("impersonation"),
+      v.literal("other")
+    ),
+    reasonText: v.optional(v.string()),
+    status: v.union(v.literal("pending"), v.literal("dismissed"), v.literal("actioned")),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedAction: v.optional(
+      v.union(v.literal("dismiss"), v.literal("suspend"), v.literal("delete"))
+    ),
+  })
+    .index("by_reported_user", ["reportedUserId"])
+    .index("by_reporter", ["reporterId"])
+    .index("by_status", ["status"])
+    .index("by_reported_user_and_status", ["reportedUserId", "status"]),
+
   // Follows (user-to-user social graph)
   follows: defineTable({
     followerId: v.id("users"),

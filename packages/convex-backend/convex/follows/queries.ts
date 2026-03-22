@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { type Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
+import { getBlockedUserIdsForUser } from "../blocks/helpers";
 import { requireAuth } from "../lib/auth";
 
 export const getFollowStatus = query({
@@ -42,7 +43,8 @@ export const getMyFollowing = query({
   args: {},
   handler: async (ctx) => {
     const { user } = await requireAuth(ctx);
-    return await getFollowingForUser(ctx, user._id);
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
+    return await getFollowingForUser(ctx, user._id, blockedIds);
   },
 });
 
@@ -50,29 +52,36 @@ export const getMyFollowers = query({
   args: {},
   handler: async (ctx) => {
     const { user } = await requireAuth(ctx);
-    return await getFollowersForUser(ctx, user._id);
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
+    return await getFollowersForUser(ctx, user._id, blockedIds);
   },
 });
 
 export const getUserFollowing = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
-    return await getFollowingForUser(ctx, args.userId);
+    const { user } = await requireAuth(ctx);
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
+    return await getFollowingForUser(ctx, args.userId, blockedIds);
   },
 });
 
 export const getUserFollowers = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
-    return await getFollowersForUser(ctx, args.userId);
+    const { user } = await requireAuth(ctx);
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
+    return await getFollowersForUser(ctx, args.userId, blockedIds);
   },
 });
 
 // Shared helpers
 
-async function getFollowingForUser(ctx: { db: any }, userId: Id<"users">) {
+async function getFollowingForUser(
+  ctx: { db: any },
+  userId: Id<"users">,
+  blockedIds?: Set<string>
+) {
   const follows = await ctx.db
     .query("follows")
     .withIndex("by_follower", (q: any) => q.eq("followerId", userId))
@@ -82,6 +91,7 @@ async function getFollowingForUser(ctx: { db: any }, userId: Id<"users">) {
 
   const users = await Promise.all(
     follows.map(async (follow: any) => {
+      if (blockedIds?.has(follow.followingId)) return null;
       const followedUser = await ctx.db.get(follow.followingId);
       if (!followedUser) return null;
       return {
@@ -95,7 +105,11 @@ async function getFollowingForUser(ctx: { db: any }, userId: Id<"users">) {
   return users.filter((u: any) => u !== null);
 }
 
-async function getFollowersForUser(ctx: { db: any }, userId: Id<"users">) {
+async function getFollowersForUser(
+  ctx: { db: any },
+  userId: Id<"users">,
+  blockedIds?: Set<string>
+) {
   const follows = await ctx.db
     .query("follows")
     .withIndex("by_following", (q: any) => q.eq("followingId", userId))
@@ -105,6 +119,7 @@ async function getFollowersForUser(ctx: { db: any }, userId: Id<"users">) {
 
   const users = await Promise.all(
     follows.map(async (follow: any) => {
+      if (blockedIds?.has(follow.followerId)) return null;
       const followerUser = await ctx.db.get(follow.followerId);
       if (!followerUser) return null;
       return {
@@ -153,6 +168,8 @@ export const getActivityFeed = query({
     const limit = args.limit ?? 20;
     const beforeTs = args.beforeTimestamp ?? Number.MAX_SAFE_INTEGER;
 
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
+
     const follows = await ctx.db
       .query("follows")
       .withIndex("by_follower", (q) => q.eq("followerId", user._id))
@@ -163,11 +180,11 @@ export const getActivityFeed = query({
       return { items: [], nextCursor: null, hasMore: false };
     }
 
-    // Batch-fetch followed users, excluding private profiles
+    // Batch-fetch followed users, excluding private profiles and blocked users
     const followedUsers = await Promise.all(followedUserIds.map((id) => ctx.db.get(id)));
     const userMap = new Map<string, UserInfo>();
     for (const u of followedUsers) {
-      if (u && !u.isProfilePrivate)
+      if (u && !u.isProfilePrivate && !blockedIds.has(u._id))
         userMap.set(u._id, { _id: u._id, name: u.name, imageUrl: u.imageUrl });
     }
 
@@ -300,7 +317,9 @@ export const getCommunityActivity = query({
     const limit = args.limit ?? 20;
     const beforeTs = args.beforeTimestamp ?? Number.MAX_SAFE_INTEGER;
 
-    // Fetch more than limit to account for filtering (private profiles, self, etc.)
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
+
+    // Fetch more than limit to account for filtering (private profiles, self, blocked, etc.)
     const fetchLimit = limit * 3;
 
     const allItems: ActivityItem[] = [];
@@ -311,9 +330,11 @@ export const getCommunityActivity = query({
       const cached = userCache.get(userId);
       if (cached !== undefined) return cached;
       const u = await ctx.db.get(userId);
-      // Exclude private profiles from the discover feed
+      // Exclude private profiles and blocked users from the discover feed
       const info =
-        u && !u.isProfilePrivate ? { _id: u._id, name: u.name, imageUrl: u.imageUrl } : null;
+        u && !u.isProfilePrivate && !blockedIds.has(u._id)
+          ? { _id: u._id, name: u.name, imageUrl: u.imageUrl }
+          : null;
       userCache.set(userId, info);
       return info;
     }

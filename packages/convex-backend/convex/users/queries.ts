@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { query } from "../_generated/server";
+import { getBlockedUserIdsForUser } from "../blocks/helpers";
 import {
   getCurrentUser,
   getEffectiveRole,
@@ -165,6 +166,28 @@ export const getUserProfile = query({
     const isOwnProfile = currentUser._id === targetUser._id;
     const isProfilePrivate = targetUser.isProfilePrivate ?? false;
 
+    // Check block status (only for non-own profiles)
+    let isBlockedByMe = false;
+    let isBlockedByThem = false;
+    if (!isOwnProfile) {
+      const [blockedByMe, blockedByThem] = await Promise.all([
+        ctx.db
+          .query("blocks")
+          .withIndex("by_blocker_and_blocked", (q) =>
+            q.eq("blockerId", currentUser._id).eq("blockedUserId", args.userId)
+          )
+          .unique(),
+        ctx.db
+          .query("blocks")
+          .withIndex("by_blocker_and_blocked", (q) =>
+            q.eq("blockerId", args.userId).eq("blockedUserId", currentUser._id)
+          )
+          .unique(),
+      ]);
+      isBlockedByMe = blockedByMe !== null;
+      isBlockedByThem = blockedByThem !== null;
+    }
+
     // Follow counts
     const followersCount = (
       await ctx.db
@@ -197,10 +220,20 @@ export const getUserProfile = query({
       createdAt: targetUser.createdAt,
       isOwnProfile,
       isProfilePrivate,
+      isBlockedByMe,
+      isBlockedByThem,
       followersCount,
       followingCount,
       isFollowedByMe,
     };
+
+    // If blocked by the profile owner, return minimal info (like a private profile)
+    if (isBlockedByThem) {
+      return {
+        ...basicInfo,
+        stats: null,
+      };
+    }
 
     // If profile is private and not own profile, return limited data
     if (isProfilePrivate && !isOwnProfile) {
@@ -319,6 +352,7 @@ export const searchUsers = query({
   args: { query: v.string() },
   handler: async (ctx, args) => {
     const { user } = await requireAuth(ctx);
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
 
     const trimmed = args.query.trim();
     if (!trimmed) return [];
@@ -329,7 +363,7 @@ export const searchUsers = query({
       .take(20);
 
     return results
-      .filter((u) => u._id !== user._id)
+      .filter((u) => u._id !== user._id && !blockedIds.has(u._id))
       .map((u) => ({
         _id: u._id,
         name: u.name,

@@ -5,6 +5,13 @@ struct ActivityItemRow: View {
 
     private let coverSize: CGFloat = 56
 
+    @State private var isReportSheetPresented = false
+    @State private var isBlockConfirmationPresented = false
+    @State private var isBlocking = false
+    @Environment(\.showToast) private var showToast
+
+    private let blockRepository = BlockRepository()
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             // Book cover — taps to book detail
@@ -14,17 +21,49 @@ struct ActivityItemRow: View {
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 4) {
-                // User + action — taps to profile
-                NavigationLink(value: AppDestination.profile(userId: item.user._id)) {
-                    HStack(spacing: 6) {
-                        avatarImage
-                        (Text(item.user.name ?? "Someone").fontWeight(.semibold)
-                            + Text(" \(actionText)"))
+                // User + action line — taps to profile; holds the ... menu on the right
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    NavigationLink(value: AppDestination.profile(userId: item.user._id)) {
+                        HStack(spacing: 6) {
+                            avatarImage
+                            (Text(item.user.name ?? "Someone").fontWeight(.semibold)
+                                + Text(" \(actionText)"))
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer(minLength: 4)
+
+                    // Context menu trigger — small ellipsis button in the trailing corner
+                    Menu {
+                        Button {
+                            isReportSheetPresented = true
+                        } label: {
+                            Label(
+                                "Report \(item.user.name ?? "User")",
+                                systemImage: "flag"
+                            )
+                        }
+
+                        Button(role: .destructive) {
+                            isBlockConfirmationPresented = true
+                        } label: {
+                            Label(
+                                "Block \(item.user.name ?? "User")",
+                                systemImage: "person.crop.circle.badge.minus"
+                            )
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
                             .font(.caption)
-                            .lineLimit(1)
+                            .foregroundStyle(.tertiary)
+                            .padding(.leading, 6)
+                            .padding(.vertical, 2)
+                            .contentShape(Rectangle())
                     }
                 }
-                .buttonStyle(.plain)
 
                 // Book title — taps to book
                 NavigationLink(value: AppDestination.book(id: item.book._id)) {
@@ -44,6 +83,23 @@ struct ActivityItemRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
+        .sheet(isPresented: $isReportSheetPresented) {
+            ReportUserSheet(
+                userId: item.user._id,
+                userName: item.user.name
+            )
+        }
+        .alert(
+            "Block \(item.user.name ?? "this user")?",
+            isPresented: $isBlockConfirmationPresented
+        ) {
+            Button("Block", role: .destructive) {
+                Task { await performBlock() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("They won't be able to see your activity and you won't see theirs.")
+        }
     }
 
     // MARK: - Avatar
@@ -122,5 +178,18 @@ struct ActivityItemRow: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    // MARK: - Block Action
+
+    private func performBlock() async {
+        isBlocking = true
+        do {
+            try await blockRepository.blockUser(blockedUserId: item.user._id)
+            showToast.success("\(item.user.name ?? "User") has been blocked.")
+        } catch {
+            showToast.error("Failed to block user. Please try again.")
+        }
+        isBlocking = false
     }
 }

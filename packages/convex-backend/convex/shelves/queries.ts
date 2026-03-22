@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { type Doc, type Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
+import { getBlockedUserIdsForUser } from "../blocks/helpers";
 import { getCurrentUser, requireAuth } from "../lib/auth";
 import { getWantToReadShelfBook } from "../lib/wantToReadShelf";
 
@@ -14,6 +15,12 @@ export const getShelf = query({
     if (!shelf) return null;
 
     const isOwner = currentUser?._id === shelf.userId;
+
+    // Hide shelves from blocked users
+    if (currentUser && !isOwner) {
+      const blockedIds = await getBlockedUserIdsForUser(ctx, currentUser._id);
+      if (blockedIds.has(shelf.userId)) return null;
+    }
 
     // Hide private shelves from non-owners
     if (!shelf.isPublic && !isOwner) return null;
@@ -127,6 +134,14 @@ export const getUserShelves = query({
   handler: async (ctx, args) => {
     const currentUser = await getCurrentUser(ctx);
     const isOwner = currentUser?._id === args.userId;
+
+    // If the shelf owner is blocked (in either direction), return empty
+    if (currentUser && !isOwner) {
+      const blockedIds = await getBlockedUserIdsForUser(ctx, currentUser._id);
+      if (blockedIds.has(args.userId)) {
+        return { shelves: [], isOwner: false };
+      }
+    }
 
     const shelves = await ctx.db
       .query("shelves")

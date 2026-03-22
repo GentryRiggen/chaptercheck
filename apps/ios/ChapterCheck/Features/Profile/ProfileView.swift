@@ -10,8 +10,12 @@ struct ProfileView: View {
     let userId: String
 
     @State private var viewModel = ProfileViewModel()
+    @State private var isReportSheetPresented = false
+    @State private var isBlockConfirmationPresented = false
+    @State private var isUnblockConfirmationPresented = false
     @Environment(ThemeManager.self) private var themeManager
     @Environment(\.pushDestination) private var pushDestination
+    @Environment(\.showToast) private var showToast
 
     var body: some View {
         Group {
@@ -23,15 +27,160 @@ struct ProfileView: View {
                     viewModel.subscribe(userId: userId)
                 }
             } else if let profile = viewModel.profile {
-                profileContent(profile)
+                if viewModel.isBlocked {
+                    blockedProfileView(profile)
+                } else if viewModel.isBlockedBy {
+                    blockedByProfileView(profile)
+                } else {
+                    profileContent(profile)
+                }
             } else {
                 notFoundView
             }
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if let profile = viewModel.profile, !profile.isOwnProfile {
+                    otherUserMenu(profile: profile)
+                }
+            }
+        }
+        .sheet(isPresented: $isReportSheetPresented) {
+            ReportUserSheet(
+                userId: userId,
+                userName: viewModel.profile?.displayName
+            )
+        }
+        .alert(
+            "Block \(viewModel.profile?.displayName ?? "this user")?",
+            isPresented: $isBlockConfirmationPresented
+        ) {
+            Button("Block", role: .destructive) {
+                Task { await performBlock() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("They won't be able to see your activity and you won't see theirs.")
+        }
+        .alert(
+            "Unblock \(viewModel.profile?.displayName ?? "this user")?",
+            isPresented: $isUnblockConfirmationPresented
+        ) {
+            Button("Unblock", role: .destructive) {
+                Task { await performUnblock() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("They will be able to see your activity and you will see theirs again.")
+        }
         .onAppear { viewModel.subscribe(userId: userId) }
         .onDisappear { viewModel.unsubscribe() }
+    }
+
+    // MARK: - Toolbar Menu
+
+    @ViewBuilder
+    private func otherUserMenu(profile: UserProfile) -> some View {
+        Menu {
+            Button {
+                isReportSheetPresented = true
+            } label: {
+                Label("Report User", systemImage: "flag")
+            }
+
+            if viewModel.isBlocked {
+                Button {
+                    isUnblockConfirmationPresented = true
+                } label: {
+                    Label("Unblock User", systemImage: "person.crop.circle.badge.checkmark")
+                }
+            } else {
+                Button(role: .destructive) {
+                    isBlockConfirmationPresented = true
+                } label: {
+                    Label("Block User", systemImage: "person.crop.circle.badge.minus")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.subheadline.weight(.semibold))
+        }
+    }
+
+    // MARK: - Blocked Profile Views
+
+    /// Shown when the current user has blocked this profile's owner.
+    private func blockedProfileView(_ profile: UserProfile) -> some View {
+        VStack(spacing: 20) {
+            profileAvatar(profile)
+                .padding(.top, 40)
+
+            Text(profile.displayName)
+                .font(.title2)
+                .fontWeight(.bold)
+
+            Text("You have blocked this user.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Button {
+                isUnblockConfirmationPresented = true
+            } label: {
+                Text("Unblock")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.accentColor))
+                    .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Shown when this profile's owner has blocked the current user.
+    private func blockedByProfileView(_ profile: UserProfile) -> some View {
+        VStack(spacing: 20) {
+            profileAvatar(profile)
+                .padding(.top, 40)
+
+            Text(profile.displayName)
+                .font(.title2)
+                .fontWeight(.bold)
+
+            ContentUnavailableView(
+                "Profile Unavailable",
+                systemImage: "person.crop.circle.badge.xmark",
+                description: Text("This profile is not available.")
+            )
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Block / Unblock Actions
+
+    private func performBlock() async {
+        do {
+            try await viewModel.blockUser()
+            showToast.success("\(viewModel.profile?.displayName ?? "User") has been blocked.")
+        } catch {
+            showToast.error("Failed to block user. Please try again.")
+        }
+    }
+
+    private func performUnblock() async {
+        do {
+            try await viewModel.unblockUser()
+            showToast.success("\(viewModel.profile?.displayName ?? "User") has been unblocked.")
+        } catch {
+            showToast.error("Failed to unblock user. Please try again.")
+        }
     }
 
     // MARK: - Content

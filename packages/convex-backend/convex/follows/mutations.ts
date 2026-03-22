@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { mutation } from "../_generated/server";
+import { getBlockedUserIdsForUser } from "../blocks/helpers";
 import { requireApprovedMutation } from "../lib/auth";
 
 export const followUser = mutation({
@@ -19,6 +20,12 @@ export const followUser = mutation({
 
     if (targetUser.isProfilePrivate) {
       throw new Error("Cannot follow a private profile");
+    }
+
+    // Check block relationship in both directions
+    const blockedIds = await getBlockedUserIdsForUser(ctx, user._id);
+    if (blockedIds.has(args.userId)) {
+      throw new Error("Cannot follow this user");
     }
 
     // Check if already following

@@ -15,6 +15,9 @@ import type * as audioFiles_queries from "../audioFiles/queries.js";
 import type * as auth_clerkWebhook from "../auth/clerkWebhook.js";
 import type * as authors_mutations from "../authors/mutations.js";
 import type * as authors_queries from "../authors/queries.js";
+import type * as blocks_helpers from "../blocks/helpers.js";
+import type * as blocks_mutations from "../blocks/mutations.js";
+import type * as blocks_queries from "../blocks/queries.js";
 import type * as bookGenreVotes_mutations from "../bookGenreVotes/mutations.js";
 import type * as bookGenreVotes_queries from "../bookGenreVotes/queries.js";
 import type * as bookNotes_mutations from "../bookNotes/mutations.js";
@@ -44,6 +47,8 @@ import type * as listeningProgress_queries from "../listeningProgress/queries.js
 import type * as migration_mutations from "../migration/mutations.js";
 import type * as openLibrary_actions from "../openLibrary/actions.js";
 import type * as openLibrary_types from "../openLibrary/types.js";
+import type * as reports_mutations from "../reports/mutations.js";
+import type * as reports_queries from "../reports/queries.js";
 import type * as search_queries from "../search/queries.js";
 import type * as seed_mutations from "../seed/mutations.js";
 import type * as seed_queries from "../seed/queries.js";
@@ -76,6 +81,9 @@ declare const fullApi: ApiFromModules<{
   "auth/clerkWebhook": typeof auth_clerkWebhook;
   "authors/mutations": typeof authors_mutations;
   "authors/queries": typeof authors_queries;
+  "blocks/helpers": typeof blocks_helpers;
+  "blocks/mutations": typeof blocks_mutations;
+  "blocks/queries": typeof blocks_queries;
   "bookGenreVotes/mutations": typeof bookGenreVotes_mutations;
   "bookGenreVotes/queries": typeof bookGenreVotes_queries;
   "bookNotes/mutations": typeof bookNotes_mutations;
@@ -105,6 +113,8 @@ declare const fullApi: ApiFromModules<{
   "migration/mutations": typeof migration_mutations;
   "openLibrary/actions": typeof openLibrary_actions;
   "openLibrary/types": typeof openLibrary_types;
+  "reports/mutations": typeof reports_mutations;
+  "reports/queries": typeof reports_queries;
   "search/queries": typeof search_queries;
   "seed/mutations": typeof seed_mutations;
   "seed/queries": typeof seed_queries;
