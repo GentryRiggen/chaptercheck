@@ -40,6 +40,6 @@ test.describe("Responsive layout", () => {
 
     // Switch tabs
     await bookDetailPage.audioTab.click();
-    await expect(page.getByRole("heading", { name: "Audio" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Audio", exact: true })).toBeVisible();
   });
 });
