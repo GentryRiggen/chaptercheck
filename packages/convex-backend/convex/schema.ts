@@ -333,6 +333,27 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_reported_user_and_status", ["reportedUserId", "status"]),
 
+  // Support Requests (public contact form submissions)
+  supportRequests: defineTable({
+    name: v.string(),
+    email: v.string(),
+    category: v.union(
+      v.literal("bug_report"),
+      v.literal("feature_request"),
+      v.literal("general_question"),
+      v.literal("account_issue")
+    ),
+    message: v.string(),
+    status: v.union(v.literal("new"), v.literal("reviewed"), v.literal("resolved")),
+    adminNotes: v.optional(v.string()),
+    reviewedAt: v.optional(v.number()),
+    resolvedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_status_and_createdAt", ["status", "createdAt"]),
+
   // Follows (user-to-user social graph)
   follows: defineTable({
     followerId: v.id("users"),

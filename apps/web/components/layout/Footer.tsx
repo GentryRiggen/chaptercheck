@@ -11,6 +11,9 @@ export function Footer() {
           <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
             Terms of Service
           </Link>
+          <Link href="/support" className="text-sm text-muted-foreground hover:text-foreground">
+            Support
+          </Link>
           <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
             Privacy Policy
           </Link>

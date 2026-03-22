@@ -2,7 +2,7 @@
 
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { useQuery } from "convex/react";
-import { Flag, HardDrive, Users } from "lucide-react";
+import { Flag, HardDrive, MessageSquare, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,12 +11,14 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/reports", label: "Reports", icon: Flag },
+  { href: "/admin/support", label: "Support", icon: MessageSquare },
   { href: "/admin/storage", label: "Storage", icon: HardDrive },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const pendingReportCount = useQuery(api.reports.queries.getPendingReportCount);
+  const newSupportCount = useQuery(api.supportRequests.queries.getNewCount);
 
   const isActive = (href: string) => pathname?.startsWith(href);
 
@@ -28,8 +30,13 @@ export function AdminSidebar() {
           <div className="flex flex-col gap-0.5">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const showBadge =
-                item.href === "/admin/reports" && pendingReportCount && pendingReportCount > 0;
+              const badgeCount =
+                item.href === "/admin/reports"
+                  ? pendingReportCount
+                  : item.href === "/admin/support"
+                    ? newSupportCount
+                    : undefined;
+              const showBadge = badgeCount !== undefined && badgeCount > 0;
               return (
                 <Link
                   key={item.href}
@@ -45,7 +52,7 @@ export function AdminSidebar() {
                   {item.label}
                   {showBadge && (
                     <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
-                      {pendingReportCount}
+                      {badgeCount}
                     </span>
                   )}
                 </Link>
@@ -60,8 +67,13 @@ export function AdminSidebar() {
         <nav className="flex gap-1 px-3 py-2">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const showBadge =
-              item.href === "/admin/reports" && pendingReportCount && pendingReportCount > 0;
+            const badgeCount =
+              item.href === "/admin/reports"
+                ? pendingReportCount
+                : item.href === "/admin/support"
+                  ? newSupportCount
+                  : undefined;
+            const showBadge = badgeCount !== undefined && badgeCount > 0;
             return (
               <Link
                 key={item.href}
@@ -77,7 +89,7 @@ export function AdminSidebar() {
                 {item.label}
                 {showBadge && (
                   <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold text-white">
-                    {pendingReportCount}
+                    {badgeCount}
                   </span>
                 )}
               </Link>
