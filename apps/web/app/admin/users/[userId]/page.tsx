@@ -3,9 +3,10 @@
 import { api } from "@chaptercheck/convex-backend/_generated/api";
 import { type Id } from "@chaptercheck/convex-backend/_generated/dataModel";
 import { formatBytes, formatRelativeDate } from "@chaptercheck/shared/utils";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
+  Ban,
   BookOpen,
   Calendar,
   Clock3,
@@ -15,13 +16,18 @@ import {
   Loader2,
   Lock,
   MessageSquare,
-  ShieldAlert,
+  ShieldOff,
   Star,
+  Trash2,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
+import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
+import { SuspendUserDialog } from "@/components/admin/SuspendUserDialog";
 import { BookCover } from "@/components/books/BookCover";
 import { StarRating } from "@/components/books/StarRating";
 import { Badge } from "@/components/ui/badge";
@@ -58,42 +64,33 @@ function formatEntryDate(timestamp?: number) {
 export default function AdminUserDetailPage() {
   const params = useParams<{ userId: string }>();
   const userId = (params?.userId as Id<"users"> | undefined) ?? null;
-  const { isAdmin, isLoading: permissionsLoading } = usePermissions();
 
-  const userDetail = useQuery(
-    api.users.queries.getAdminUserDetail,
-    isAdmin && userId ? { userId } : "skip"
-  );
+  const userDetail = useQuery(api.users.queries.getAdminUserDetail, userId ? { userId } : "skip");
   const listeningActivity = useQuery(
     api.listeningProgress.queries.getAdminUserListeningActivity,
-    isAdmin && userId ? { userId, limit: 20 } : "skip"
+    userId ? { userId, limit: 20 } : "skip"
   );
   const ratings = useQuery(
     api.bookUserData.queries.getAdminUserRatings,
-    isAdmin && userId ? { userId } : "skip"
+    userId ? { userId } : "skip"
   );
+
+  const { user: currentUser } = usePermissions();
+  const unsuspendUser = useMutation(api.users.mutations.unsuspendUser);
+
+  const [isSuspendOpen, setIsSuspendOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isUnsuspending, setIsUnsuspending] = useState(false);
 
   usePageTitle(userDetail?.name ? `${userDetail.name} Admin View` : "Admin User");
 
   if (
-    permissionsLoading ||
-    (isAdmin &&
-      userId &&
-      (userDetail === undefined || listeningActivity === undefined || ratings === undefined))
+    userId &&
+    (userDetail === undefined || listeningActivity === undefined || ratings === undefined)
   ) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
-        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-        <h1 className="text-lg font-semibold">Access Denied</h1>
-        <p className="text-sm text-muted-foreground">You need admin access to view this page.</p>
       </div>
     );
   }
@@ -104,11 +101,31 @@ export default function AdminUserDetailPage() {
         <UserRound className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-lg font-semibold">User not found</h1>
         <Button variant="outline" asChild>
-          <Link href="/admin">Back to Admin</Link>
+          <Link href="/admin/users">Back to Users</Link>
         </Button>
       </div>
     );
   }
+
+  const isOwnAccount = currentUser?._id === userDetail._id;
+  const isSuspended = userDetail.approvalStatus === "suspended";
+  const isPending = userDetail.approvalStatus === "pending";
+  const isAdmin = userDetail.role === "admin";
+  const showSuspendButton = !isOwnAccount && !isPending && !isSuspended;
+  const showUnsuspendButton = !isOwnAccount && isSuspended;
+  const showDeleteButton = !isOwnAccount && !isAdmin;
+
+  const handleUnsuspend = async () => {
+    setIsUnsuspending(true);
+    try {
+      await unsuspendUser({ userId: userDetail._id });
+      toast.success(`Unsuspended ${userDetail.name || userDetail.email}`);
+    } catch {
+      toast.error("Couldn't unsuspend the user. Please try again.");
+    } finally {
+      setIsUnsuspending(false);
+    }
+  };
 
   const currentListening = listeningActivity.current;
 
@@ -176,7 +193,56 @@ export default function AdminUserDetailPage() {
                 </div>
               </div>
             </div>
+
+            {(showSuspendButton || showUnsuspendButton || showDeleteButton) && (
+              <div className="flex shrink-0 gap-2">
+                {showSuspendButton && (
+                  <Button variant="outline" size="sm" onClick={() => setIsSuspendOpen(true)}>
+                    <Ban className="mr-1.5 h-4 w-4" />
+                    Suspend
+                  </Button>
+                )}
+                {showUnsuspendButton && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUnsuspend}
+                    disabled={isUnsuspending}
+                  >
+                    <ShieldOff className="mr-1.5 h-4 w-4" />
+                    {isUnsuspending ? "Unsuspending..." : "Unsuspend"}
+                  </Button>
+                )}
+                {showDeleteButton && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:bg-destructive/10"
+                    onClick={() => setIsDeleteOpen(true)}
+                  >
+                    <Trash2 className="mr-1.5 h-4 w-4" />
+                    Delete
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
+
+          {isSuspended && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/50">
+              <div className="flex items-center gap-2">
+                <Ban className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                  This user is suspended
+                </span>
+              </div>
+              {userDetail.suspensionReason && (
+                <p className="mt-1 pl-6 text-sm text-amber-700 dark:text-amber-400">
+                  Reason: {userDetail.suspensionReason}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-xl border bg-background/70 p-4">
@@ -434,6 +500,14 @@ export default function AdminUserDetailPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <SuspendUserDialog user={userDetail} open={isSuspendOpen} onOpenChange={setIsSuspendOpen} />
+      <DeleteUserDialog
+        user={userDetail}
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        redirectOnDelete
+      />
     </div>
   );
 }

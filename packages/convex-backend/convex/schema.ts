@@ -25,7 +25,10 @@ export default defineSchema({
     ), // defaults to "viewer"
     hasPremium: v.optional(v.boolean()), // defaults to false, gates audio features
     isProfilePrivate: v.optional(v.boolean()), // defaults to false = public profile
-    approvalStatus: v.optional(v.union(v.literal("pending"), v.literal("approved"))),
+    approvalStatus: v.optional(
+      v.union(v.literal("pending"), v.literal("approved"), v.literal("suspended"))
+    ),
+    suspensionReason: v.optional(v.string()),
     // Storage account (optional, created lazily on first upload)
     // Multiple users can share the same storage account
     storageAccountId: v.optional(v.id("storageAccounts")),

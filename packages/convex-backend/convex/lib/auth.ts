@@ -60,10 +60,17 @@ export function hasPremium(user: Doc<"users">): boolean {
 }
 
 /**
- * Check if user is approved (undefined or "approved" = approved, "pending" = not)
+ * Check if user is approved (undefined or "approved" = approved, "pending"/"suspended" = not)
  */
 export function isApprovedUser(user: Doc<"users">): boolean {
   return user.approvalStatus === undefined || user.approvalStatus === "approved";
+}
+
+/**
+ * Check if user is suspended
+ */
+export function isSuspendedUser(user: Doc<"users">): boolean {
+  return user.approvalStatus === "suspended";
 }
 
 export interface AuthenticatedUser {

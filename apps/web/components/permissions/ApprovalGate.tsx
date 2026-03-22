@@ -13,7 +13,7 @@ interface ApprovalGateProps {
 }
 
 /**
- * Wraps content with approval gating for pending users.
+ * Wraps content with approval gating for pending and suspended users.
  * Shows children as disabled with a tooltip explaining the restriction.
  *
  * Usage:
@@ -24,19 +24,23 @@ interface ApprovalGateProps {
  * ```
  */
 export function ApprovalGate({ children, fallback, loading = null }: ApprovalGateProps) {
-  const { isLoading, isPending } = usePermissions();
+  const { isLoading, isPending, isSuspended } = usePermissions();
 
   if (isLoading) {
     return <>{loading}</>;
   }
 
-  if (!isPending) {
+  if (!isPending && !isSuspended) {
     return <>{children}</>;
   }
 
   if (fallback) {
     return <>{fallback}</>;
   }
+
+  const tooltipMessage = isSuspended
+    ? "Your account has been suspended"
+    : "Available after account approval";
 
   return (
     <TooltipProvider>
@@ -47,7 +51,7 @@ export function ApprovalGate({ children, fallback, loading = null }: ApprovalGat
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Available after account approval</p>
+          <p>{tooltipMessage}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

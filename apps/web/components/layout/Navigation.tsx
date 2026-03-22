@@ -20,7 +20,7 @@ export function Navigation() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { isSignedIn } = useAuth();
-  const { isPending } = usePermissions();
+  const { isPending, isSuspended, suspensionReason } = usePermissions();
 
   // Don't show navigation on auth pages
   if (pathname?.startsWith("/sign-in") || pathname?.startsWith("/sign-up")) {
@@ -145,6 +145,12 @@ export function Navigation() {
           </div>
         </div>
       </nav>
+      {isSignedIn && isSuspended && (
+        <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-center text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          Your account has been suspended.{suspensionReason ? ` ${suspensionReason}` : ""} Contact
+          an administrator for more information.
+        </div>
+      )}
       {isSignedIn && isPending && (
         <div className="border-b border-yellow-200 bg-yellow-50 px-4 py-2 text-center text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
           Your account is pending approval. Some features are limited.

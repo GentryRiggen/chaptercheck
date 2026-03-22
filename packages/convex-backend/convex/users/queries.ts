@@ -7,6 +7,7 @@ import {
   hasPremium,
   hasRoleLevel,
   isApprovedUser,
+  isSuspendedUser,
   requireAdmin,
   requireAuth,
 } from "../lib/auth";
@@ -25,6 +26,7 @@ export interface UserPermissions {
   // Approval checks
   isPending: boolean;
   isApproved: boolean;
+  isSuspended: boolean;
 
   // Premium check
   hasPremium: boolean;
@@ -56,6 +58,7 @@ export const getCurrentUserWithPermissions = query({
     const effectiveRole = getEffectiveRole(user);
     const isPremium = hasPremium(user);
     const approved = isApprovedUser(user);
+    const suspended = isSuspendedUser(user);
 
     const isAdmin = hasRoleLevel(user, "admin");
     const isEditor = hasRoleLevel(user, "editor");
@@ -67,8 +70,9 @@ export const getCurrentUserWithPermissions = query({
       isViewer: true, // All authenticated users are at least viewers
 
       // Approval checks
-      isPending: !approved,
+      isPending: !approved && !suspended,
       isApproved: approved,
+      isSuspended: suspended,
 
       // Premium check
       hasPremium: isPremium,
@@ -94,6 +98,7 @@ export const getCurrentUserWithPermissions = query({
       hasPremium: isPremium,
       isProfilePrivate: user.isProfilePrivate ?? false,
       approvalStatus: user.approvalStatus ?? "approved",
+      suspensionReason: suspended ? user.suspensionReason : undefined,
       permissions,
     };
   },
@@ -283,6 +288,7 @@ export const getAdminUserDetail = query({
       role: getEffectiveRole(targetUser),
       hasPremium: hasPremium(targetUser),
       approvalStatus: targetUser.approvalStatus ?? "approved",
+      suspensionReason: targetUser.suspensionReason,
       isProfilePrivate: targetUser.isProfilePrivate ?? false,
       createdAt: targetUser.createdAt,
       storageAccountId: targetUser.storageAccountId,
@@ -329,6 +335,265 @@ export const searchUsers = query({
         name: u.name,
         imageUrl: u.imageUrl,
       }));
+  },
+});
+
+/**
+ * Get user counts grouped by approval status (admin-only).
+ * Used for tab badges on the admin users page.
+ */
+export const getUserStatusCounts = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const users = await ctx.db.query("users").collect();
+
+    let total = 0;
+    let active = 0;
+    let pending = 0;
+    let suspended = 0;
+
+    for (const user of users) {
+      total++;
+      const status = user.approvalStatus ?? "approved";
+      if (status === "approved") active++;
+      else if (status === "pending") pending++;
+      else if (status === "suspended") suspended++;
+    }
+
+    return { total, active, pending, suspended };
+  },
+});
+
+/**
+ * Search and filter users with optional text search, status, and role filters (admin-only).
+ * Replaces the need for separate listAllUsers + listPendingUsers on the admin page.
+ */
+export const searchAndFilterUsers = query({
+  args: {
+    search: v.optional(v.string()),
+    status: v.optional(
+      v.union(v.literal("active"), v.literal("pending"), v.literal("suspended"), v.literal("all"))
+    ),
+    role: v.optional(
+      v.union(v.literal("admin"), v.literal("editor"), v.literal("viewer"), v.literal("all"))
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const search = args.search?.trim();
+    const statusFilter = args.status ?? "all";
+    const roleFilter = args.role ?? "all";
+
+    // Fetch users: use search index if search term provided, otherwise full scan
+    let users;
+    if (search) {
+      users = await ctx.db
+        .query("users")
+        .withSearchIndex("search_users", (q) => q.search("name", search))
+        .collect();
+    } else {
+      users = await ctx.db.query("users").collect();
+    }
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      users = users.filter((user) => {
+        const effectiveStatus = user.approvalStatus ?? "approved";
+        if (statusFilter === "active") return effectiveStatus === "approved";
+        return effectiveStatus === statusFilter;
+      });
+    }
+
+    // Apply role filter
+    if (roleFilter !== "all") {
+      users = users.filter((user) => getEffectiveRole(user) === roleFilter);
+    }
+
+    // Enrich with storage account info (same shape as listAllUsers)
+    const usersWithStorage = await Promise.all(
+      users.map(async (user) => {
+        const storageAccount = user.storageAccountId
+          ? await ctx.db.get(user.storageAccountId)
+          : null;
+
+        return {
+          _id: user._id,
+          clerkId: user.clerkId,
+          email: user.email,
+          name: user.name,
+          imageUrl: user.imageUrl,
+          role: getEffectiveRole(user),
+          hasPremium: hasPremium(user),
+          approvalStatus: user.approvalStatus ?? "approved",
+          suspensionReason: user.suspensionReason,
+          storageAccountId: user.storageAccountId,
+          storageAccount: storageAccount
+            ? {
+                _id: storageAccount._id,
+                name: storageAccount.name,
+                r2PathPrefix: storageAccount.r2PathPrefix,
+                totalBytesUsed: storageAccount.totalBytesUsed,
+                fileCount: storageAccount.fileCount,
+              }
+            : null,
+          createdAt: user.createdAt,
+        };
+      })
+    );
+
+    return usersWithStorage;
+  },
+});
+
+/**
+ * Get a summary of all data that would be deleted for a user (admin-only).
+ * Used by the admin delete-user confirmation dialog.
+ */
+export const getAdminUserDeletionSummary = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const targetUser = await ctx.db.get(args.userId);
+    if (!targetUser) {
+      return null;
+    }
+
+    // Fetch all data in parallel
+    const [
+      bookUserData,
+      shelves,
+      bookNotes,
+      noteCategories,
+      memoryTags,
+      bookNoteTags,
+      listeningProgress,
+      audioFiles,
+      bookGenreVotes,
+      followsAsFollower,
+      followsAsFollowing,
+      userPreferences,
+    ] = await Promise.all([
+      ctx.db
+        .query("bookUserData")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect(),
+      ctx.db
+        .query("shelves")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect(),
+      ctx.db
+        .query("bookNotes")
+        .withIndex("by_user_and_book", (q) => q.eq("userId", args.userId))
+        .collect(),
+      ctx.db
+        .query("noteCategories")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect(),
+      ctx.db
+        .query("memoryTags")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect(),
+      ctx.db
+        .query("bookNoteTags")
+        .withIndex("by_user_and_tag", (q) => q.eq("userId", args.userId))
+        .collect(),
+      ctx.db
+        .query("listeningProgress")
+        .withIndex("by_user_and_book", (q) => q.eq("userId", args.userId))
+        .collect(),
+      ctx.db
+        .query("audioFiles")
+        .withIndex("by_uploadedBy", (q) => q.eq("uploadedBy", args.userId))
+        .collect(),
+      ctx.db
+        .query("bookGenreVotes")
+        .filter((q) => q.eq(q.field("userId"), args.userId))
+        .collect(),
+      ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q) => q.eq("followerId", args.userId))
+        .collect(),
+      ctx.db
+        .query("follows")
+        .withIndex("by_following", (q) => q.eq("followingId", args.userId))
+        .collect(),
+      ctx.db
+        .query("userPreferences")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .collect(),
+    ]);
+
+    // Count shelfBooks across all shelves
+    let totalShelfBooks = 0;
+    for (const shelf of shelves) {
+      const shelfBooks = await ctx.db
+        .query("shelfBooks")
+        .withIndex("by_shelf", (q) => q.eq("shelfId", shelf._id))
+        .collect();
+      totalShelfBooks += shelfBooks.length;
+    }
+
+    // Compute audio file stats
+    const totalAudioBytes = audioFiles.reduce((sum, f) => sum + f.fileSize, 0);
+    const distinctBooksWithAudio = new Set(audioFiles.map((f) => f.bookId)).size;
+
+    // Compute bookUserData breakdowns
+    const ratingsCount = bookUserData.filter((d) => d.rating !== undefined).length;
+    const reviewsCount = bookUserData.filter(
+      (d) => d.reviewText !== undefined && d.reviewText !== ""
+    ).length;
+
+    // Storage account info
+    let storageAccountInfo = null;
+    if (targetUser.storageAccountId) {
+      const storageAccount = await ctx.db.get(targetUser.storageAccountId);
+      if (storageAccount) {
+        const usersOnAccount = await ctx.db
+          .query("users")
+          .withIndex("by_storageAccountId", (q) =>
+            q.eq("storageAccountId", targetUser.storageAccountId!)
+          )
+          .collect();
+
+        storageAccountInfo = {
+          isSoleUser: usersOnAccount.length === 1,
+          accountName: storageAccount.name,
+          storageAccountId: storageAccount._id,
+        };
+      }
+    }
+
+    return {
+      user: {
+        _id: targetUser._id,
+        name: targetUser.name,
+        email: targetUser.email,
+      },
+      counts: {
+        totalBookEntries: bookUserData.length,
+        ratingsCount,
+        reviewsCount,
+        shelvesCount: shelves.length,
+        totalShelfBooks,
+        bookNotesCount: bookNotes.length,
+        noteCategoriesCount: noteCategories.length,
+        memoryTagsCount: memoryTags.length,
+        bookNoteTagsCount: bookNoteTags.length,
+        listeningProgressCount: listeningProgress.length,
+        audioFilesCount: audioFiles.length,
+        totalAudioBytes,
+        distinctBooksWithAudio,
+        bookGenreVotesCount: bookGenreVotes.length,
+        followsAsFollowerCount: followsAsFollower.length,
+        followsAsFollowingCount: followsAsFollowing.length,
+        hasUserPreferences: userPreferences.length > 0,
+      },
+      storageAccount: storageAccountInfo,
+    };
   },
 });
 

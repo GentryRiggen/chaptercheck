@@ -38,6 +38,8 @@ interface PermissionsContextValue {
   // Approval status
   isPending: boolean;
   isApproved: boolean;
+  isSuspended: boolean;
+  suspensionReason: string | undefined;
 }
 
 // Role levels for comparison (higher = more permissions)
@@ -97,6 +99,8 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
       hasRoleLevel,
       isPending: permissions?.isPending ?? false,
       isApproved: permissions?.isApproved ?? true, // default true so UI doesn't flash disabled during loading
+      isSuspended: permissions?.isSuspended ?? false,
+      suspensionReason: userWithPermissions?.suspensionReason,
     };
   }, [userWithPermissions]);
 

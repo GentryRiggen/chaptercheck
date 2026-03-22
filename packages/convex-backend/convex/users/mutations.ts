@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
 import { mutation } from "../_generated/server";
-import { requireAdminMutation, requireAuthMutation } from "../lib/auth";
+import { getEffectiveRole, requireAdminMutation, requireAuthMutation } from "../lib/auth";
 
 /**
  * Update a user's role (admin-only)
@@ -132,6 +132,70 @@ export const denyUser = mutation({
     if (user.approvalStatus !== "pending") throw new Error("User is not pending approval");
 
     await ctx.db.delete(args.userId);
+
+    return { success: true };
+  },
+});
+
+/**
+ * Suspend an approved user (admin-only)
+ */
+export const suspendUser = mutation({
+  args: {
+    userId: v.id("users"),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminMutation(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (getEffectiveRole(user) === "admin") {
+      throw new Error("Cannot suspend an admin user");
+    }
+
+    const effectiveStatus = user.approvalStatus ?? "approved";
+    if (effectiveStatus !== "approved") {
+      throw new Error("Only approved users can be suspended");
+    }
+
+    await ctx.db.patch(args.userId, {
+      approvalStatus: "suspended",
+      suspensionReason: args.reason,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Unsuspend a suspended user (admin-only)
+ */
+export const unsuspendUser = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminMutation(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.approvalStatus !== "suspended") {
+      throw new Error("User is not suspended");
+    }
+
+    await ctx.db.patch(args.userId, {
+      approvalStatus: "approved",
+      suspensionReason: undefined,
+      updatedAt: Date.now(),
+    });
 
     return { success: true };
   },
