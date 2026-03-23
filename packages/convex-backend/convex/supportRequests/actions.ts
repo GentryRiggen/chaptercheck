@@ -30,28 +30,26 @@ export const submit = action({
       return;
     }
 
-    // Verify Turnstile token with Cloudflare
+    // Verify Turnstile token with Cloudflare (skipped in dev when not configured)
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (!turnstileSecret) {
-      throw new Error("Turnstile is not configured");
-    }
+    if (turnstileSecret) {
+      const verifyResponse = await fetch(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            secret: turnstileSecret,
+            response: args.turnstileToken,
+          }),
+        }
+      );
 
-    const verifyResponse = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          secret: turnstileSecret,
-          response: args.turnstileToken,
-        }),
+      const result = (await verifyResponse.json()) as TurnstileVerifyResponse;
+
+      if (!result.success) {
+        throw new Error("Verification failed. Please try again.");
       }
-    );
-
-    const result = (await verifyResponse.json()) as TurnstileVerifyResponse;
-
-    if (!result.success) {
-      throw new Error("Verification failed. Please try again.");
     }
 
     // Insert the support request via internal mutation

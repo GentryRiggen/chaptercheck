@@ -78,6 +78,8 @@ const CATEGORY_OPTIONS = [
   { value: "account_issue", label: "Account Issue" },
 ] as const;
 
+const TURNSTILE_ENABLED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
 export default function SupportPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,7 +99,7 @@ export default function SupportPage() {
   });
 
   const handleSubmit = async (values: SupportRequestFormValues) => {
-    if (!turnstileToken) {
+    if (TURNSTILE_ENABLED && !turnstileToken) {
       toast.error("Please complete the verification check.");
       return;
     }
@@ -107,7 +109,7 @@ export default function SupportPage() {
       const honeypotEl = document.getElementById("website") as HTMLInputElement | null;
       await submitRequest({
         ...values,
-        turnstileToken,
+        turnstileToken: turnstileToken ?? "",
         website: honeypotEl?.value || undefined,
       });
       setIsSubmitted(true);
@@ -180,6 +182,8 @@ export default function SupportPage() {
                     className="mt-6"
                     onClick={() => {
                       form.reset();
+                      turnstileRef.current?.reset();
+                      setTurnstileToken(null);
                       setIsSubmitted(false);
                     }}
                   >
@@ -287,7 +291,7 @@ export default function SupportPage() {
 
                     <Button
                       type="submit"
-                      disabled={isSubmitting || !turnstileToken}
+                      disabled={isSubmitting || (TURNSTILE_ENABLED && !turnstileToken)}
                       className="w-full sm:w-auto"
                     >
                       {isSubmitting ? (
