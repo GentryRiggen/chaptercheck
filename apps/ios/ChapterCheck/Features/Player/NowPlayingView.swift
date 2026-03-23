@@ -146,6 +146,22 @@ struct NowPlayingView: View {
                 }
             )
             .frame(height: carouselHeight, alignment: .top)
+            .shadow(
+                color: .black.opacity(
+                    selectedCarouselPage == 0 ? (isPlayingAnimated ? 0.5 : 0.25) : 0
+                ),
+                radius: isPlayingAnimated ? 32 : 14,
+                x: 0,
+                y: isPlayingAnimated ? 16 : 6
+            )
+            .shadow(
+                color: .black.opacity(
+                    selectedCarouselPage == 0 ? (isPlayingAnimated ? 0.2 : 0.1) : 0
+                ),
+                radius: isPlayingAnimated ? 10 : 5,
+                x: 0,
+                y: isPlayingAnimated ? 5 : 2
+            )
 
             // Page indicator dots
             if audioPlayer.currentBook != nil {
