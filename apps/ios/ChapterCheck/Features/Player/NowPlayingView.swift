@@ -471,10 +471,10 @@ struct NowPlayingView: View {
     private var sliderSeekUndoSection: some View {
         if audioPlayer.sliderSeekUndoPosition != nil {
             SliderSeekUndoBanner()
-                .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .animation(.spring(duration: 0.3), value: audioPlayer.sliderSeekUndoPosition)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
