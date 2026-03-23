@@ -1,10 +1,10 @@
 import { v } from "convex/values";
 
-import { mutation } from "../_generated/server";
+import { internalMutation, mutation } from "../_generated/server";
 import { requireAdminMutation } from "../lib/auth";
 
-// Public — no auth required
-export const submit = mutation({
+// Internal — called by the submit action after Turnstile verification
+export const insertRequest = internalMutation({
   args: {
     name: v.string(),
     email: v.string(),

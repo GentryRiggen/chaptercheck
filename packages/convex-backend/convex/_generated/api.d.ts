@@ -60,6 +60,7 @@ import type * as storageAccounts_actions from "../storageAccounts/actions.js";
 import type * as storageAccounts_internal from "../storageAccounts/internal.js";
 import type * as storageAccounts_mutations from "../storageAccounts/mutations.js";
 import type * as storageAccounts_queries from "../storageAccounts/queries.js";
+import type * as supportRequests_actions from "../supportRequests/actions.js";
 import type * as supportRequests_mutations from "../supportRequests/mutations.js";
 import type * as supportRequests_queries from "../supportRequests/queries.js";
 import type * as userPreferences_mutations from "../userPreferences/mutations.js";
@@ -128,6 +129,7 @@ declare const fullApi: ApiFromModules<{
   "storageAccounts/internal": typeof storageAccounts_internal;
   "storageAccounts/mutations": typeof storageAccounts_mutations;
   "storageAccounts/queries": typeof storageAccounts_queries;
+  "supportRequests/actions": typeof supportRequests_actions;
   "supportRequests/mutations": typeof supportRequests_mutations;
   "supportRequests/queries": typeof supportRequests_queries;
   "userPreferences/mutations": typeof userPreferences_mutations;

@@ -6,10 +6,11 @@ import {
   supportRequestSchema,
 } from "@chaptercheck/shared/validations/support";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "convex/react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import { useAction } from "convex/react";
 import { CheckCircle2, ChevronDown, HelpCircle, Loader2, Send } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -80,8 +81,10 @@ const CATEGORY_OPTIONS = [
 export default function SupportPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
-  const submitRequest = useMutation(api.supportRequests.mutations.submit);
+  const submitRequest = useAction(api.supportRequests.actions.submit);
 
   const form = useForm<SupportRequestFormValues>({
     resolver: zodResolver(supportRequestSchema),
@@ -94,12 +97,26 @@ export default function SupportPage() {
   });
 
   const handleSubmit = async (values: SupportRequestFormValues) => {
+    if (!turnstileToken) {
+      toast.error("Please complete the verification check.");
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await submitRequest(values);
+      // Read honeypot value from the hidden field
+      const honeypotEl = document.getElementById("website") as HTMLInputElement | null;
+      await submitRequest({
+        ...values,
+        turnstileToken,
+        website: honeypotEl?.value || undefined,
+      });
       setIsSubmitted(true);
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } catch {
       toast.error("Failed to submit your request. Please try again.");
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -246,7 +263,33 @@ export default function SupportPage() {
                       )}
                     />
 
-                    <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                    {/* Honeypot — hidden from real users, bots auto-fill it */}
+                    <div className="absolute -left-[9999px]" aria-hidden="true">
+                      <label htmlFor="website">Website</label>
+                      <input
+                        type="text"
+                        id="website"
+                        name="website"
+                        tabIndex={-1}
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+                      <Turnstile
+                        ref={turnstileRef}
+                        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                        onSuccess={setTurnstileToken}
+                        onExpire={() => setTurnstileToken(null)}
+                        options={{ theme: "auto" }}
+                      />
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting || !turnstileToken}
+                      className="w-full sm:w-auto"
+                    >
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
