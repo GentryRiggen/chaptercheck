@@ -37,6 +37,7 @@ struct AudioSettingsSheet: View {
         return Array(
             candidates
                 .filter { ($0 * 10).rounded() / 10 != currentRounded }
+                .sorted()
                 .prefix(3)
         )
     }
