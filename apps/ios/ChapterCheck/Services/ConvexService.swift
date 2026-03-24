@@ -42,6 +42,7 @@ final class ConvexService: ObservableObject {
     private var webSocketStateCancellable: AnyCancellable?
     private var tokenRefreshTask: Task<Void, Never>?
     private var webSocketRecoveryTask: Task<Void, Never>?
+    private var reconnectNotificationTask: Task<Void, Never>?
     private var lastBackgroundedAt: Date?
     private var lastResetAt = Date.distantPast
     private var wasWebSocketConnected = false
@@ -118,12 +119,25 @@ final class ConvexService: ObservableObject {
 
         if !wasConnected && nowConnected {
             logger.info("WebSocket connected")
-            NotificationCenter.default.post(name: .convexReconnected, object: nil)
             webSocketRecoveryTask?.cancel()
             webSocketRecoveryTask = nil
             SentryService.addBreadcrumb(message: "Convex WebSocket connected", category: "convex")
+
+            // Debounce the reconnected notification: only fire after the connection
+            // has been stable for 2 seconds. This prevents a feedback loop where
+            // handlers (e.g. refreshDownloadedBookMetadata) create new subscriptions
+            // that cause the WebSocket to restart during its initial sync phase.
+            reconnectNotificationTask?.cancel()
+            reconnectNotificationTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                guard !Task.isCancelled, let self, self.isWebSocketConnected else { return }
+                self.logger.info("WebSocket stable — posting reconnected notification")
+                NotificationCenter.default.post(name: .convexReconnected, object: nil)
+            }
         } else if wasConnected && !nowConnected {
             logger.info("WebSocket disconnected (state: \(String(describing: state)))")
+            reconnectNotificationTask?.cancel()
+            reconnectNotificationTask = nil
             SentryService.addBreadcrumb(
                 message: "Convex WebSocket disconnected",
                 category: "convex",
@@ -303,6 +317,8 @@ final class ConvexService: ObservableObject {
         tokenRefreshTask = nil
         webSocketRecoveryTask?.cancel()
         webSocketRecoveryTask = nil
+        reconnectNotificationTask?.cancel()
+        reconnectNotificationTask = nil
         authStateCancellable?.cancel()
         authStateCancellable = nil
         webSocketStateCancellable?.cancel()

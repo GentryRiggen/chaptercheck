@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 
 /// Observable manager for download state, injected via `.environment()`.
@@ -46,6 +45,9 @@ final class DownloadManager {
 
     /// Active download tasks per individual audio file.
     private var fileDownloadTasks: [String: Task<Void, Never>] = [:]
+
+    /// Tracked metadata refresh task, so overlapping calls are cancelled.
+    private var metadataRefreshTask: Task<Void, Never>?
 
     init() {
         self.downloadService = DownloadService(audioRepository: AudioRepository())
@@ -464,53 +466,51 @@ final class DownloadManager {
     // MARK: - Metadata Refresh
 
     /// Fetch current book metadata from Convex and update stale manifest entries.
+    ///
+    /// Cancels any in-flight refresh before starting a new one to prevent
+    /// overlapping subscription accumulation during WebSocket reconnection.
     func refreshDownloadedBookMetadata() async {
-        let bookIds = Array(downloadedBookIds)
-        guard !bookIds.isEmpty else { return }
+        metadataRefreshTask?.cancel()
 
-        let bookRepository = BookRepository()
-        var updatedEntries: [BookMetadataEntry] = []
+        let task = Task { [weak self] in
+            guard let self else { return }
+            let bookIds = Array(self.downloadedBookIds)
+            guard !bookIds.isEmpty else { return }
 
-        for bookId in bookIds {
-            guard let publisher = bookRepository.subscribeToBook(id: bookId) else { continue }
+            let convex = ConvexService.shared
+            var updatedEntries: [BookMetadataEntry] = []
 
-            do {
-                let book = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<BookWithDetails?, Error>) in
-                    var cancellable: AnyCancellable?
-                    cancellable = publisher
-                        .first()
-                        .sink(
-                            receiveCompletion: { completion in
-                                switch completion {
-                                case .finished:
-                                    break
-                                case .failure(let error):
-                                    continuation.resume(throwing: error)
-                                }
-                                _ = cancellable // prevent premature dealloc
-                            },
-                            receiveValue: { value in
-                                continuation.resume(returning: value)
-                            }
-                        )
+            for bookId in bookIds {
+                guard !Task.isCancelled else { return }
+
+                do {
+                    let book: BookWithDetails? = try await convex.query(
+                        "books/queries:getBook",
+                        with: ["bookId": bookId]
+                    )
+
+                    guard let book else { continue }
+
+                    updatedEntries.append(BookMetadataEntry(
+                        bookId: book._id,
+                        title: book.title,
+                        authorNames: book.authors.map(\.name),
+                        coverImageR2Key: book.coverImageR2Key
+                    ))
+                } catch {
+                    if Task.isCancelled { return }
+                    self.logger.warning("Failed to refresh metadata for book \(bookId): \(error.localizedDescription)")
                 }
-
-                guard let book else { continue }
-
-                updatedEntries.append(BookMetadataEntry(
-                    bookId: book._id,
-                    title: book.title,
-                    authorNames: book.authors.map(\.name),
-                    coverImageR2Key: book.coverImageR2Key
-                ))
-            } catch {
-                logger.warning("Failed to refresh metadata for book \(bookId): \(error.localizedDescription)")
             }
+
+            guard !Task.isCancelled, !updatedEntries.isEmpty else { return }
+            await self.downloadService.updateBookMetadata(updatedEntries)
+            await self.refreshState()
+            self.logger.info("Metadata refresh completed for \(updatedEntries.count) books")
         }
 
-        guard !updatedEntries.isEmpty else { return }
-        await downloadService.updateBookMetadata(updatedEntries)
-        await refreshState()
+        metadataRefreshTask = task
+        await task.value
     }
 
     // MARK: - Private
