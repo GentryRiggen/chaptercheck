@@ -46,6 +46,11 @@ final class ConvexService: ObservableObject {
     private var lastBackgroundedAt: Date?
     private var lastResetAt = Date.distantPast
     private var wasWebSocketConnected = false
+    /// Keeps the previous Convex client alive while its subscriptions are being
+    /// cancelled during a session reset. Without this, the old client can be
+    /// deallocated before subscription cancellation completes, causing a UniFFI
+    /// panic in the ConvexMobile Rust layer (CHAPTERCHECK-IOS-9).
+    private var retiredClient: ConvexClientWithAuth<String>?
 
     /// Interval between proactive token refreshes (in seconds).
     /// Clerk JWTs expire after ~60s; refresh every 50s to stay ahead.
@@ -327,9 +332,20 @@ final class ConvexService: ObservableObject {
         isWebSocketConnected = false
         wasWebSocketConnected = false
 
+        // Keep the old client alive so that in-flight subscription cancellations
+        // (triggered by SwiftUI view teardown after resetID changes) don't crash
+        // the already-freed UniFFI/Rust layer.
+        retiredClient = client
         client = Self.makeClient()
         bindClientState()
         resetID = UUID()
+
+        // Release the retired client on the next run loop tick, after SwiftUI
+        // has had a chance to tear down views and cancel their subscriptions.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            self?.retiredClient = nil
+        }
 
         defer { isResetting = false }
 
