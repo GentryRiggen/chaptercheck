@@ -34,14 +34,8 @@ jobs:
         with:
           xcode-version: "26"
 
-      - name: 📲 Install iOS platform if missing
-        run: |
-          if ! xcodebuild -showsdks 2>/dev/null | grep -q 'iphoneos'; then
-            echo "iOS SDK not found — installing platform..."
-            xcodebuild -downloadPlatform iOS
-          else
-            echo "iOS SDK already available"
-          fi
+      - name: 📲 Install iOS platform
+        run: xcodebuild -downloadPlatform iOS
 
       - name: 📦 Install XcodeGen
         run: brew install xcodegen
