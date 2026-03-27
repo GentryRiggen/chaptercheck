@@ -46,6 +46,14 @@ final class ConvexService: ObservableObject {
     private var lastBackgroundedAt: Date?
     private var lastResetAt = Date.distantPast
     private var wasWebSocketConnected = false
+
+    /// Flap detection: tracks recent connect→disconnect transitions.
+    /// When the WebSocket rapidly cycles (e.g., after long background periods),
+    /// the recovery watchdog never fires because the WS keeps briefly connecting.
+    /// This counter detects the pattern and triggers a full session reset.
+    private var flapTimestamps: [Date] = []
+    private static let flapThreshold = 5          // number of disconnect events
+    private static let flapWindowSeconds: TimeInterval = 30  // within this time window
     /// Keeps the previous Convex client alive while its subscriptions are being
     /// cancelled during a session reset. Without this, the old client can be
     /// deallocated before subscription cancellation completes, causing a UniFFI
@@ -137,10 +145,12 @@ final class ConvexService: ObservableObject {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled, let self, self.isWebSocketConnected else { return }
                 self.logger.info("WebSocket stable — posting reconnected notification")
+                self.flapTimestamps.removeAll()
                 NotificationCenter.default.post(name: .convexReconnected, object: nil)
             }
         } else if wasConnected && !nowConnected {
-            logger.info("WebSocket disconnected (state: \(String(describing: state)))")
+            let hadPendingStableNotification = reconnectNotificationTask != nil
+            logger.info("WebSocket disconnected (state: \(String(describing: state)))\(hadPendingStableNotification ? " — cancelled pending stable notification" : "")")
             reconnectNotificationTask?.cancel()
             reconnectNotificationTask = nil
             SentryService.addBreadcrumb(
@@ -149,7 +159,38 @@ final class ConvexService: ObservableObject {
                 level: .warning,
                 data: ["state": String(describing: state)]
             )
-            startWebSocketRecoveryWatchdog()
+
+            // Track this disconnect for flap detection
+            let now = Date()
+            flapTimestamps.append(now)
+            flapTimestamps.removeAll { now.timeIntervalSince($0) > Self.flapWindowSeconds }
+            logger.debug("WebSocket flap count: \(self.flapTimestamps.count)/\(Self.flapThreshold) in \(Self.flapWindowSeconds)s window")
+
+            if flapTimestamps.count >= Self.flapThreshold {
+                let count = flapTimestamps.count
+                logger.warning("WebSocket flapping detected (\(count) disconnects in \(Self.flapWindowSeconds)s) — resetting session")
+                SentryService.addBreadcrumb(
+                    message: "WebSocket flapping detected — triggering session reset",
+                    category: "convex",
+                    level: .warning,
+                    data: ["flapCount": String(count), "windowSeconds": String(Self.flapWindowSeconds)]
+                )
+                // Don't clear flapTimestamps here — resetApplicationSession will clear
+                // them. If the reset is skipped (cooldown/already resetting), keeping
+                // the timestamps means the next disconnect immediately re-triggers
+                // instead of needing 5 more disconnects to detect the same flap storm.
+                Task { [weak self] in
+                    await self?.resetApplicationSession(reason: "websocket_flapping")
+                }
+                return
+            }
+
+            // Only start the recovery watchdog if we're not in an active flap pattern.
+            // During flapping the WS keeps briefly connecting (resetting the watchdog),
+            // so it never fires anyway — skip it to avoid redundant tasks.
+            if flapTimestamps.count < 2 {
+                startWebSocketRecoveryWatchdog()
+            }
         }
     }
 
@@ -223,7 +264,10 @@ final class ConvexService: ObservableObject {
         let backgroundDuration = lastBackgroundedAt.map { Date().timeIntervalSince($0) } ?? 0
         lastBackgroundedAt = nil
 
-        guard networkMonitor.isConnected else { return }
+        guard networkMonitor.isConnected else {
+            logger.info("App became active after \(Int(backgroundDuration))s in background — no network, skipping recovery")
+            return
+        }
 
         logger.info("App became active after \(Int(backgroundDuration))s in background")
 
@@ -300,7 +344,10 @@ final class ConvexService: ObservableObject {
     /// existing subscriptions are torn down, a fresh Convex client is created,
     /// and the root view gets a new identity so `@State`-owned objects are rebuilt.
     func resetApplicationSession(reason: String) async {
-        if isResetting { return }
+        if isResetting {
+            logger.debug("Skipping reset (\(reason)) — already resetting")
+            return
+        }
 
         let now = Date()
         guard now.timeIntervalSince(lastResetAt) >= Self.resetCooldownSeconds else {
@@ -331,6 +378,7 @@ final class ConvexService: ObservableObject {
         authState = .loading
         isWebSocketConnected = false
         wasWebSocketConnected = false
+        flapTimestamps.removeAll()
 
         // Keep the old client alive so that in-flight subscription cancellations
         // (triggered by SwiftUI view teardown after resetID changes) don't crash
