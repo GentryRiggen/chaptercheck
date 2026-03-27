@@ -177,8 +177,7 @@ struct NowPlayingView: View {
                 .accessibilityLabel("Page \(selectedCarouselPage + 1) of 2")
             }
 
-            Color.clear
-                .frame(height: carouselToSeekSpacing)
+            audioVisualizerSection
 
             seekBarSection
                 .overlay(alignment: .top) {
@@ -437,6 +436,13 @@ struct NowPlayingView: View {
             .padding(.top, 52)
             .transition(.move(edge: .top).combined(with: .opacity))
         }
+    }
+
+    private var audioVisualizerSection: some View {
+        AudioVisualizerView(isPlaying: isPlayingAnimated)
+            .padding(.top, carouselToSeekSpacing * 0.4)
+            .padding(.bottom, carouselToSeekSpacing * 0.4)
+            .opacity(audioPlayer.currentBook != nil ? 1 : 0)
     }
 
     private var seekBarSection: some View {
