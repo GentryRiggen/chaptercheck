@@ -439,9 +439,12 @@ struct NowPlayingView: View {
     }
 
     private var audioVisualizerSection: some View {
-        AudioVisualizerView(isPlaying: isPlayingAnimated)
-            .padding(.top, carouselToSeekSpacing * 0.4)
-            .padding(.bottom, carouselToSeekSpacing * 0.4)
+        // Keep total height equal to the original carouselToSeekSpacing spacer.
+        // Visualizer is 16pt tall, so split the remaining space as padding.
+        let verticalPadding = max((carouselToSeekSpacing - 16) / 2, 0)
+        return AudioVisualizerView(isPlaying: isPlayingAnimated)
+            .padding(.top, verticalPadding)
+            .padding(.bottom, verticalPadding)
             .opacity(audioPlayer.currentBook != nil ? 1 : 0)
     }
 
