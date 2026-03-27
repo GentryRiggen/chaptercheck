@@ -408,6 +408,8 @@ struct NowPlayingView: View {
             }
 
             Spacer()
+
+            addNoteButton
         }
     }
 
@@ -449,12 +451,8 @@ struct NowPlayingView: View {
     }
 
     private var seekBarSection: some View {
-        HStack(alignment: .seekBarTrackCenter, spacing: 12) {
-            SeekBarView(onSpeedPillTapped: { isAudioSettingsPresented = true })
-
-            addNoteButton
-        }
-        .padding(.horizontal, 24)
+        SeekBarView(onSpeedPillTapped: { isAudioSettingsPresented = true })
+            .padding(.horizontal, 24)
     }
 
     private var addNoteButton: some View {
@@ -470,9 +468,6 @@ struct NowPlayingView: View {
         }
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .alignmentGuide(.seekBarTrackCenter) { dimensions in
-            dimensions[VerticalAlignment.center]
-        }
         .accessibilityLabel("Add note")
     }
 
