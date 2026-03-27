@@ -204,7 +204,11 @@ export const filterBooksByGenres = query({
         books.sort((a, b) => b._creationTime - a._creationTime);
         break;
       case "top_rated":
-        books.sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0));
+        books.sort((a, b) => {
+          const ratingDiff = (b.averageRating ?? 0) - (a.averageRating ?? 0);
+          if (ratingDiff !== 0) return ratingDiff;
+          return (b.ratingCount ?? 0) - (a.ratingCount ?? 0);
+        });
         break;
       default:
         books.sort((a, b) => a.title.localeCompare(b.title));
@@ -225,14 +229,22 @@ export const getTopRatedBooks = query({
     const limit = args.limit ?? 6;
 
     // Query by averageRating index descending, then filter to rated books
-    const books = await ctx.db
+    // Over-fetch to allow re-sorting ties by ratingCount
+    const candidates = await ctx.db
       .query("books")
       .withIndex("by_averageRating")
       .order("desc")
       .filter((q) => q.gt(q.field("ratingCount"), 0))
-      .take(limit);
+      .take(limit * 3);
 
-    return await batchEnrichBooks(ctx, books);
+    // Break ties: same rating → more votes ranks higher
+    candidates.sort((a, b) => {
+      const ratingDiff = (b.averageRating ?? 0) - (a.averageRating ?? 0);
+      if (ratingDiff !== 0) return ratingDiff;
+      return (b.ratingCount ?? 0) - (a.ratingCount ?? 0);
+    });
+
+    return await batchEnrichBooks(ctx, candidates.slice(0, limit));
   },
 });
 

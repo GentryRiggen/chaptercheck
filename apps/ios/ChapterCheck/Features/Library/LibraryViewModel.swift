@@ -280,7 +280,11 @@ final class LibraryViewModel {
         case .relevance: unifiedBooks
         case .titleAsc: unifiedBooks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         case .titleDesc: unifiedBooks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedDescending }
-        case .topRated: unifiedBooks.sorted { ($0.averageRating ?? 0) > ($1.averageRating ?? 0) }
+        case .topRated: unifiedBooks.sorted {
+            let ratingDiff = ($0.averageRating ?? 0) - ($1.averageRating ?? 0)
+            if ratingDiff != 0 { return ratingDiff > 0 }
+            return ($0.ratingCount ?? 0) > ($1.ratingCount ?? 0)
+        }
         }
     }
 
