@@ -171,15 +171,9 @@ final class NowPlayingManager {
             return .success
         }
 
-        // Seek (scrubbing on lock screen)
-        center.changePlaybackPositionCommand.isEnabled = true
-        center.changePlaybackPositionCommand.addTarget { [weak self] event in
-            guard let positionEvent = event as? MPChangePlaybackPositionCommandEvent else {
-                return .commandFailed
-            }
-            self?.handlers.onSeek(positionEvent.positionTime)
-            return .success
-        }
+        // Show scrub bar but don't allow interaction
+        center.changePlaybackPositionCommand.isEnabled = false
+        center.changePlaybackPositionCommand.addTarget { _ in .commandFailed }
 
         // Next / Previous Track (AirPods double/triple-click → skip forward/backward)
         center.nextTrackCommand.isEnabled = true
