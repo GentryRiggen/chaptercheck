@@ -36,8 +36,20 @@ final class NowPlayingManager {
     private var cachedArtworkUrlString: String?
     private var loadArtworkTask: Task<Void, Never>?
 
+    /// Tokens returned by `addTarget`, needed for cleanup in `deinit`.
+    private var commandTargets: [(MPRemoteCommand, Any)] = []
+
     init() {
         registerRemoteCommands()
+    }
+
+    deinit {
+        // Currently unreachable (owned by the AudioPlayerManager singleton),
+        // but kept as a safety net: if ownership ever changes, stale command
+        // targets on MPRemoteCommandCenter.shared() would cause ghost playback.
+        for (command, target) in commandTargets {
+            command.removeTarget(target)
+        }
     }
 
     // MARK: - Now Playing Info
@@ -136,54 +148,54 @@ final class NowPlayingManager {
     private func registerRemoteCommands() {
         let center = MPRemoteCommandCenter.shared()
 
+        func register(_ command: MPRemoteCommand, handler: @escaping (MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus) {
+            command.isEnabled = true
+            let target = command.addTarget(handler: handler)
+            commandTargets.append((command, target))
+        }
+
         // Play / Pause
-        center.playCommand.isEnabled = true
-        center.playCommand.addTarget { [weak self] _ in
+        register(center.playCommand) { [weak self] _ in
             self?.handlers.onPlay()
             return .success
         }
 
-        center.pauseCommand.isEnabled = true
-        center.pauseCommand.addTarget { [weak self] _ in
+        register(center.pauseCommand) { [weak self] _ in
             self?.handlers.onPause()
             return .success
         }
 
-        center.togglePlayPauseCommand.isEnabled = true
-        center.togglePlayPauseCommand.addTarget { [weak self] _ in
+        register(center.togglePlayPauseCommand) { [weak self] _ in
             self?.handlers.onTogglePlayPause()
             return .success
         }
 
         // Skip Forward (30s)
-        center.skipForwardCommand.isEnabled = true
         center.skipForwardCommand.preferredIntervals = [NSNumber(value: skipForwardInterval)]
-        center.skipForwardCommand.addTarget { [weak self] _ in
+        register(center.skipForwardCommand) { [weak self] _ in
             self?.handlers.onSkipForward()
             return .success
         }
 
         // Skip Backward (15s)
-        center.skipBackwardCommand.isEnabled = true
         center.skipBackwardCommand.preferredIntervals = [NSNumber(value: skipBackwardInterval)]
-        center.skipBackwardCommand.addTarget { [weak self] _ in
+        register(center.skipBackwardCommand) { [weak self] _ in
             self?.handlers.onSkipBackward()
             return .success
         }
 
         // Show scrub bar but don't allow interaction
         center.changePlaybackPositionCommand.isEnabled = false
-        center.changePlaybackPositionCommand.addTarget { _ in .commandFailed }
+        let scrubTarget = center.changePlaybackPositionCommand.addTarget { _ in .commandFailed }
+        commandTargets.append((center.changePlaybackPositionCommand, scrubTarget))
 
         // Next / Previous Track (AirPods double/triple-click → skip forward/backward)
-        center.nextTrackCommand.isEnabled = true
-        center.nextTrackCommand.addTarget { [weak self] _ in
+        register(center.nextTrackCommand) { [weak self] _ in
             self?.handlers.onNextTrack()
             return .success
         }
 
-        center.previousTrackCommand.isEnabled = true
-        center.previousTrackCommand.addTarget { [weak self] _ in
+        register(center.previousTrackCommand) { [weak self] _ in
             self?.handlers.onPreviousTrack()
             return .success
         }

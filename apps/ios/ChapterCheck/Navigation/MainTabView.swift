@@ -113,7 +113,7 @@ enum Tab: Int, Hashable {
 
 /// Primary tab-based navigation after authentication.
 ///
-/// Owns the `AudioPlayerManager` as `@State` and injects it into the
+/// Injects the `AudioPlayerManager.shared` singleton into the SwiftUI
 /// environment so all child views can access playback state. A persistent
 /// `MiniPlayerView` overlay is shown at the bottom above the tab bar.
 /// A `ToastView` overlay sits above the mini player for transient notifications.
@@ -125,7 +125,7 @@ struct MainView: View {
     @State private var notesPath: [AppDestination] = []
     @State private var profilePath: [AppDestination] = []
 
-    @State private var audioPlayer = AudioPlayerManager()
+    private var audioPlayer: AudioPlayerManager { .shared }
     @State private var downloadManager = DownloadManager()
     @State private var currentUserProvider = CurrentUserProvider()
     @State private var genreProvider = GenreProvider()
@@ -272,8 +272,7 @@ struct MainView: View {
             await downloadManager.initialize()
             audioPlayer.downloadManager = downloadManager
 
-            // Expose to CarPlay scene delegate
-            SharedState.audioPlayer = audioPlayer
+            // Expose download manager to CarPlay scene delegate
             SharedState.downloadManager = downloadManager
 
             // Start global shared subscriptions

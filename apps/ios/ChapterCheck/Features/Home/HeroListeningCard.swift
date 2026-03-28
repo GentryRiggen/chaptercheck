@@ -265,6 +265,6 @@ struct HeroListeningCard: View {
             lastListenedAt: Date().timeIntervalSince1970 * 1000
         )
     )
-    .environment(AudioPlayerManager())
+    .environment(AudioPlayerManager.shared)
     .padding()
 }

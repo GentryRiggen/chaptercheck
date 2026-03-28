@@ -1,13 +1,13 @@
 import Foundation
 
 /// Weak references to the app's singleton managers so the CarPlay scene
-/// can access the same `AudioPlayerManager` and `DownloadManager` instances
-/// owned by `MainView`.
+/// can access the same instances.
 ///
-/// `MainView` sets these in its `.task` modifier. The CarPlay scene delegate
-/// reads them to control playback and browse downloads.
+/// `audioPlayer` now points to the `AudioPlayerManager.shared` singleton
+/// directly. `downloadManager` is still set by `MainView` in its `.task`
+/// modifier because `DownloadManager` is view-scoped.
 @MainActor
 enum SharedState {
-    static weak var audioPlayer: AudioPlayerManager?
+    static var audioPlayer: AudioPlayerManager { .shared }
     static weak var downloadManager: DownloadManager?
 }

@@ -257,10 +257,7 @@ final class CarPlaySceneDelegate: UIResponder, @preconcurrency CPTemplateApplica
         Task {
             defer { completion() }
 
-            guard let audioPlayer = SharedState.audioPlayer else {
-                logger.error("AudioPlayerManager not available for CarPlay")
-                return
-            }
+            let audioPlayer = SharedState.audioPlayer
 
             // If this book is already loaded, just resume and show now playing
             if audioPlayer.currentBook?._id == progress.bookId {
@@ -291,10 +288,7 @@ final class CarPlaySceneDelegate: UIResponder, @preconcurrency CPTemplateApplica
         Task {
             defer { completion() }
 
-            guard let audioPlayer = SharedState.audioPlayer else {
-                logger.error("AudioPlayerManager not available for CarPlay")
-                return
-            }
+            let audioPlayer = SharedState.audioPlayer
 
             if audioPlayer.currentBook?._id == book._id {
                 if !audioPlayer.isPlaying {
@@ -324,10 +318,7 @@ final class CarPlaySceneDelegate: UIResponder, @preconcurrency CPTemplateApplica
         Task {
             defer { completion() }
 
-            guard let audioPlayer = SharedState.audioPlayer else {
-                logger.error("AudioPlayerManager not available for CarPlay")
-                return
-            }
+            let audioPlayer = SharedState.audioPlayer
 
             if audioPlayer.currentBook?._id == bookId {
                 if !audioPlayer.isPlaying {

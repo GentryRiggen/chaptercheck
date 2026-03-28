@@ -278,9 +278,20 @@ final class AudioPlayerManager {
     private var skipResetTask: Task<Void, Never>?
     private var sliderSeekUndoTask: Task<Void, Never>?
 
+    // MARK: - Singleton
+
+    /// Shared singleton instance that survives SwiftUI view recreation.
+    ///
+    /// `AudioPlayerManager` must outlive the view hierarchy because
+    /// `resetApplicationSession` (ConvexService) changes `resetID`, which
+    /// tears down and recreates `MainView` and all its `@State`. A `@State`-
+    /// owned player would be destroyed while its `AVPlayer` is still playing,
+    /// producing ghost playback and duplicate `MPRemoteCommandCenter` targets.
+    static let shared = AudioPlayerManager()
+
     // MARK: - Initialization
 
-    init() {
+    private init() {
         self.streamURLCache = StreamURLCache(audioRepository: AudioRepository())
         self.nowPlayingManager = NowPlayingManager()
         self.sessionManager = AudioSessionManager()
