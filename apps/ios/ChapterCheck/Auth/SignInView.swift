@@ -6,17 +6,20 @@ import ClerkKit
 /// Step 1: The user enters their email and taps "Send Code".
 /// Step 2: The user enters the 6-digit code they received and taps "Verify".
 struct SignInView: View {
+    /// Binding to the sign-in object, owned by AuthGateView so it survives
+    /// transient Clerk state changes that would otherwise destroy this view.
+    @Binding var pendingSignIn: SignIn?
+
     /// Callback invoked when the user taps "Don't have an account? Create one".
     var onShowSignUp: (() -> Void)? = nil
 
     @State private var email = ""
     @State private var otpCode = ""
-    @State private var signIn: SignIn?
     @State private var isLoading = false
     @State private var errorMessage: String?
 
     /// Whether we are in the OTP verification step.
-    private var isVerifyingCode: Bool { signIn != nil }
+    private var isVerifyingCode: Bool { pendingSignIn != nil }
 
     var body: some View {
         VStack(spacing: 32) {
@@ -164,7 +167,7 @@ struct SignInView: View {
                 let result = try await Clerk.shared.auth.signInWithEmailCode(
                     emailAddress: email
                 )
-                signIn = result
+                pendingSignIn = result
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -173,7 +176,7 @@ struct SignInView: View {
     }
 
     private func handleVerifyCode() {
-        guard let signIn, otpCode.count == 6 else { return }
+        guard let signIn = pendingSignIn, otpCode.count == 6 else { return }
         isLoading = true
         errorMessage = nil
 
@@ -181,8 +184,9 @@ struct SignInView: View {
             do {
                 let result = try await signIn.verifyCode(otpCode)
                 if result.status == .complete {
-                    // Auth state change is picked up by AuthGateView via Clerk.shared.session
-                    self.signIn = nil
+                    // Auth state change is picked up by AuthGateView via Clerk.shared.session.
+                    // Clearing the binding releases the branch guard in AuthGateView.
+                    self.pendingSignIn = nil
                 } else {
                     errorMessage = "Verification incomplete. Please try again."
                 }
@@ -194,12 +198,12 @@ struct SignInView: View {
     }
 
     private func resetToEmailStep() {
-        signIn = nil
+        pendingSignIn = nil
         otpCode = ""
         errorMessage = nil
     }
 }
 
 #Preview {
-    SignInView()
+    SignInView(pendingSignIn: .constant(nil))
 }

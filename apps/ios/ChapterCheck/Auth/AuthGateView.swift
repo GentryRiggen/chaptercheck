@@ -14,6 +14,10 @@ struct AuthGateView: View {
     @ObservedObject private var convexService = ConvexService.shared
     @State private var hasAuthenticated = false
     @State private var showSignUp = false
+    /// Owned here so the sign-in/sign-up objects survive transient Clerk state
+    /// changes that temporarily destroy and recreate the child auth views.
+    @State private var pendingSignIn: SignIn?
+    @State private var pendingSignUp: SignUp?
     private let logger = AppLogger(category: "AuthGateView")
     private let networkMonitor = NetworkMonitor.shared
 
@@ -54,7 +58,8 @@ struct AuthGateView: View {
                             UserDefaults.standard.set(true, forKey: Self.hasAuthenticatedBeforeKey)
                         }
                     }
-            } else if Clerk.shared.isLoaded, Clerk.shared.session != nil {
+            } else if Clerk.shared.isLoaded, Clerk.shared.session != nil,
+                      pendingSignIn == nil, pendingSignUp == nil {
                 // Clerk session exists but Convex not yet authenticated
                 loadingView
                     .task {
@@ -70,15 +75,21 @@ struct AuthGateView: View {
                         }
                     }
             } else {
-                // Either Clerk not loaded or no session — keep the auth views in a
-                // single structural branch so @State survives transient Clerk
-                // state changes during the OTP flow (isLoaded can briefly toggle
-                // when signInWithEmailCode / verifyEmailCode mutates Clerk's @Observable state).
+                // Either Clerk not loaded, no session, or an auth flow is in
+                // progress (pendingSignIn/pendingSignUp non-nil). The pending
+                // bindings live here so they survive transient Clerk state
+                // changes that would otherwise destroy and recreate the child views.
                 Group {
                     if showSignUp {
-                        SignUpView(onShowSignIn: { showSignUp = false })
+                        SignUpView(pendingSignUp: $pendingSignUp, onShowSignIn: {
+                            pendingSignUp = nil
+                            showSignUp = false
+                        })
                     } else {
-                        SignInView(onShowSignUp: { showSignUp = true })
+                        SignInView(pendingSignIn: $pendingSignIn, onShowSignUp: {
+                            pendingSignIn = nil
+                            showSignUp = true
+                        })
                     }
                 }
                 .disabled(!Clerk.shared.isLoaded)

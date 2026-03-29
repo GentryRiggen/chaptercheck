@@ -11,6 +11,10 @@ import SwiftUI
 /// On completion the Clerk session updates automatically, which `AuthGateView` picks up
 /// via `Clerk.shared.session` and transitions to the main app.
 struct SignUpView: View {
+    /// Binding to the sign-up object, owned by AuthGateView so it survives
+    /// transient Clerk state changes that would otherwise destroy this view.
+    @Binding var pendingSignUp: SignUp?
+
     /// Callback invoked when the user taps "Already have an account? Sign in".
     let onShowSignIn: () -> Void
 
@@ -18,7 +22,6 @@ struct SignUpView: View {
     @State private var lastName = ""
     @State private var email = ""
     @State private var otpCode = ""
-    @State private var signUp: SignUp?
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var step: Step = .info
@@ -280,7 +283,7 @@ struct SignUpView: View {
                 )
                 // Send the OTP to the user's email
                 let updated = try await result.sendEmailCode()
-                signUp = updated
+                pendingSignUp = updated
                 step = .otp
             } catch {
                 // Use a generic message to avoid enumerating existing accounts
@@ -291,7 +294,7 @@ struct SignUpView: View {
     }
 
     private func handleVerifyCode() {
-        guard let signUp, otpCode.count == 6 else { return }
+        guard let signUp = pendingSignUp, otpCode.count == 6 else { return }
         isLoading = true
         errorMessage = nil
 
@@ -301,7 +304,7 @@ struct SignUpView: View {
                 if result.status == .complete {
                     // Sign-up is complete. Clerk.shared.session will update automatically.
                     // Show the optional photo step before AuthGateView transitions.
-                    self.signUp = result
+                    self.pendingSignUp = result
                     step = .photo
                 } else {
                     errorMessage = "Verification incomplete. Please try again."
@@ -341,12 +344,13 @@ struct SignUpView: View {
     }
 
     private func finishSignUp() {
-        // AuthGateView detects the new Clerk.shared.session and transitions automatically.
-        // Nothing more to do — this view will be replaced by MainView.
+        // Clearing the binding releases the branch guard in AuthGateView,
+        // allowing it to detect the Clerk session and transition to MainView.
+        pendingSignUp = nil
     }
 
     private func resetToInfoStep() {
-        signUp = nil
+        pendingSignUp = nil
         otpCode = ""
         errorMessage = nil
         step = .info
@@ -354,5 +358,5 @@ struct SignUpView: View {
 }
 
 #Preview {
-    SignUpView(onShowSignIn: {})
+    SignUpView(pendingSignUp: .constant(nil), onShowSignIn: {})
 }
