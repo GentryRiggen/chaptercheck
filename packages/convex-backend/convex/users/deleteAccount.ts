@@ -254,6 +254,9 @@ export const deleteAccount = action({
       isSoleUser = count === 1;
     }
 
+    // --- Delete the user from Clerk first (harder to recover if orphaned) ---
+    await deleteClerkUser(clerkUserId);
+
     // --- Delete all user data from Convex ---
     const { r2KeysToDelete, storageAccountR2Prefix } = await ctx.runMutation(
       internal.users.deleteAccount.deleteAccountData,
@@ -262,9 +265,6 @@ export const deleteAccount = action({
 
     // --- Delete R2 files ---
     await deleteR2Files(r2KeysToDelete, storageAccountR2Prefix);
-
-    // --- Delete the user from Clerk ---
-    await deleteClerkUser(clerkUserId);
   },
 });
 
@@ -273,9 +273,9 @@ export const deleteAccount = action({
  *
  * 1. Verifies the caller is an admin.
  * 2. Looks up the target user.
- * 3. Runs the internal mutation to purge all target user data.
- * 4. Deletes R2 files for the target user's audio uploads.
- * 5. Calls the Clerk Backend API to delete the target user from Clerk.
+ * 3. Deletes the target user from Clerk (before data, to avoid orphaned accounts).
+ * 4. Runs the internal mutation to purge all target user data.
+ * 5. Deletes R2 files for the target user's audio uploads.
  */
 export const adminDeleteUser = action({
   args: {
@@ -329,6 +329,9 @@ export const adminDeleteUser = action({
       isSoleUser = count === 1;
     }
 
+    // --- Delete from Clerk first (harder to recover if orphaned) ---
+    await deleteClerkUser(targetUser.clerkId);
+
     // --- Delete all target user data from Convex ---
     const { r2KeysToDelete, storageAccountR2Prefix } = await ctx.runMutation(
       internal.users.deleteAccount.deleteAccountData,
@@ -337,9 +340,6 @@ export const adminDeleteUser = action({
 
     // --- Delete R2 files ---
     await deleteR2Files(r2KeysToDelete, storageAccountR2Prefix);
-
-    // --- Delete from Clerk ---
-    await deleteClerkUser(targetUser.clerkId);
   },
 });
 
@@ -448,7 +448,9 @@ async function deleteR2KeysBatch(
 async function deleteClerkUser(clerkUserId: string): Promise<void> {
   const clerkSecretKey = process.env.CLERK_SECRET_KEY;
   if (!clerkSecretKey) {
-    throw new Error("CLERK_SECRET_KEY environment variable is not set");
+    throw new Error(
+      "CLERK_SECRET_KEY environment variable is not set. Run: npx convex env set CLERK_SECRET_KEY <key>"
+    );
   }
 
   const response = await fetch(`https://api.clerk.com/v1/users/${clerkUserId}`, {

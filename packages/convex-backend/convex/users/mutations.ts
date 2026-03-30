@@ -83,6 +83,7 @@ export const adminUpdateUser = mutation({
       role: args.role,
       hasPremium: args.hasPremium,
       storageAccountId: args.storageAccountId,
+      approvalStatus: "approved",
       updatedAt: Date.now(),
     });
 
