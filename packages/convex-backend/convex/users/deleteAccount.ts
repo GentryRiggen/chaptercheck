@@ -131,7 +131,41 @@ export const deleteAccountData = internalMutation({
       await ctx.db.delete(row._id);
     }
 
-    // --- 12. audioFiles (field is uploadedBy, has by_uploadedBy index) ---
+    // --- 12. blocks (both directions) ---
+    const blocksAsBlocker = await ctx.db
+      .query("blocks")
+      .withIndex("by_blocker", (q) => q.eq("blockerId", userId))
+      .collect();
+    for (const row of blocksAsBlocker) {
+      await ctx.db.delete(row._id);
+    }
+
+    const blocksAsBlocked = await ctx.db
+      .query("blocks")
+      .withIndex("by_blocked", (q) => q.eq("blockedUserId", userId))
+      .collect();
+    for (const row of blocksAsBlocked) {
+      await ctx.db.delete(row._id);
+    }
+
+    // --- 13. reports (both directions) ---
+    const reportsAsReporter = await ctx.db
+      .query("reports")
+      .withIndex("by_reporter", (q) => q.eq("reporterId", userId))
+      .collect();
+    for (const row of reportsAsReporter) {
+      await ctx.db.delete(row._id);
+    }
+
+    const reportsAsReported = await ctx.db
+      .query("reports")
+      .withIndex("by_reported_user", (q) => q.eq("reportedUserId", userId))
+      .collect();
+    for (const row of reportsAsReported) {
+      await ctx.db.delete(row._id);
+    }
+
+    // --- 14. audioFiles (field is uploadedBy, has by_uploadedBy index) ---
     const audioFiles = await ctx.db
       .query("audioFiles")
       .withIndex("by_uploadedBy", (q) => q.eq("uploadedBy", userId))
@@ -142,6 +176,7 @@ export const deleteAccountData = internalMutation({
     const totalBytesDeleted = audioFiles.reduce((sum, f) => sum + f.fileSize, 0);
 
     // Update storage account stats for shared accounts, or delete if sole user
+    // Note: user row may already be deleted by Clerk webhook, so guard with get()
     const user = await ctx.db.get(userId);
     let storageAccountR2Prefix: string | undefined;
 
@@ -167,8 +202,11 @@ export const deleteAccountData = internalMutation({
       await ctx.db.delete(row._id);
     }
 
-    // --- 13. users row (last) ---
-    await ctx.db.delete(userId);
+    // --- 15. users row (last) ---
+    // Guard: the Clerk user.deleted webhook may have already removed this row
+    if (user) {
+      await ctx.db.delete(userId);
+    }
 
     return {
       r2KeysToDelete,
@@ -460,7 +498,8 @@ async function deleteClerkUser(clerkUserId: string): Promise<void> {
     },
   });
 
-  if (!response.ok) {
+  // 404 means the user was already deleted (idempotent)
+  if (!response.ok && response.status !== 404) {
     const errorBody = await response.text();
     throw new Error(`Failed to delete Clerk user (${response.status}): ${errorBody}`);
   }

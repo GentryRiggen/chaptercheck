@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { Webhook } from "svix";
 
 import { internal } from "../_generated/api";
-import { httpAction, internalMutation } from "../_generated/server";
+import { httpAction, internalMutation, internalQuery } from "../_generated/server";
 
 export const handleClerkWebhook = httpAction(async (ctx, request) => {
   const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
@@ -77,9 +77,26 @@ export const handleClerkWebhook = httpAction(async (ctx, request) => {
     const { id } = evt.data;
 
     if (id) {
-      await ctx.runMutation(internal.auth.clerkWebhook.deleteUser, {
+      // Look up user first, then run full data cleanup (not just user row)
+      const user = await ctx.runQuery(internal.auth.clerkWebhook.getUserByClerkId, {
         clerkId: id,
       });
+      if (user) {
+        // Check if sole user on storage account
+        let isSoleUser = false;
+        if (user.storageAccountId) {
+          const { count } = await ctx.runQuery(
+            internal.users.deleteAccount.getStorageAccountUserCount,
+            { storageAccountId: user.storageAccountId }
+          );
+          isSoleUser = count === 1;
+        }
+
+        await ctx.runMutation(internal.users.deleteAccount.deleteAccountData, {
+          userId: user._id,
+          deleteStorageAccount: isSoleUser,
+        });
+      }
     }
   }
 
@@ -153,18 +170,12 @@ export const updateUser = internalMutation({
   },
 });
 
-export const deleteUser = internalMutation({
-  args: {
-    clerkId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
+export const getUserByClerkId = internalQuery({
+  args: { clerkId: v.string() },
+  handler: async (ctx, { clerkId }) => {
+    return await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
       .unique();
-
-    if (user) {
-      await ctx.db.delete(user._id);
-    }
   },
 });
