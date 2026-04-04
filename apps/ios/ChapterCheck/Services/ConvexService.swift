@@ -59,6 +59,15 @@ final class ConvexService: ObservableObject {
     /// deallocated before subscription cancellation completes, causing a UniFFI
     /// panic in the ConvexMobile Rust layer (CHAPTERCHECK-IOS-9).
     private var retiredClient: ConvexClientWithAuth<String>?
+    /// Keeps the previous client's state-observation cancellables alive alongside
+    /// `retiredClient`. Cancelling these during an active WebSocket flap storm
+    /// propagates into the ConvexMobile Rust layer while it's unstable, triggering
+    /// the UniFFI panic. By deferring cancellation until the retired client is
+    /// released (after the flap storm has settled), the Rust layer is stable again.
+    private var retiredCancellables: [AnyCancellable] = []
+    /// Monotonic generation counter — incremented each time `bindClientState()`
+    /// creates new sinks so that stale sinks from a retired client are ignored.
+    private var bindGeneration: UInt64 = 0
 
     /// Interval between proactive token refreshes (in seconds).
     /// Clerk JWTs expire after ~60s; refresh every 50s to stay ahead.
@@ -108,19 +117,24 @@ final class ConvexService: ObservableObject {
     }
 
     private func bindClientState() {
+        bindGeneration &+= 1
+        let expectedGeneration = bindGeneration
+
         authStateCancellable?.cancel()
         authStateCancellable = client.authState
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
-                self?.authState = state
-                self?.handleAuthStateChange(state)
+                guard let self, self.bindGeneration == expectedGeneration else { return }
+                self.authState = state
+                self.handleAuthStateChange(state)
             }
 
         webSocketStateCancellable?.cancel()
         webSocketStateCancellable = client.watchWebSocketState()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
-                self?.handleWebSocketStateChange(state)
+                guard let self, self.bindGeneration == expectedGeneration else { return }
+                self.handleWebSocketStateChange(state)
             }
     }
 
@@ -371,28 +385,40 @@ final class ConvexService: ObservableObject {
         webSocketRecoveryTask = nil
         reconnectNotificationTask?.cancel()
         reconnectNotificationTask = nil
-        authStateCancellable?.cancel()
+
+        // Detach old state-observation cancellables WITHOUT cancelling them.
+        // Cancelling Combine subscriptions to ConvexMobile publishers while the
+        // WebSocket is actively flapping can trigger a UniFFI Rust panic
+        // (CHAPTERCHECK-IOS-9). The generation counter in bindClientState()
+        // ensures these stale sinks are no-ops. They'll be cancelled naturally
+        // when retiredCancellables is cleared after the flap storm settles.
+        var retiring: [AnyCancellable] = []
+        if let c = authStateCancellable { retiring.append(c) }
+        if let c = webSocketStateCancellable { retiring.append(c) }
         authStateCancellable = nil
-        webSocketStateCancellable?.cancel()
         webSocketStateCancellable = nil
+
         authState = .loading
         isWebSocketConnected = false
         wasWebSocketConnected = false
         flapTimestamps.removeAll()
 
-        // Keep the old client alive so that in-flight subscription cancellations
-        // (triggered by SwiftUI view teardown after resetID changes) don't crash
-        // the already-freed UniFFI/Rust layer.
+        // Keep the old client and its cancellables alive so that in-flight
+        // subscription cancellations (triggered by SwiftUI view teardown after
+        // resetID changes) don't crash the already-freed UniFFI/Rust layer.
         retiredClient = client
+        retiredCancellables = retiring
         client = Self.makeClient()
         bindClientState()
         resetID = UUID()
 
-        // Release the retired client on the next run loop tick, after SwiftUI
-        // has had a chance to tear down views and cancel their subscriptions.
+        // Release the retired client and cancellables after SwiftUI has had time
+        // to tear down views and cancel their subscriptions, and the WebSocket
+        // flap storm has settled so the Rust layer is stable for deferred cancels.
         Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(2))
+            try? await Task.sleep(for: .seconds(5))
             self?.retiredClient = nil
+            self?.retiredCancellables.removeAll()
         }
 
         defer { isResetting = false }
