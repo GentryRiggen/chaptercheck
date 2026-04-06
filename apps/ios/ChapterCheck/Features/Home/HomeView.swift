@@ -1,4 +1,3 @@
-import ClerkKit
 import ConvexMobile
 import SwiftUI
 
@@ -9,7 +8,6 @@ import SwiftUI
 /// browse the full library and authors.
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
-    @State private var isAddBookPresented = false
     @Environment(AudioPlayerManager.self) private var audioPlayer
     @Environment(DownloadManager.self) private var downloadManager
     @Environment(ThemeManager.self) private var themeManager
@@ -47,29 +45,6 @@ struct HomeView: View {
             }
         }
         .navigationTitle("Chapter Check")
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                if currentUser?.permissions.canCreateContent == true {
-                    Button {
-                        isAddBookPresented = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Add book")
-                }
-
-                NavigationLink(value: AppDestination.search) {
-                    Image(systemName: "magnifyingglass")
-                }
-                .disabled(viewModel.isOffline)
-                .opacity(viewModel.isOffline ? 0.4 : 1)
-            }
-        }
-        .sheet(isPresented: $isAddBookPresented) {
-            AddBookView { _ in
-                isAddBookPresented = false
-            }
-        }
         .onAppear {
             viewModel.downloadManager = downloadManager
             viewModel.audioPlayerManager = audioPlayer

@@ -521,8 +521,6 @@ struct MainView: View {
             ShelfDetailView(shelfId: id)
         case .profile(let userId):
             ProfileView(userId: userId)
-        case .search:
-            SearchView()
         case .browseLibrary(let initialSort):
             LibraryView(initialSort: initialSort)
         case .browseAuthors:

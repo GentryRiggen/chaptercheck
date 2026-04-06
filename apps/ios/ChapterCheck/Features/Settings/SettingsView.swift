@@ -178,7 +178,7 @@ struct SettingsView: View {
             FollowListView(userId: userId, mode: .following)
         case .userSearch:
             UserSearchView()
-        case .search, .browseLibrary, .browseAuthors:
+        case .browseLibrary, .browseAuthors:
             EmptyView()
         }
     }
