@@ -27,12 +27,16 @@ export const useAudioUpload = (bookId: Id<"books">) => {
     };
 
     try {
+      // .m4b files are MP4 containers (same as .m4a) but browsers report
+      // them as audio/x-m4b which backends may not recognize.
+      const contentType = file.name.match(/\.m4b$/i) ? "audio/mp4" : file.type;
+
       // Step 1: Get presigned URL from Convex (also creates storage account if needed)
       const { uploadUrl, r2Key, r2Bucket, storageAccountId } = await generateUploadUrl({
         bookId,
         fileName: file.name,
         fileSize: file.size,
-        contentType: file.type,
+        contentType,
       });
 
       // Step 2: Upload to R2 using XMLHttpRequest for progress tracking
@@ -63,7 +67,7 @@ export const useAudioUpload = (bookId: Id<"books">) => {
         });
 
         xhr.open("PUT", uploadUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.setRequestHeader("Content-Type", contentType);
         xhr.send(file);
       });
 

@@ -36,7 +36,14 @@ interface FileWithStatus {
 }
 
 const MAX_FILE_SIZE = 1.5 * 1024 * 1024 * 1024; // 1.5GB
-const VALID_TYPES = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a", "audio/x-m4a"];
+const VALID_TYPES = [
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/m4a",
+  "audio/x-m4a",
+  "audio/x-m4b",
+];
 const VALID_EXTENSIONS = /\.(mp3|m4a|m4b)$/i;
 const MAX_CONCURRENT_UPLOADS = 3;
 
@@ -50,7 +57,7 @@ export function AudioUpload({ bookId, existingFileCount = 0, onUploadComplete }:
 
   const validateFile = (file: File): string | null => {
     if (!VALID_TYPES.includes(file.type) && !file.name.match(VALID_EXTENSIONS)) {
-      return `${file.name}: Invalid file type. Please select MP3 or M4A files.`;
+      return `${file.name}: Invalid file type. Please select MP3, M4A, or M4B files.`;
     }
     if (file.size > MAX_FILE_SIZE) {
       return `${file.name}: File size must be less than 1.5GB.`;
@@ -329,7 +336,7 @@ export function AudioUpload({ bookId, existingFileCount = 0, onUploadComplete }:
             ref={fileInputRef}
             type="file"
             multiple
-            accept="audio/mpeg,audio/mp3,audio/mp4,audio/m4a,.mp3,.m4a,.m4b"
+            accept="audio/mpeg,audio/mp3,audio/mp4,audio/m4a,audio/x-m4b,.mp3,.m4a,.m4b"
             onChange={handleFileSelect}
             className="hidden"
             disabled={isUploading}

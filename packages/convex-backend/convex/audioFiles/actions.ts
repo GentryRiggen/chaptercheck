@@ -16,6 +16,7 @@ const ALLOWED_AUDIO_CONTENT_TYPES = new Set([
   "audio/mp4",
   "audio/m4a",
   "audio/x-m4a",
+  "audio/x-m4b",
   "audio/aac",
   "audio/wav",
   "audio/x-wav",
