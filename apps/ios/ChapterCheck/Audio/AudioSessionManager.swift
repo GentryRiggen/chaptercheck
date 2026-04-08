@@ -9,9 +9,13 @@ import Foundation
 /// resuming playback through a delegate callback.
 final class AudioSessionManager {
 
-    /// Callback invoked when an audio interruption occurs.
-    /// - Parameter shouldResume: `true` if playback should resume after the interruption ended.
-    var onInterruption: ((_ shouldResume: Bool) -> Void)?
+    enum InterruptionEvent {
+        case began
+        case ended(shouldResume: Bool)
+    }
+
+    /// Callback invoked when an audio interruption begins or ends.
+    var onInterruption: ((_ event: InterruptionEvent) -> Void)?
 
     /// Callback invoked when the audio output route changes.
     /// - Parameter deviceName: The name of the current output device, or `nil` for built-in speaker.
@@ -128,14 +132,14 @@ final class AudioSessionManager {
         switch type {
         case .began:
             logger.info("Audio interruption began")
-            onInterruption?(false)
+            onInterruption?(.began)
 
         case .ended:
             let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
             let shouldResume = options.contains(.shouldResume)
             logger.info("Audio interruption ended, shouldResume=\(shouldResume)")
-            onInterruption?(shouldResume)
+            onInterruption?(.ended(shouldResume: shouldResume))
 
         @unknown default:
             logger.warning("Unknown audio interruption type: \(typeValue)")

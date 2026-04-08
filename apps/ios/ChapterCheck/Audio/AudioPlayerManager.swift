@@ -219,6 +219,10 @@ final class AudioPlayerManager {
     private var webSocketObservation: AnyCancellable?
     private var reconnectObservation: NSObjectProtocol?
 
+    /// Tracks whether audio was playing when an interruption began, so we can
+    /// auto-resume after transient interruptions (e.g. lock-screen system sounds).
+    private var wasPlayingBeforeInterruption = false
+
     /// Number of automatic retries attempted for the current track on transient failures.
     private var transientRetryCount = 0
 
@@ -400,6 +404,7 @@ final class AudioPlayerManager {
 
     /// Pause playback and save progress.
     func pause() {
+        wasPlayingBeforeInterruption = false
         player?.pause()
         isPlaying = false
         cancelSleepTimer()
@@ -1254,17 +1259,28 @@ final class AudioPlayerManager {
     private func configureAudioSession() {
         sessionManager.configure()
 
-        sessionManager.onInterruption = { [weak self] shouldResume in
+        sessionManager.onInterruption = { [weak self] event in
             Task { @MainActor in
                 guard let self else { return }
-                if shouldResume {
-                    self.resume()
-                } else {
-                    // Interruption began or ended without resume flag
-                    self.player?.pause()
-                    self.isPlaying = false
-                    self.saveProgressNow(forceRemoteSync: true)
-                    self.updateNowPlayingState()
+                switch event {
+                case .began:
+                    self.wasPlayingBeforeInterruption = self.isPlaying
+                    if self.isPlaying {
+                        self.player?.pause()
+                        self.isPlaying = false
+                        self.saveProgressNow(forceRemoteSync: true)
+                        self.updateNowPlayingState()
+                    }
+                case .ended(let shouldResume):
+                    if self.wasPlayingBeforeInterruption {
+                        // Resume if the system says to, or if no other app has
+                        // taken over audio (covers transient lock-screen interrupts
+                        // where .shouldResume is not set).
+                        if shouldResume || !AVAudioSession.sharedInstance().isOtherAudioPlaying {
+                            self.resume()
+                        }
+                    }
+                    self.wasPlayingBeforeInterruption = false
                 }
             }
         }
@@ -1362,6 +1378,17 @@ final class AudioPlayerManager {
         syncTimelineFromPlayer()
         if let livePos = livePlayerPosition() {
             lastLivePosition = livePos
+        }
+
+        // If an interruption began but .ended never fired (known iOS
+        // edge case for transient lock-screen system sounds), resume
+        // playback now that the app is foregrounded again.
+        if wasPlayingBeforeInterruption {
+            wasPlayingBeforeInterruption = false
+            if !AVAudioSession.sharedInstance().isOtherAudioPlaying {
+                resume()
+                return
+            }
         }
 
         // Sync play/pause state — the player may have been paused by
