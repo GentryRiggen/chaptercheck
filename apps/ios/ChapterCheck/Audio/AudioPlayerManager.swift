@@ -323,13 +323,15 @@ final class AudioPlayerManager {
         guard let playerItem = player?.currentItem else { return }
 
         if enabled {
-            if let audioMix = VoiceBoostProcessor.createAudioMix(for: playerItem) {
-                playerItem.audioMix = audioMix
-            } else {
-                logger.error("Failed to create voice boost audio mix")
-                isVoiceBoostEnabled = false
-                cachePreferencesLocally()
-                preferencesRepository.updatePreferences(voiceBoostEnabled: false)
+            Task {
+                if let audioMix = await VoiceBoostProcessor.createAudioMix(for: playerItem) {
+                    playerItem.audioMix = audioMix
+                } else {
+                    logger.error("Failed to create voice boost audio mix")
+                    isVoiceBoostEnabled = false
+                    cachePreferencesLocally()
+                    preferencesRepository.updatePreferences(voiceBoostEnabled: false)
+                }
             }
         } else {
             playerItem.audioMix = nil
@@ -661,7 +663,7 @@ final class AudioPlayerManager {
             let playerItem = AVPlayerItem(url: url)
 
             if isVoiceBoostEnabled {
-                playerItem.audioMix = VoiceBoostProcessor.createAudioMix(for: playerItem)
+                playerItem.audioMix = await VoiceBoostProcessor.createAudioMix(for: playerItem)
             }
 
             let avPlayer = AVPlayer(playerItem: playerItem)
@@ -1639,7 +1641,9 @@ final class AudioPlayerManager {
             isVoiceBoostEnabled = newVoiceBoost
             if let playerItem = player?.currentItem {
                 if newVoiceBoost {
-                    playerItem.audioMix = VoiceBoostProcessor.createAudioMix(for: playerItem)
+                    Task {
+                        playerItem.audioMix = await VoiceBoostProcessor.createAudioMix(for: playerItem)
+                    }
                 } else {
                     playerItem.audioMix = nil
                 }

@@ -18,8 +18,10 @@ enum VoiceBoostProcessor {
     /// Creates an `AVAudioMix` with voice boost processing for the given player item.
     ///
     /// Returns `nil` if the player item has no audio tracks or tap creation fails.
-    static func createAudioMix(for playerItem: AVPlayerItem) -> AVAudioMix? {
-        guard let track = playerItem.asset.tracks(withMediaType: .audio).first else {
+    /// Uses async `loadTracks` to avoid blocking the main thread on a synchronous
+    /// XPC call to the media server (which can hang for 2+ seconds on cold assets).
+    static func createAudioMix(for playerItem: AVPlayerItem) async -> AVAudioMix? {
+        guard let track = try? await playerItem.asset.loadTracks(withMediaType: .audio).first else {
             return nil
         }
 
