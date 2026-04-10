@@ -13,38 +13,39 @@ import { internalAction, internalMutation } from "../_generated/server";
  *   2. Execute:  cleanup/deleteOrphanedBooks:run  { "dryRun": false }
  */
 
-// Find all books that have zero audio files
-export const findBooksWithoutAudio = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const allBooks = await ctx.db.query("books").collect();
-    const results: { _id: (typeof allBooks)[0]["_id"]; title: string; authorIds: string[] }[] = [];
+const PAGE_SIZE = 500;
+const DELETE_BATCH = 10;
 
-    for (const book of allBooks) {
+// Paginated scan: find books without audio files, one page at a time
+export const findBooksWithoutAudioPage = internalMutation({
+  args: { cursor: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const result = await ctx.db
+      .query("books")
+      .paginate({ numItems: PAGE_SIZE, cursor: args.cursor ?? null });
+
+    const booksWithoutAudio: { _id: Id<"books">; title: string }[] = [];
+
+    for (const book of result.page) {
       const audioFile = await ctx.db
         .query("audioFiles")
         .withIndex("by_book", (q) => q.eq("bookId", book._id))
         .first();
 
       if (!audioFile) {
-        const bookAuthors = await ctx.db
-          .query("bookAuthors")
-          .withIndex("by_book", (q) => q.eq("bookId", book._id))
-          .collect();
-
-        results.push({
-          _id: book._id,
-          title: book.title,
-          authorIds: bookAuthors.map((ba) => ba.authorId),
-        });
+        booksWithoutAudio.push({ _id: book._id, title: book.title });
       }
     }
 
-    return results;
+    return {
+      booksWithoutAudio,
+      isDone: result.isDone,
+      continueCursor: result.continueCursor,
+    };
   },
 });
 
-// Delete indexed related data (bookAuthors, shelfBooks, genreVotes, bookUserData) + the book
+// Delete indexed related data + the book itself for a small batch
 export const deleteBooksBatch = internalMutation({
   args: { bookIds: v.array(v.id("books")) },
   handler: async (ctx, args) => {
@@ -100,37 +101,47 @@ export const deleteBooksBatch = internalMutation({
   },
 });
 
-// Delete listeningProgress for a set of book IDs (no by_book index, requires scan)
-export const deleteListeningProgressForBooks = internalMutation({
-  args: { bookIds: v.array(v.id("books")) },
+// Paginated scan + delete of listeningProgress matching any of the given bookIds
+export const deleteListeningProgressPage = internalMutation({
+  args: {
+    bookIds: v.array(v.id("books")),
+    cursor: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const bookIdSet = new Set<string>(args.bookIds);
-    const allProgress = await ctx.db.query("listeningProgress").collect();
-    let deleted = 0;
+    const result = await ctx.db
+      .query("listeningProgress")
+      .paginate({ numItems: PAGE_SIZE, cursor: args.cursor ?? null });
 
-    for (const progress of allProgress) {
+    let deleted = 0;
+    for (const progress of result.page) {
       if (bookIdSet.has(progress.bookId)) {
         await ctx.db.delete(progress._id);
         deleted++;
       }
     }
 
-    return { deleted };
+    return { deleted, isDone: result.isDone, continueCursor: result.continueCursor };
   },
 });
 
-// Delete bookNotes + their bookNoteTags for a set of book IDs (no by_book index, requires scan)
-export const deleteBookNotesForBooks = internalMutation({
-  args: { bookIds: v.array(v.id("books")) },
+// Paginated scan + delete of bookNotes (and their tags) matching any of the given bookIds
+export const deleteBookNotesPage = internalMutation({
+  args: {
+    bookIds: v.array(v.id("books")),
+    cursor: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const bookIdSet = new Set<string>(args.bookIds);
-    const allNotes = await ctx.db.query("bookNotes").collect();
+    const result = await ctx.db
+      .query("bookNotes")
+      .paginate({ numItems: PAGE_SIZE, cursor: args.cursor ?? null });
+
     let notesDeleted = 0;
     let tagsDeleted = 0;
 
-    for (const note of allNotes) {
+    for (const note of result.page) {
       if (bookIdSet.has(note.bookId)) {
-        // Delete tags for this note first
         const tags = await ctx.db
           .query("bookNoteTags")
           .withIndex("by_note", (q) => q.eq("noteId", note._id))
@@ -139,24 +150,31 @@ export const deleteBookNotesForBooks = internalMutation({
           await ctx.db.delete(tag._id);
           tagsDeleted++;
         }
-
         await ctx.db.delete(note._id);
         notesDeleted++;
       }
     }
 
-    return { notesDeleted, tagsDeleted };
+    return {
+      notesDeleted,
+      tagsDeleted,
+      isDone: result.isDone,
+      continueCursor: result.continueCursor,
+    };
   },
 });
 
-// Find authors with no remaining bookAuthors entries
-export const findOrphanedAuthors = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const allAuthors = await ctx.db.query("authors").collect();
-    const orphaned: { _id: (typeof allAuthors)[0]["_id"]; name: string }[] = [];
+// Paginated scan: find authors with no remaining bookAuthors entries
+export const findOrphanedAuthorsPage = internalMutation({
+  args: { cursor: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const result = await ctx.db
+      .query("authors")
+      .paginate({ numItems: PAGE_SIZE, cursor: args.cursor ?? null });
 
-    for (const author of allAuthors) {
+    const orphaned: { _id: Id<"authors">; name: string }[] = [];
+
+    for (const author of result.page) {
       const bookAuthor = await ctx.db
         .query("bookAuthors")
         .withIndex("by_author", (q) => q.eq("authorId", author._id))
@@ -167,7 +185,7 @@ export const findOrphanedAuthors = internalMutation({
       }
     }
 
-    return orphaned;
+    return { orphaned, isDone: result.isDone, continueCursor: result.continueCursor };
   },
 });
 
@@ -186,9 +204,23 @@ export const deleteAuthorsBatch = internalMutation({
 export const run = internalAction({
   args: { dryRun: v.boolean() },
   handler: async (ctx, args): Promise<Record<string, unknown>> => {
-    // Step 1: Find books without audio files
-    const booksWithoutAudio: { _id: Id<"books">; title: string; authorIds: string[] }[] =
-      await ctx.runMutation(internal.cleanup.deleteOrphanedBooks.findBooksWithoutAudio, {});
+    // Step 1: Find all books without audio files (paginated)
+    const booksWithoutAudio: { _id: Id<"books">; title: string }[] = [];
+    let cursor: string | undefined;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const page: {
+        booksWithoutAudio: { _id: Id<"books">; title: string }[];
+        isDone: boolean;
+        continueCursor: string;
+      } = await ctx.runMutation(internal.cleanup.deleteOrphanedBooks.findBooksWithoutAudioPage, {
+        cursor,
+      });
+      booksWithoutAudio.push(...page.booksWithoutAudio);
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
 
     console.log(`\n========================================`);
     console.log(`CLEANUP: Books without audio files`);
@@ -211,44 +243,79 @@ export const run = internalAction({
 
     const bookIds = booksWithoutAudio.map((b) => b._id);
 
-    // Step 2: Delete related data that requires full table scans
+    // Step 2: Delete listeningProgress (paginated scan)
     console.log(`\nDeleting related data...`);
+    let totalProgressDeleted = 0;
+    cursor = undefined;
 
-    const progressResult = await ctx.runMutation(
-      internal.cleanup.deleteOrphanedBooks.deleteListeningProgressForBooks,
-      { bookIds }
-    );
-    console.log(`  Listening progress: ${progressResult.deleted} deleted`);
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const result: { deleted: number; isDone: boolean; continueCursor: string } =
+        await ctx.runMutation(internal.cleanup.deleteOrphanedBooks.deleteListeningProgressPage, {
+          bookIds,
+          cursor,
+        });
+      totalProgressDeleted += result.deleted;
+      if (result.isDone) break;
+      cursor = result.continueCursor;
+    }
+    console.log(`  Listening progress: ${totalProgressDeleted} deleted`);
 
-    const notesResult = await ctx.runMutation(
-      internal.cleanup.deleteOrphanedBooks.deleteBookNotesForBooks,
-      { bookIds }
-    );
-    console.log(
-      `  Book notes: ${notesResult.notesDeleted} deleted, tags: ${notesResult.tagsDeleted} deleted`
-    );
+    // Step 3: Delete bookNotes + tags (paginated scan)
+    let totalNotesDeleted = 0;
+    let totalTagsDeleted = 0;
+    cursor = undefined;
 
-    // Step 3: Delete books + indexed related data in batches
-    const BATCH = 25;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const result: {
+        notesDeleted: number;
+        tagsDeleted: number;
+        isDone: boolean;
+        continueCursor: string;
+      } = await ctx.runMutation(internal.cleanup.deleteOrphanedBooks.deleteBookNotesPage, {
+        bookIds,
+        cursor,
+      });
+      totalNotesDeleted += result.notesDeleted;
+      totalTagsDeleted += result.tagsDeleted;
+      if (result.isDone) break;
+      cursor = result.continueCursor;
+    }
+    console.log(`  Book notes: ${totalNotesDeleted} deleted, tags: ${totalTagsDeleted} deleted`);
+
+    // Step 4: Delete books + indexed related data in batches
     let booksDeleted = 0;
 
-    for (let i = 0; i < bookIds.length; i += BATCH) {
-      const batch = bookIds.slice(i, i + BATCH);
+    for (let i = 0; i < bookIds.length; i += DELETE_BATCH) {
+      const batch = bookIds.slice(i, i + DELETE_BATCH);
       const result = await ctx.runMutation(internal.cleanup.deleteOrphanedBooks.deleteBooksBatch, {
         bookIds: batch,
       });
       booksDeleted += batch.length;
       console.log(
-        `  Book batch ${Math.floor(i / BATCH) + 1}: ${batch.length} books (${result.totalDeleted} total records)`
+        `  Book batch ${Math.floor(i / DELETE_BATCH) + 1}: ${batch.length} books (${result.totalDeleted} total records)`
       );
     }
 
-    // Step 4: Find and delete orphaned authors
+    // Step 5: Find and delete orphaned authors (paginated)
     console.log(`\nChecking for orphaned authors...`);
-    const orphanedAuthors: { _id: Id<"authors">; name: string }[] = await ctx.runMutation(
-      internal.cleanup.deleteOrphanedBooks.findOrphanedAuthors,
-      {}
-    );
+    const orphanedAuthors: { _id: Id<"authors">; name: string }[] = [];
+    cursor = undefined;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const page: {
+        orphaned: { _id: Id<"authors">; name: string }[];
+        isDone: boolean;
+        continueCursor: string;
+      } = await ctx.runMutation(internal.cleanup.deleteOrphanedBooks.findOrphanedAuthorsPage, {
+        cursor,
+      });
+      orphanedAuthors.push(...page.orphaned);
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
 
     console.log(`Found ${orphanedAuthors.length} orphaned author(s):`);
     for (const author of orphanedAuthors) {
@@ -258,8 +325,8 @@ export const run = internalAction({
     let authorsDeleted = 0;
     if (orphanedAuthors.length > 0) {
       const authorIds = orphanedAuthors.map((a) => a._id);
-      for (let i = 0; i < authorIds.length; i += BATCH) {
-        const batch = authorIds.slice(i, i + BATCH);
+      for (let i = 0; i < authorIds.length; i += DELETE_BATCH) {
+        const batch = authorIds.slice(i, i + DELETE_BATCH);
         await ctx.runMutation(internal.cleanup.deleteOrphanedBooks.deleteAuthorsBatch, {
           authorIds: batch,
         });
