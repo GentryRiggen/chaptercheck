@@ -31,7 +31,7 @@ export function BookCard({ book, variant = "default", className }: BookCardProps
     <Link
       href={`/books/${book._id}`}
       className={cn(
-        "group relative overflow-hidden rounded-xl bg-card/50 p-3 shadow-sm ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 hover:ring-primary/30",
+        "group relative overflow-hidden rounded-xl bg-card/50 p-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5",
         className
       )}
     >
