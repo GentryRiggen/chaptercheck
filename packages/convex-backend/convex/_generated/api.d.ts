@@ -27,6 +27,7 @@ import type * as bookUserData_mutations from "../bookUserData/mutations.js";
 import type * as bookUserData_queries from "../bookUserData/queries.js";
 import type * as books_mutations from "../books/mutations.js";
 import type * as books_queries from "../books/queries.js";
+import type * as cleanup_deleteOrphanedBooks from "../cleanup/deleteOrphanedBooks.js";
 import type * as follows_mutations from "../follows/mutations.js";
 import type * as follows_queries from "../follows/queries.js";
 import type * as genres_mutations from "../genres/mutations.js";
@@ -96,6 +97,7 @@ declare const fullApi: ApiFromModules<{
   "bookUserData/queries": typeof bookUserData_queries;
   "books/mutations": typeof books_mutations;
   "books/queries": typeof books_queries;
+  "cleanup/deleteOrphanedBooks": typeof cleanup_deleteOrphanedBooks;
   "follows/mutations": typeof follows_mutations;
   "follows/queries": typeof follows_queries;
   "genres/mutations": typeof genres_mutations;
