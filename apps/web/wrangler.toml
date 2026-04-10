@@ -5,3 +5,9 @@ compatibility_flags = ["nodejs_compat"]
 
 # Cloudflare Pages assets
 assets = { directory = ".open-next/assets", binding = "ASSETS" }
+
+# Explicit CPU limit — required for Next.js SSR + Clerk auth + Sentry.
+# Without this, the Worker may use the legacy Bundled plan default (50ms)
+# which is far too low for SSR and causes Error 1102 under concurrent load.
+[limits]
+cpu_ms = 30000
