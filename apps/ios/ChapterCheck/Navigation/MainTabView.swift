@@ -142,6 +142,7 @@ struct MainView: View {
     @State private var deleteDownloadBookId: String?
     @State private var stopStreamingTask: Task<Void, Never>?
     @Environment(ThemeManager.self) private var themeManager
+    @Environment(DeepLinkRouter.self) private var deepLinkRouter
     private let networkMonitor = NetworkMonitor.shared
 
     /// The navigation path binding for the currently selected tab.
@@ -285,6 +286,16 @@ struct MainView: View {
                 await OfflineProgressQueue.shared.flush()
                 Task { await downloadManager.refreshDownloadedBookMetadata() }
             }
+
+            // If a Universal Link was buffered while the user was signing in
+            // (or before MainView appeared), route it now.
+            consumePendingDeepLink()
+        }
+        .onChange(of: deepLinkRouter.pendingDestination) { _, newValue in
+            // A link arrived while the app was already running and MainView
+            // is onscreen — route immediately.
+            guard newValue != nil else { return }
+            consumePendingDeepLink()
         }
         .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
             // Going offline: stop streaming (non-downloaded) playback after a
@@ -481,6 +492,37 @@ struct MainView: View {
         NavigateToDestinationAction { destination in
             pendingNavigation = destination
             isNowPlayingPresented = false
+        }
+    }
+
+    /// Routes a destination staged by `DeepLinkRouter` (e.g. from a Universal
+    /// Link) to the appropriate tab's navigation stack. If the Now Playing
+    /// sheet is open, defer the push until it dismisses — matches the behavior
+    /// of `navigateAction` for in-app navigation.
+    private func consumePendingDeepLink() {
+        guard let (destination, tab) = deepLinkRouter.consume() else { return }
+
+        if selectedTab != tab {
+            selectedTab = tab
+        }
+
+        let targetPath: Binding<[AppDestination]>
+        switch tab {
+        case .home: targetPath = $homePath
+        case .library: targetPath = $libraryPath
+        case .social: targetPath = $socialPath
+        case .notes: targetPath = $notesPath
+        case .profile: targetPath = $profilePath
+        }
+
+        // Avoid pushing a duplicate if the user is already on that destination.
+        if targetPath.wrappedValue.last == destination { return }
+
+        if isNowPlayingPresented {
+            pendingNavigation = destination
+            isNowPlayingPresented = false
+        } else {
+            targetPath.wrappedValue.append(destination)
         }
     }
 

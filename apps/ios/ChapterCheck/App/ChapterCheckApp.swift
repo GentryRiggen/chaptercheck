@@ -4,6 +4,7 @@ import ClerkKit
 @main
 struct ChapterCheckApp: App {
     @State private var themeManager = ThemeManager()
+    @State private var deepLinkRouter = DeepLinkRouter()
     @ObservedObject private var convexService = ConvexService.shared
     @Environment(\.scenePhase) private var scenePhase
     private let networkMonitor = NetworkMonitor.shared
@@ -20,8 +21,21 @@ struct ChapterCheckApp: App {
             AuthGateView()
                 .id(convexService.resetID)
                 .environment(themeManager)
+                .environment(deepLinkRouter)
                 .tint(themeManager.accentColor)
                 .preferredColorScheme(themeManager.preferredColorScheme)
+                .onOpenURL { url in
+                    // Called when a Universal Link is tapped while the app is
+                    // already running in the foreground/background.
+                    deepLinkRouter.handle(url: url)
+                }
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                    // Called when the app is launched by tapping a Universal
+                    // Link from Safari, Messages, Mail, etc.
+                    if let url = activity.webpageURL {
+                        deepLinkRouter.handle(url: url)
+                    }
+                }
 
         }
         .onChange(of: scenePhase) { _, newPhase in

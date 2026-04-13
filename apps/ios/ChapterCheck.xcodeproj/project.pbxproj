@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -189,6 +189,7 @@
 		EC8A36A124B5DBDC24E2039E /* BookMutationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8574461A528DEA09DFD33321 /* BookMutationRepository.swift */; };
 		ED310AE24DF8A1FC5C385119 /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D22CEFC589F33A4E05E8BFB /* DownloadManager.swift */; };
 		EDA920111450BC712A372119 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7E8D8338166DFB86BD92D /* ProfileView.swift */; };
+		EDACDB76A5BD84536E3B9B7C /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA270DBFC6340C7C927F2F4D /* DeepLinkRouter.swift */; };
 		EE9641A2AC8E6BE32F79F1F0 /* UserPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853FD7CA0E0107089396BFBA /* UserPreferences.swift */; };
 		F01B72FD611217C4D379EE2F /* AllReadingHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A79AE2E6F5C799D02158FF9D /* AllReadingHistoryView.swift */; };
 		F04516BF14905F9349BA8945 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80899FCE870DA63B54308D5A /* MainTabView.swift */; };
@@ -231,7 +232,7 @@
 		3561CADC39D72D2252A0FE68 /* PlaybackProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackProgressStore.swift; sourceTree = "<group>"; };
 		3781B336C686AC7E65EBA656 /* DownloadPromptBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadPromptBanner.swift; sourceTree = "<group>"; };
 		37D67B2546968C8069F63E07 /* ListeningProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeningProgress.swift; sourceTree = "<group>"; };
-		37E79533D58EC921758E0577 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		37E79533D58EC921758E0577 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		37ED6CEAB7A60DE13D977A51 /* Genre.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Genre.swift; sourceTree = "<group>"; };
 		38034A136F8D2C48B9D92E69 /* SocialRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRepository.swift; sourceTree = "<group>"; };
 		38670312B41265DB820BD573 /* AudioUploadQueueSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioUploadQueueSheet.swift; sourceTree = "<group>"; };
@@ -359,7 +360,7 @@
 		CC3726AE3DC55BE23FBF86FA /* AddBookConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookConfirmView.swift; sourceTree = "<group>"; };
 		CC3C134DB5104CCB61CE6EB5 /* AddBookViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookViewModel.swift; sourceTree = "<group>"; };
 		CCB12126F43DA09B1876DB55 /* SeriesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesDetailView.swift; sourceTree = "<group>"; };
-		CE38A99090831B755E8737E4 /* ChapterCheck.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChapterCheck.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CE38A99090831B755E8737E4 /* ChapterCheck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChapterCheck.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE6D120EB27289CE632EE1EF /* BookNotePreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookNotePreviewSheet.swift; sourceTree = "<group>"; };
 		CEE090000D4AF02CB2608DCB /* AllUserReviewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllUserReviewsView.swift; sourceTree = "<group>"; };
 		D0D677D1F7CAEEED450392D0 /* AllReadingHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllReadingHistoryViewModel.swift; sourceTree = "<group>"; };
@@ -378,6 +379,7 @@
 		E1B7E8D8338166DFB86BD92D /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		E252609AA082F238BB5B3D72 /* BookGridCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookGridCard.swift; sourceTree = "<group>"; };
 		E87A69950FF4FBF4B75BCBE6 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
+		EA270DBFC6340C7C927F2F4D /* DeepLinkRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
 		ECDD05971F1BDD2B6095A952 /* PreferencesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesRepository.swift; sourceTree = "<group>"; };
 		ED3B2700B4EF5F3ED45E3763 /* BookUserDataRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookUserDataRepository.swift; sourceTree = "<group>"; };
 		F2374A2C380BE1BB06CE53A4 /* ListeningCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeningCard.swift; sourceTree = "<group>"; };
@@ -626,6 +628,7 @@
 			isa = PBXGroup;
 			children = (
 				47F2E3DC3EB312E97FA30EBD /* AppDestination.swift */,
+				EA270DBFC6340C7C927F2F4D /* DeepLinkRouter.swift */,
 				80899FCE870DA63B54308D5A /* MainTabView.swift */,
 			);
 			path = Navigation;
@@ -905,7 +908,6 @@
 				38C4A65D855CD5143DE025C5 /* XCRemoteSwiftPackageReference "Pulse" */,
 				68291EA105A7409D3A5AD1B3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -997,6 +999,7 @@
 				B4F16E8978E6570A46CBFA83 /* ConvexAuthObserver.swift in Sources */,
 				89EBA98735C2710D1FA6EF77 /* ConvexService.swift in Sources */,
 				749485E2350B61EBCC6A3638 /* CrossBookNoteRow.swift in Sources */,
+				EDACDB76A5BD84536E3B9B7C /* DeepLinkRouter.swift in Sources */,
 				312610AF2991C4F706D8D29B /* DeleteAccountView.swift in Sources */,
 				FF212EBC80A3EBD8B3F96833 /* Download.swift in Sources */,
 				ED310AE24DF8A1FC5C385119 /* DownloadManager.swift in Sources */,
@@ -1189,9 +1192,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = ChapterCheck/ChapterCheck.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DDA6P8AJDM;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChapterCheck/Info.plist;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
@@ -1275,9 +1280,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = ChapterCheck/ChapterCheck.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DDA6P8AJDM;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChapterCheck/Info.plist;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
