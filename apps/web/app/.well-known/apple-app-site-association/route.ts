@@ -10,7 +10,6 @@
  * caches the association file, so changes may take up to 24h to propagate.
  */
 
-export const runtime = "edge";
 export const dynamic = "force-static";
 
 const APP_ID = "DDA6P8AJDM.com.chaptercheck.app";
