@@ -283,11 +283,22 @@ final class ConvexService: ObservableObject {
             return
         }
 
+        // No Clerk session means the user is signed out or mid sign-in (e.g. on
+        // the OTP entry screen). There's no authenticated session to refresh and
+        // no authenticated WebSocket to wait for — running the recovery logic
+        // below would fall through to `resetApplicationSession`, which bumps
+        // `resetID` and destroys the SwiftUI tree (including the lifted
+        // `pendingSignIn` state that keeps the user on the code entry screen).
+        guard Clerk.shared.session != nil else {
+            logger.info("App became active after \(Int(backgroundDuration))s in background — no Clerk session, skipping recovery")
+            return
+        }
+
         logger.info("App became active after \(Int(backgroundDuration))s in background")
 
         if case .authenticated = authState {
             await refreshTokenNow()
-        } else if Clerk.shared.session != nil {
+        } else {
             logger.info("Restoring Convex session after foreground resume")
             _ = await client.loginFromCache()
         }
@@ -363,6 +374,21 @@ final class ConvexService: ObservableObject {
             return
         }
 
+        // No Clerk session means there's nothing to reset — the user is signed
+        // out or mid sign-in (OTP flow). Bumping `resetID` here would destroy
+        // the SwiftUI tree (including the lifted `pendingSignIn` state), kicking
+        // the user back to the email entry screen.
+        guard Clerk.shared.session != nil else {
+            logger.debug("Skipping reset (\(reason)) — no Clerk session")
+            if case .authenticated = authState {} else {
+                // Assign directly (not via Combine) so handleAuthStateChange
+                // doesn't fire token refresh during a mid-sign-in bailout. This
+                // just ensures downstream observers don't stay in .loading.
+                authState = .unauthenticated
+            }
+            return
+        }
+
         let now = Date()
         guard now.timeIntervalSince(lastResetAt) >= Self.resetCooldownSeconds else {
             logger.debug("Skipping reset (\(reason)) — cooldown active")
@@ -423,10 +449,10 @@ final class ConvexService: ObservableObject {
 
         defer { isResetting = false }
 
+        // Clerk session was present at function entry. Re-read defensively in
+        // case the user signed out between then and now (e.g. in another tab or
+        // via async Clerk invalidation) — the logout path handles state cleanup.
         guard networkMonitor.isConnected, Clerk.shared.session != nil else {
-            if Clerk.shared.session == nil {
-                authState = .unauthenticated
-            }
             return
         }
 
