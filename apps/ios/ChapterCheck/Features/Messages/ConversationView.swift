@@ -202,13 +202,15 @@ struct ConversationView: View {
                     }
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.accentColor)
                 }
                 .disabled(!networkMonitor.isConnected || isUploading)
 
                 TextField("Message", text: $messageText, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 20))
                     .lineLimit(1...5)
 
                 Button {
@@ -218,13 +220,13 @@ struct ConversationView: View {
                     Task { await viewModel.sendTextMessage(text) }
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
-                        .font(.title2)
+                        .font(.system(size: 28))
                         .foregroundStyle(sendButtonColor)
                 }
                 .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !networkMonitor.isConnected || isUploading)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
         }
         .background(.bar)
         .onChange(of: selectedPhotoItem) { _, newItem in
