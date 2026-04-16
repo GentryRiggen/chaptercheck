@@ -25,13 +25,19 @@ final class MessagingRepository {
     /// Subscribe to paginated messages for a conversation (newest first).
     func subscribeToMessages(
         conversationId: String,
-        numItems: Int = 50
-    ) -> AnyPublisher<PaginatedMessages, ClientError>? {
-        convex.subscribe(
+        numItems: Int = 50,
+        cursor: String? = nil
+    ) -> AnyPublisher<PaginatedResult<Message>, ClientError>? {
+        let paginationOpts: [String: ConvexEncodable?] = [
+            "numItems": Double(numItems),
+            "cursor": cursor,
+        ]
+
+        return convex.subscribe(
             to: "messages/queries:getMessages",
             with: [
                 "conversationId": conversationId,
-                "paginationOpts": ["numItems": Double(numItems), "cursor": nil] as [String: ConvexEncodable?],
+                "paginationOpts": paginationOpts,
             ]
         )
     }
@@ -76,12 +82,17 @@ final class MessagingRepository {
     }
 
     /// Load more messages (pagination).
-    func loadMoreMessages(conversationId: String, cursor: String, numItems: Int = 50) async throws -> PaginatedMessages {
-        try await convex.query(
+    func loadMoreMessages(conversationId: String, cursor: String, numItems: Int = 50) async throws -> PaginatedResult<Message> {
+        let paginationOpts: [String: ConvexEncodable?] = [
+            "numItems": Double(numItems),
+            "cursor": cursor,
+        ]
+
+        return try await convex.query(
             "messages/queries:getMessages",
             with: [
                 "conversationId": conversationId,
-                "paginationOpts": ["numItems": Double(numItems), "cursor": cursor] as [String: ConvexEncodable?],
+                "paginationOpts": paginationOpts,
             ]
         )
     }

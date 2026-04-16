@@ -71,15 +71,6 @@ struct MessageReaction: Decodable, Sendable {
     let createdAt: Double
 }
 
-// MARK: - Paginated Messages
-
-/// Paginated response from `messages/queries:getMessages`.
-struct PaginatedMessages: Decodable, Sendable {
-    let page: [Message]
-    let isDone: Bool
-    let continueCursor: String
-}
-
 // MARK: - Conversation State
 
 /// Read state for a conversation.
