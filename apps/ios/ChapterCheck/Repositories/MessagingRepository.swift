@@ -31,7 +31,7 @@ final class MessagingRepository {
             to: "messages/queries:getMessages",
             with: [
                 "conversationId": conversationId,
-                "paginationOpts": ["numItems": numItems, "cursor": nil] as [String: ConvexEncodable?],
+                "paginationOpts": ["numItems": Double(numItems), "cursor": nil] as [String: ConvexEncodable?],
             ]
         )
     }
@@ -81,7 +81,7 @@ final class MessagingRepository {
             "messages/queries:getMessages",
             with: [
                 "conversationId": conversationId,
-                "paginationOpts": ["numItems": numItems, "cursor": cursor] as [String: ConvexEncodable?],
+                "paginationOpts": ["numItems": Double(numItems), "cursor": cursor] as [String: ConvexEncodable?],
             ]
         )
     }
