@@ -59,6 +59,7 @@ export function ApproveUserDialog({ user, open, onOpenChange }: ApproveUserDialo
     defaultValues: {
       role: "viewer",
       hasPremium: false,
+      messagingEnabled: true,
       storageAccountId: "",
     },
   });
@@ -85,6 +86,7 @@ export function ApproveUserDialog({ user, open, onOpenChange }: ApproveUserDialo
         userId: user._id,
         role: values.role,
         hasPremium: values.hasPremium,
+        messagingEnabled: values.messagingEnabled,
         storageAccountId:
           values.storageAccountId && values.storageAccountId !== "none"
             ? (values.storageAccountId as Id<"storageAccounts">)
@@ -134,6 +136,19 @@ export function ApproveUserDialog({ user, open, onOpenChange }: ApproveUserDialo
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border p-3">
                   <FormLabel className="text-sm font-medium">Premium Access</FormLabel>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="messagingEnabled"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <FormLabel className="text-sm font-medium">Direct Messaging</FormLabel>
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>

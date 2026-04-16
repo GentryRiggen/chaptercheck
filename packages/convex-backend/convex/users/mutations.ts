@@ -101,6 +101,7 @@ export const approveUser = mutation({
     userId: v.id("users"),
     role: v.union(v.literal("admin"), v.literal("editor"), v.literal("viewer")),
     hasPremium: v.boolean(),
+    messagingEnabled: v.optional(v.boolean()),
     storageAccountId: v.optional(v.id("storageAccounts")),
   },
   handler: async (ctx, args) => {
@@ -114,6 +115,7 @@ export const approveUser = mutation({
       approvalStatus: "approved",
       role: args.role,
       hasPremium: args.hasPremium,
+      messagingEnabled: args.messagingEnabled ?? false,
       storageAccountId: args.storageAccountId,
       updatedAt: Date.now(),
     });
