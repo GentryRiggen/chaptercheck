@@ -21,6 +21,7 @@ export type CreateUserFormValues = z.infer<typeof createUserSchema>;
 export const editUserSchema = z.object({
   role: z.enum(["admin", "editor", "viewer"]),
   hasPremium: z.boolean(),
+  messagingEnabled: z.boolean(),
   storageAccountId: z.string().optional().or(z.literal("")),
 });
 

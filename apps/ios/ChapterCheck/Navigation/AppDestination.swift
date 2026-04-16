@@ -19,4 +19,6 @@ enum AppDestination: Hashable {
     case followers(userId: String)
     case following(userId: String)
     case userSearch
+    case conversation(otherUserId: String)
+    case composeMessage
 }

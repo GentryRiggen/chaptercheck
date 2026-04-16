@@ -22,3 +22,15 @@ export function generateAudioFileR2Key(
   const sanitizedFileName = sanitizeFileName(fileName);
   return `${getStoragePrefix()}/${r2PathPrefix}/audiobooks/${bookId}/${sanitizedFileName}`;
 }
+
+/**
+ * Generate an R2 key for a message media file (photo or video)
+ *
+ * Format: {env}/media/messages/{conversationId}/{timestamp}-{sanitizedFileName}
+ * Example: prod/media/messages/abc123/1710000000000-photo.jpg
+ */
+export function generateMessageMediaR2Key(conversationId: string, fileName: string): string {
+  const sanitizedFileName = sanitizeFileName(fileName);
+  const timestamp = Date.now();
+  return `${getStoragePrefix()}/media/messages/${conversationId}/${timestamp}-${sanitizedFileName}`;
+}

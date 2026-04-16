@@ -98,6 +98,7 @@ export default function AdminUsersPage() {
     email: string;
     role: UserRole;
     hasPremium: boolean;
+    messagingEnabled: boolean;
     storageAccountId?: Id<"storageAccounts">;
   } | null>(null);
   const [approvingUser, setApprovingUser] = useState<{
@@ -323,6 +324,7 @@ export default function AdminUsersPage() {
                                 email: user.email,
                                 role: user.role,
                                 hasPremium: user.hasPremium,
+                                messagingEnabled: user.messagingEnabled,
                                 storageAccountId: user.storageAccountId,
                               })
                             }
@@ -508,6 +510,7 @@ export default function AdminUsersPage() {
                                       email: user.email,
                                       role: user.role,
                                       hasPremium: user.hasPremium,
+                                      messagingEnabled: user.messagingEnabled,
                                       storageAccountId: user.storageAccountId,
                                     })
                                   }

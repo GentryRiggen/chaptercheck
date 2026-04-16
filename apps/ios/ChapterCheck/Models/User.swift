@@ -24,6 +24,8 @@ struct UserPermissions: Decodable, Sendable {
     let canManageShelves: Bool
     /// `true` when the user can follow other users. Requires approval.
     let canFollow: Bool
+    /// `true` when the user can send direct messages. Requires messagingEnabled + allowDirectMessages + approved.
+    let canSendMessages: Bool
 
     // MARK: - Decoding
 
@@ -32,6 +34,7 @@ struct UserPermissions: Decodable, Sendable {
         case canCreateContent, canEditContent, canDeleteContent
         case canUploadAudio, canPlayAudio, canManageUsers
         case isPending, isApproved, canManageShelves, canFollow
+        case canSendMessages
     }
 
     init(from decoder: Decoder) throws {
@@ -52,6 +55,7 @@ struct UserPermissions: Decodable, Sendable {
         isApproved = try container.decodeIfPresent(Bool.self, forKey: .isApproved) ?? true
         canManageShelves = try container.decodeIfPresent(Bool.self, forKey: .canManageShelves) ?? true
         canFollow = try container.decodeIfPresent(Bool.self, forKey: .canFollow) ?? true
+        canSendMessages = try container.decodeIfPresent(Bool.self, forKey: .canSendMessages) ?? false
     }
 }
 
@@ -66,6 +70,8 @@ struct UserWithPermissions: Decodable, Identifiable, Sendable {
     let role: String
     let hasPremium: Bool
     let isProfilePrivate: Bool
+    let messagingEnabled: Bool?
+    let allowDirectMessages: Bool?
     let permissions: UserPermissions
 
     var id: String { _id }

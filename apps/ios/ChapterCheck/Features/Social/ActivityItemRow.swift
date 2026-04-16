@@ -38,6 +38,10 @@ struct ActivityItemRow: View {
 
                     // Context menu trigger — small ellipsis button in the trailing corner
                     Menu {
+                        NavigationLink(value: AppDestination.conversation(otherUserId: item.user._id)) {
+                            Label("Message", systemImage: "bubble.left")
+                        }
+
                         Button {
                             isReportSheetPresented = true
                         } label: {

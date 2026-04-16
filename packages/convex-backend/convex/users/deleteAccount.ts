@@ -202,7 +202,54 @@ export const deleteAccountData = internalMutation({
       await ctx.db.delete(row._id);
     }
 
-    // --- 15. users row (last) ---
+    // --- 15. conversationState (has by_user index) ---
+    const conversationStates = await ctx.db
+      .query("conversationState")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of conversationStates) {
+      await ctx.db.delete(row._id);
+    }
+
+    // --- 16. messages sent by user ---
+    const sentMessages = await ctx.db
+      .query("messages")
+      .filter((q) => q.eq(q.field("senderId"), userId))
+      .collect();
+    for (const row of sentMessages) {
+      await ctx.db.delete(row._id);
+    }
+
+    // --- 17. conversations where user is a participant ---
+    const conversationsAsA = await ctx.db
+      .query("conversations")
+      .withIndex("by_participantA", (q) => q.eq("participantA", userId))
+      .collect();
+    const conversationsAsB = await ctx.db
+      .query("conversations")
+      .withIndex("by_participantB", (q) => q.eq("participantB", userId))
+      .collect();
+    for (const row of [...conversationsAsA, ...conversationsAsB]) {
+      // Delete the other participant's state too
+      const otherStates = await ctx.db
+        .query("conversationState")
+        .withIndex("by_conversation_and_user", (q) => q.eq("conversationId", row._id))
+        .collect();
+      for (const state of otherStates) {
+        await ctx.db.delete(state._id);
+      }
+      // Delete all remaining messages in the conversation
+      const remainingMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q) => q.eq("conversationId", row._id))
+        .collect();
+      for (const msg of remainingMessages) {
+        await ctx.db.delete(msg._id);
+      }
+      await ctx.db.delete(row._id);
+    }
+
+    // --- 18. users row (last) ---
     // Guard: the Clerk user.deleted webhook may have already removed this row
     if (user) {
       await ctx.db.delete(userId);

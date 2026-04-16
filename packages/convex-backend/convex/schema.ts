@@ -25,6 +25,8 @@ export default defineSchema({
     ), // defaults to "viewer"
     hasPremium: v.optional(v.boolean()), // defaults to false, gates audio features
     isProfilePrivate: v.optional(v.boolean()), // defaults to false = public profile
+    messagingEnabled: v.optional(v.boolean()), // admin toggle for DM feature rollout
+    allowDirectMessages: v.optional(v.boolean()), // user opt-in for receiving/sending DMs
     approvalStatus: v.optional(
       v.union(v.literal("pending"), v.literal("approved"), v.literal("suspended"))
     ),
@@ -353,6 +355,61 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_createdAt", ["createdAt"])
     .index("by_status_and_createdAt", ["status", "createdAt"]),
+
+  // Direct Message Conversations (1:1 only)
+  conversations: defineTable({
+    participantA: v.id("users"), // lexicographically smaller user ID
+    participantB: v.id("users"), // lexicographically larger user ID
+    lastMessageId: v.optional(v.id("messages")),
+    lastMessageAt: v.optional(v.number()),
+    lastMessagePreview: v.optional(v.string()),
+    lastMessageSenderId: v.optional(v.id("users")),
+    lastMessageType: v.optional(v.union(v.literal("text"), v.literal("photo"), v.literal("video"))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_pair", ["participantA", "participantB"])
+    .index("by_participantA", ["participantA", "lastMessageAt"])
+    .index("by_participantB", ["participantB", "lastMessageAt"]),
+
+  // Per-user conversation state (read position, soft-delete)
+  conversationState: defineTable({
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    lastReadMessageId: v.optional(v.id("messages")),
+    deletedAt: v.optional(v.number()), // soft-delete for "delete conversation for me"
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId", "updatedAt"])
+    .index("by_conversation_and_user", ["conversationId", "userId"]),
+
+  // Direct messages
+  messages: defineTable({
+    conversationId: v.id("conversations"),
+    senderId: v.id("users"),
+    type: v.union(v.literal("text"), v.literal("photo"), v.literal("video")),
+    text: v.optional(v.string()),
+    editedAt: v.optional(v.number()),
+    // Media fields (photo/video)
+    mediaR2Key: v.optional(v.string()),
+    thumbnailR2Key: v.optional(v.string()),
+    mediaWidth: v.optional(v.number()),
+    mediaHeight: v.optional(v.number()),
+    mediaSizeBytes: v.optional(v.number()),
+    mediaDurationSeconds: v.optional(v.number()),
+    // Reactions (embedded — max 2 in 1:1)
+    reactions: v.optional(
+      v.array(
+        v.object({
+          userId: v.id("users"),
+          emoji: v.string(),
+          createdAt: v.number(),
+        })
+      )
+    ),
+    createdAt: v.number(),
+  }).index("by_conversation", ["conversationId", "createdAt"]),
 
   // Follows (user-to-user social graph)
   follows: defineTable({

@@ -278,6 +278,17 @@ struct ProfileView: View {
                     }
                 }
 
+                // My Notes (own profile only)
+                if profile.isOwnProfile {
+                    Section {
+                        NavigationLink {
+                            NotesTabView()
+                        } label: {
+                            Label("My Notes", systemImage: "note.text")
+                        }
+                    }
+                }
+
                 // Empty state when there's no content
                 if viewModel.readBooks.isEmpty && viewModel.shelves.isEmpty && viewModel.reviews.isEmpty && profile.stats == nil {
                     Section {
@@ -341,7 +352,20 @@ struct ProfileView: View {
                 }
 
                 if !profile.isOwnProfile {
-                    FollowButton(userId: userId)
+                    HStack(spacing: 12) {
+                        FollowButton(userId: userId)
+
+                        if !viewModel.isBlocked && !viewModel.isBlockedBy {
+                            NavigationLink(value: AppDestination.conversation(otherUserId: userId)) {
+                                Label("Message", systemImage: "bubble.left")
+                                    .font(.subheadline.weight(.semibold))
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color(.systemGray5), in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
 
                 // Stats row

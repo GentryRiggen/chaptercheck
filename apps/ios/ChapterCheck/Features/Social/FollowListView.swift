@@ -50,6 +50,12 @@ struct FollowListView: View {
             } else {
                 ForEach(filteredUsers) { user in
                     UserAvatarRow(user: user)
+                        .swipeActions(edge: .trailing) {
+                            NavigationLink(value: AppDestination.conversation(otherUserId: user._id)) {
+                                Label("Message", systemImage: "bubble.left")
+                            }
+                            .tint(.blue)
+                        }
                 }
             }
         }

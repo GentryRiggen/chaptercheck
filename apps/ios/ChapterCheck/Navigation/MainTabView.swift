@@ -107,7 +107,7 @@ enum Tab: Int, Hashable {
     case home
     case library
     case social
-    case notes
+    case messages
     case profile
 }
 
@@ -122,8 +122,10 @@ struct MainView: View {
     @State private var homePath: [AppDestination] = []
     @State private var libraryPath: [AppDestination] = []
     @State private var socialPath: [AppDestination] = []
-    @State private var notesPath: [AppDestination] = []
+    @State private var messagesPath: [AppDestination] = []
     @State private var profilePath: [AppDestination] = []
+    @State private var unreadMessageCount = 0
+    @State private var unreadCancellable: AnyCancellable?
 
     private var audioPlayer: AudioPlayerManager { .shared }
     @State private var downloadManager = DownloadManager()
@@ -151,7 +153,7 @@ struct MainView: View {
         case .home: return $homePath
         case .library: return $libraryPath
         case .social: return $socialPath
-        case .notes: return $notesPath
+        case .messages: return $messagesPath
         case .profile: return $profilePath
         }
     }
@@ -198,14 +200,15 @@ struct MainView: View {
                     }
                 }
 
-                SwiftUI.Tab("Notes", systemImage: "note.text", value: Tab.notes) {
-                    NavigationStack(path: $notesPath) {
-                        NotesTabView()
+                SwiftUI.Tab("Messages", systemImage: "bubble.left.and.bubble.right", value: Tab.messages) {
+                    NavigationStack(path: $messagesPath) {
+                        MessagesTabView()
                             .navigationDestination(for: AppDestination.self) { destination in
                                 destinationView(for: destination)
                             }
                     }
                 }
+                .badge(unreadMessageCount)
 
                 SwiftUI.Tab("Profile", systemImage: "person.crop.circle", value: Tab.profile) {
                     NavigationStack(path: $profilePath) {
@@ -280,6 +283,7 @@ struct MainView: View {
             currentUserProvider.subscribe()
             genreProvider.subscribe()
             tagProvider.subscribe()
+            subscribeToUnreadMessages()
 
             if networkMonitor.isConnected {
                 subscribeToPreferences()
@@ -511,7 +515,7 @@ struct MainView: View {
         case .home: targetPath = $homePath
         case .library: targetPath = $libraryPath
         case .social: targetPath = $socialPath
-        case .notes: targetPath = $notesPath
+        case .messages: targetPath = $messagesPath
         case .profile: targetPath = $profilePath
         }
 
@@ -548,6 +552,24 @@ struct MainView: View {
             )
     }
 
+    private func subscribeToUnreadMessages() {
+        unreadCancellable?.cancel()
+        unreadCancellable = nil
+
+        guard case .authenticated = ConvexService.shared.authState,
+              let publisher: AnyPublisher<Int, ClientError> = MessagingRepository().subscribeToUnreadCount() else { return }
+
+        unreadCancellable = publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { count in
+                    unreadMessageCount = count
+                    UIApplication.shared.applicationIconBadgeNumber = count
+                }
+            )
+    }
+
     // MARK: - Navigation Destination
 
     @ViewBuilder
@@ -579,6 +601,10 @@ struct MainView: View {
             FollowListView(userId: userId, mode: .following)
         case .userSearch:
             UserSearchView()
+        case .conversation(let otherUserId):
+            ConversationView(otherUserId: otherUserId)
+        case .composeMessage:
+            ComposeMessageView()
         }
     }
 }

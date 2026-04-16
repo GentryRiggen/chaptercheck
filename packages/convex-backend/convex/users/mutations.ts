@@ -61,6 +61,7 @@ export const adminUpdateUser = mutation({
     userId: v.id("users"),
     role: v.union(v.literal("admin"), v.literal("editor"), v.literal("viewer")),
     hasPremium: v.boolean(),
+    messagingEnabled: v.optional(v.boolean()),
     storageAccountId: v.optional(v.id("storageAccounts")),
   },
   handler: async (ctx, args) => {
@@ -82,6 +83,7 @@ export const adminUpdateUser = mutation({
     await ctx.db.patch(args.userId, {
       role: args.role,
       hasPremium: args.hasPremium,
+      messagingEnabled: args.messagingEnabled ?? user.messagingEnabled,
       storageAccountId: args.storageAccountId,
       approvalStatus: "approved",
       updatedAt: Date.now(),

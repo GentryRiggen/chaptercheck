@@ -41,6 +41,7 @@ export interface UserPermissions {
   canManageUsers: boolean; // Admin-only: change user roles/premium
   canManageShelves: boolean; // Requires approved
   canFollow: boolean; // Requires approved
+  canSendMessages: boolean; // Requires messagingEnabled + allowDirectMessages + approved
 }
 
 /**
@@ -87,6 +88,8 @@ export const getCurrentUserWithPermissions = query({
       canManageUsers: isAdmin,
       canManageShelves: approved,
       canFollow: approved,
+      canSendMessages:
+        approved && (user.messagingEnabled ?? false) && (user.allowDirectMessages ?? false),
     };
 
     return {
@@ -98,6 +101,8 @@ export const getCurrentUserWithPermissions = query({
       role: effectiveRole,
       hasPremium: isPremium,
       isProfilePrivate: user.isProfilePrivate ?? false,
+      messagingEnabled: user.messagingEnabled ?? false,
+      allowDirectMessages: user.allowDirectMessages ?? false,
       approvalStatus: user.approvalStatus ?? "approved",
       suspensionReason: suspended ? user.suspensionReason : undefined,
       permissions,
@@ -320,6 +325,7 @@ export const getAdminUserDetail = query({
       imageUrl: targetUser.imageUrl,
       role: getEffectiveRole(targetUser),
       hasPremium: hasPremium(targetUser),
+      messagingEnabled: targetUser.messagingEnabled ?? false,
       approvalStatus: targetUser.approvalStatus ?? "approved",
       suspensionReason: targetUser.suspensionReason,
       isProfilePrivate: targetUser.isProfilePrivate ?? false,
@@ -461,6 +467,7 @@ export const searchAndFilterUsers = query({
           imageUrl: user.imageUrl,
           role: getEffectiveRole(user),
           hasPremium: hasPremium(user),
+          messagingEnabled: user.messagingEnabled ?? false,
           approvalStatus: user.approvalStatus ?? "approved",
           suspensionReason: user.suspensionReason,
           storageAccountId: user.storageAccountId,
