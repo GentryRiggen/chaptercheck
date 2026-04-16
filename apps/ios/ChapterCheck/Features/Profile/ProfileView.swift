@@ -352,16 +352,19 @@ struct ProfileView: View {
                 }
 
                 if !profile.isOwnProfile {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         FollowButton(userId: userId)
 
                         if !viewModel.isBlocked && !viewModel.isBlockedBy {
-                            NavigationLink(value: AppDestination.conversation(otherUserId: userId)) {
-                                Label("Message", systemImage: "bubble.left")
+                            Button {
+                                pushDestination(.conversation(otherUserId: userId))
+                            } label: {
+                                Text("Message")
                                     .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
-                                    .background(Color(.systemGray5), in: Capsule())
+                                    .background(Color(.tertiarySystemFill), in: Capsule())
                             }
                             .buttonStyle(.plain)
                         }
