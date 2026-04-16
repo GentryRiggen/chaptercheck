@@ -13,6 +13,7 @@ export const createUserSchema = z.object({
   email: z.string().trim().min(1, "Email is required").email("Please enter a valid email address"),
   role: z.enum(["admin", "editor", "viewer"]),
   hasPremium: z.boolean(),
+  messagingEnabled: z.boolean(),
   storageAccountId: z.string().optional().or(z.literal("")),
 });
 
