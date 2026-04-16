@@ -14,6 +14,7 @@ struct MessageBubble: View {
     let onCopy: () -> Void
 
     @State private var showEditSheet = false
+    @State private var showReactionPicker = false
     @State private var editText = ""
     @State private var mediaUrl: URL?
     @State private var showFullScreenImage = false
@@ -74,6 +75,14 @@ struct MessageBubble: View {
         }
         .sheet(isPresented: $showEditSheet) {
             editMessageSheet
+        }
+        .sheet(isPresented: $showReactionPicker) {
+            ReactionPicker { emoji in
+                showReactionPicker = false
+                onReact(emoji)
+            }
+            .presentationDetents([.height(80)])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -163,15 +172,10 @@ struct MessageBubble: View {
             }
         }
 
-        // Quick reactions in context menu
-        Section("React") {
-            ForEach(ReactionPicker.presetEmojis, id: \.self) { emoji in
-                Button {
-                    onReact(emoji)
-                } label: {
-                    Text(emoji)
-                }
-            }
+        Button {
+            showReactionPicker = true
+        } label: {
+            Label("Add Reaction", systemImage: "face.smiling")
         }
     }
 
