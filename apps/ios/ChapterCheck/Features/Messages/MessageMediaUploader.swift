@@ -6,7 +6,9 @@ import UIKit
 /// and presigned URL upload for message media.
 actor MessageMediaUploader {
 
-    private let repository = MessagingRepository()
+    @MainActor private func makeRepository() -> MessagingRepository {
+        MessagingRepository()
+    }
 
     // MARK: - Photo Upload
 
@@ -21,7 +23,7 @@ actor MessageMediaUploader {
         let fileName = "photo_\(Int(Date().timeIntervalSince1970)).jpg"
 
         // Get presigned upload URL
-        let upload = try await repository.generateMediaUploadUrl(
+        let upload = try await makeRepository().generateMediaUploadUrl(
             conversationId: conversationId,
             fileName: fileName,
             fileSize: compressed.count,
@@ -82,7 +84,7 @@ actor MessageMediaUploader {
 
         // Upload thumbnail
         let thumbnailFileName = "thumb_\(Int(Date().timeIntervalSince1970)).jpg"
-        let thumbnailUpload = try await repository.generateMediaUploadUrl(
+        let thumbnailUpload = try await makeRepository().generateMediaUploadUrl(
             conversationId: conversationId,
             fileName: thumbnailFileName,
             fileSize: thumbnailData.count,
@@ -92,7 +94,7 @@ actor MessageMediaUploader {
 
         // Upload video
         let videoFileName = "video_\(Int(Date().timeIntervalSince1970)).mp4"
-        let videoUpload = try await repository.generateMediaUploadUrl(
+        let videoUpload = try await makeRepository().generateMediaUploadUrl(
             conversationId: conversationId,
             fileName: videoFileName,
             fileSize: fileSize,
@@ -143,9 +145,10 @@ actor MessageMediaUploader {
         }
 
         let formatDescriptions = try await videoTrack.load(.formatDescriptions)
+        // H.264 FourCC is 'avc1' = 0x61766331
+        let h264FourCC: FourCharCode = 0x61766331
         let isH264 = formatDescriptions.contains { desc in
-            let mediaSubType = CMFormatDescriptionGetMediaSubType(desc)
-            return mediaSubType == kCMVideoCodec_H264
+            CMFormatDescriptionGetMediaSubType(desc) == h264FourCC
         }
 
         if isH264 && sourceURL.pathExtension.lowercased() == "mp4" {

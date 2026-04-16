@@ -268,7 +268,11 @@ struct ConversationView: View {
     }
 
     private func sendMedia(_ preview: MediaPreviewItem) async {
-        guard let conversationId = viewModel.conversationId ?? (try? await ensureConversation()) else { return }
+        var conversationId = viewModel.conversationId
+        if conversationId == nil {
+            conversationId = try? await ensureConversation()
+        }
+        guard let conversationId else { return }
 
         isUploading = true
         uploadProgress = 0
