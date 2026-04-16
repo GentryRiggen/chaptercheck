@@ -55,6 +55,7 @@ struct MessageBubble: View {
                 .padding(.vertical, message.isText ? 10 : 0)
                 .background(bubbleBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 18))
+                .onTapGesture(count: 2) { showReactionPicker = true }
                 .contextMenu { contextMenuItems }
 
                 if !isFromCurrentUser { Spacer(minLength: 60) }
