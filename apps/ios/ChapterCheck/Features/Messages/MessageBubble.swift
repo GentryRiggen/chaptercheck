@@ -283,6 +283,7 @@ struct MessageMediaImage: View {
 
     @State private var imageURL: URL?
     @State private var isLoading = true
+    @State private var loadFailed = false
 
     var body: some View {
         Group {
@@ -292,7 +293,7 @@ struct MessageMediaImage: View {
                     case .success(let image):
                         image
                             .resizable()
-                            .scaledToFill()
+                            .scaledToFit()
                     case .failure:
                         imagePlaceholder(systemName: "exclamationmark.triangle")
                     default:
@@ -300,11 +301,12 @@ struct MessageMediaImage: View {
                             .frame(width: 200, height: 150)
                     }
                 }
+                .frame(minWidth: 120, minHeight: 80)
             } else if isLoading {
                 ProgressView()
                     .frame(width: 200, height: 150)
             } else {
-                imagePlaceholder(systemName: "photo")
+                imagePlaceholder(systemName: loadFailed ? "exclamationmark.triangle" : "photo")
             }
         }
         .task { await loadURL() }
@@ -315,7 +317,7 @@ struct MessageMediaImage: View {
             let result = try await MessagingRepository().generateMediaUrl(r2Key: r2Key)
             imageURL = URL(string: result.url)
         } catch {
-            // Failed to get presigned URL
+            loadFailed = true
         }
         isLoading = false
     }

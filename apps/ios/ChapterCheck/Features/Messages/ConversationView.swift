@@ -45,6 +45,14 @@ struct ConversationView: View {
         }
         .navigationTitle(viewModel.conversationDetail?.otherUser?.displayName ?? "Conversation")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Error", isPresented: .init(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        )) {
+            Button("OK") { viewModel.error = nil }
+        } message: {
+            Text(viewModel.error ?? "")
+        }
         .onAppear {
             viewModel.subscribe()
             Task { await viewModel.markRead() }
