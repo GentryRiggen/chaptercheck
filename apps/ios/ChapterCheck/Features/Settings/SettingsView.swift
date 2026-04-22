@@ -180,6 +180,8 @@ struct SettingsView: View {
             UserSearchView()
         case .browseLibrary, .browseAuthors:
             EmptyView()
+        case .messages:
+            MessagesTabView()
         case .conversation(let otherUserId):
             ConversationView(otherUserId: otherUserId)
         case .composeMessage:

@@ -209,9 +209,7 @@ struct ProfileView: View {
             // Messages (own profile only)
             if profile.isOwnProfile {
                 Section {
-                    NavigationLink {
-                        MessagesTabView()
-                    } label: {
+                    NavigationLink(value: AppDestination.messages) {
                         HStack {
                             Label("Messages", systemImage: "bubble.left.and.bubble.right")
                             Spacer()

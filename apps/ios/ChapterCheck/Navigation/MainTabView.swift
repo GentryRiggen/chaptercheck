@@ -200,7 +200,7 @@ struct MainView: View {
                     }
                 }
 
-                SwiftUI.Tab("Notes", systemImage: "pencil.and.notepad", value: Tab.notes) {
+                SwiftUI.Tab("Notes", systemImage: "note.text", value: Tab.notes) {
                     NavigationStack(path: $notesPath) {
                         NotesTabView()
                             .navigationDestination(for: AppDestination.self) { destination in
@@ -601,6 +601,8 @@ struct MainView: View {
             FollowListView(userId: userId, mode: .following)
         case .userSearch:
             UserSearchView()
+        case .messages:
+            MessagesTabView()
         case .conversation(let otherUserId):
             ConversationView(otherUserId: otherUserId)
         case .composeMessage:
