@@ -107,7 +107,7 @@ enum Tab: Int, Hashable {
     case home
     case library
     case social
-    case messages
+    case notes
     case profile
 }
 
@@ -122,7 +122,7 @@ struct MainView: View {
     @State private var homePath: [AppDestination] = []
     @State private var libraryPath: [AppDestination] = []
     @State private var socialPath: [AppDestination] = []
-    @State private var messagesPath: [AppDestination] = []
+    @State private var notesPath: [AppDestination] = []
     @State private var profilePath: [AppDestination] = []
     @State private var unreadMessageCount = 0
     @State private var unreadCancellable: AnyCancellable?
@@ -153,7 +153,7 @@ struct MainView: View {
         case .home: return $homePath
         case .library: return $libraryPath
         case .social: return $socialPath
-        case .messages: return $messagesPath
+        case .notes: return $notesPath
         case .profile: return $profilePath
         }
     }
@@ -200,15 +200,14 @@ struct MainView: View {
                     }
                 }
 
-                SwiftUI.Tab("Messages", systemImage: "bubble.left.and.bubble.right", value: Tab.messages) {
-                    NavigationStack(path: $messagesPath) {
-                        MessagesTabView()
+                SwiftUI.Tab("Notes", systemImage: "pencil.and.notepad", value: Tab.notes) {
+                    NavigationStack(path: $notesPath) {
+                        NotesTabView()
                             .navigationDestination(for: AppDestination.self) { destination in
                                 destinationView(for: destination)
                             }
                     }
                 }
-                .badge(unreadMessageCount)
 
                 SwiftUI.Tab("Profile", systemImage: "person.crop.circle", value: Tab.profile) {
                     NavigationStack(path: $profilePath) {
@@ -218,6 +217,7 @@ struct MainView: View {
                             }
                     }
                 }
+                .badge(unreadMessageCount)
             }
 
             if audioPlayer.hasContent {
@@ -515,7 +515,7 @@ struct MainView: View {
         case .home: targetPath = $homePath
         case .library: targetPath = $libraryPath
         case .social: targetPath = $socialPath
-        case .messages: targetPath = $messagesPath
+        case .notes: targetPath = $notesPath
         case .profile: targetPath = $profilePath
         }
 
