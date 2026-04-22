@@ -1,3 +1,5 @@
+import Combine
+import ConvexMobile
 import SwiftUI
 
 /// Displays a user's public profile including stats, shelves, and reading history.
@@ -13,6 +15,8 @@ struct ProfileView: View {
     @State private var isReportSheetPresented = false
     @State private var isBlockConfirmationPresented = false
     @State private var isUnblockConfirmationPresented = false
+    @State private var unreadMessageCount = 0
+    @State private var unreadCancellable: AnyCancellable?
     @Environment(ThemeManager.self) private var themeManager
     @Environment(\.pushDestination) private var pushDestination
     @Environment(\.showToast) private var showToast
@@ -75,8 +79,15 @@ struct ProfileView: View {
         } message: {
             Text("They will be able to see your activity and you will see theirs again.")
         }
-        .onAppear { viewModel.subscribe(userId: userId) }
-        .onDisappear { viewModel.unsubscribe() }
+        .onAppear {
+            viewModel.subscribe(userId: userId)
+            subscribeToUnreadMessages()
+        }
+        .onDisappear {
+            viewModel.unsubscribe()
+            unreadCancellable?.cancel()
+            unreadCancellable = nil
+        }
     }
 
     // MARK: - Toolbar Menu
@@ -195,6 +206,28 @@ struct ProfileView: View {
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
+            // Messages (own profile only)
+            if profile.isOwnProfile {
+                Section {
+                    NavigationLink {
+                        MessagesTabView()
+                    } label: {
+                        HStack {
+                            Label("Messages", systemImage: "bubble.left.and.bubble.right")
+                            Spacer()
+                            if unreadMessageCount > 0 {
+                                Text("\(unreadMessageCount)")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.accentColor, in: Capsule())
+                            }
+                        }
+                    }
+                }
+            }
+
             // Private profile gate
             if profile.isProfilePrivate && !profile.isOwnProfile {
                 Section {
@@ -278,17 +311,6 @@ struct ProfileView: View {
                     }
                 }
 
-                // My Notes (own profile only)
-                if profile.isOwnProfile {
-                    Section {
-                        NavigationLink {
-                            NotesTabView()
-                        } label: {
-                            Label("My Notes", systemImage: "note.text")
-                        }
-                    }
-                }
-
                 // Empty state when there's no content
                 if viewModel.readBooks.isEmpty && viewModel.shelves.isEmpty && viewModel.reviews.isEmpty && profile.stats == nil {
                     Section {
@@ -308,6 +330,22 @@ struct ProfileView: View {
         .safeAreaInset(edge: .bottom) {
             Spacer().frame(height: 80)
         }
+    }
+
+    private func subscribeToUnreadMessages() {
+        unreadCancellable?.cancel()
+        unreadCancellable = nil
+
+        guard let publisher: AnyPublisher<Int, ClientError> = MessagingRepository().subscribeToUnreadCount() else { return }
+
+        unreadCancellable = publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { count in
+                    unreadMessageCount = count
+                }
+            )
     }
 
     // MARK: - Sub-views
