@@ -39,6 +39,12 @@ struct AuthGateView: View {
         // Offline bypass — keep MainView mounted to preserve playback state
         if allowOfflineBypass { return true }
 
+        // Explicit user sign-out short-circuits the `hasAuthenticated`
+        // fall-through. Without this, if Clerk's signOut HTTP call fails or
+        // its local client state lingers, `Clerk.shared.session != nil` keeps
+        // returning true and MainView stays mounted forever.
+        if convexService.userSignOutRequested { return false }
+
         guard Clerk.shared.isLoaded, Clerk.shared.session != nil else { return false }
         if case .authenticated = convexService.authState { return true }
         // Keep MainView mounted through transient loading/unauthenticated
@@ -59,7 +65,8 @@ struct AuthGateView: View {
                         }
                     }
             } else if Clerk.shared.isLoaded, Clerk.shared.session != nil,
-                      pendingSignIn == nil, pendingSignUp == nil {
+                      pendingSignIn == nil, pendingSignUp == nil,
+                      !convexService.userSignOutRequested {
                 // Clerk session exists but Convex not yet authenticated
                 loadingView
                     .task {

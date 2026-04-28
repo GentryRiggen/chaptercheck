@@ -12,6 +12,8 @@ import Foundation
 final class ClerkConvexAuthProvider: AuthProvider {
     typealias T = String
 
+    private let logger = AppLogger(category: "ClerkConvexAuthProvider")
+
     // MARK: - AuthProvider
 
     func login() async throws -> String {
@@ -25,7 +27,7 @@ final class ClerkConvexAuthProvider: AuthProvider {
     }
 
     func logout() async throws {
-        try await logoutOnMain()
+        await logoutOnMain()
     }
 
     func extractIdToken(from authResult: String) -> String {
@@ -35,9 +37,27 @@ final class ClerkConvexAuthProvider: AuthProvider {
     // MARK: - Private Helpers
 
     /// Signs out on the main actor since Clerk is MainActor-isolated.
+    ///
+    /// Errors from Clerk are caught and logged rather than propagated. If we
+    /// rethrew, ConvexMobile's `client.logout()` would short-circuit and never
+    /// emit `.unauthenticated`, leaving the app stuck on the authenticated UI.
+    /// The user explicitly requested sign-out — we always proceed with local
+    /// cleanup even if Clerk's network call fails (e.g. expired session, 4xx).
     @MainActor
-    private func logoutOnMain() async throws {
-        try await Clerk.shared.auth.signOut()
+    private func logoutOnMain() async {
+        logger.info("Clerk signOut starting")
+        do {
+            try await Clerk.shared.auth.signOut()
+            logger.info("Clerk signOut succeeded — session=\(Clerk.shared.session == nil ? "nil" : "non-nil")")
+        } catch {
+            logger.error("Clerk signOut threw: \(error.localizedDescription) — continuing local cleanup")
+            SentryService.addBreadcrumb(
+                message: "Clerk signOut threw — continuing local cleanup",
+                category: "auth",
+                level: .warning,
+                data: ["error": error.localizedDescription]
+            )
+        }
     }
 
     /// Fetches a fresh JWT from the current Clerk session using the "convex"

@@ -274,6 +274,10 @@ struct SignUpView: View {
         isLoading = true
         errorMessage = nil
 
+        // User is explicitly attempting to authenticate. Clear any stale
+        // sign-out flag so AuthGateView won't block routing to MainView.
+        ConvexService.shared.userDidSignIn()
+
         Task {
             do {
                 let result = try await Clerk.shared.auth.signUp(
@@ -304,6 +308,7 @@ struct SignUpView: View {
                 if result.status == .complete {
                     // Sign-up is complete. Clerk.shared.session will update automatically.
                     // Show the optional photo step before AuthGateView transitions.
+                    ConvexService.shared.userDidSignIn()
                     self.pendingSignUp = result
                     step = .photo
                 } else {

@@ -29,6 +29,11 @@ final class ConvexService: ObservableObject {
     @Published private(set) var resetID = UUID()
     @Published private(set) var isResetting = false
     @Published private(set) var isWebSocketConnected: Bool = false
+    /// Set true when the user explicitly invokes `logout()`. Cleared when
+    /// `login()` succeeds. `AuthGateView` observes this to forcibly tear down
+    /// `MainView` even if Clerk's local session lingers (e.g. signOut HTTP
+    /// failure leaves `Clerk.shared.session` populated).
+    @Published private(set) var userSignOutRequested: Bool = false
 
     // MARK: - Client
 
@@ -360,7 +365,18 @@ final class ConvexService: ObservableObject {
 
     /// Initiate a fresh login flow (called after the user completes Clerk sign-in).
     func login() async {
+        userSignOutRequested = false
         _ = await client.login()
+    }
+
+    /// Call when a Clerk sign-in or sign-up flow completes, before the new
+    /// session lands. Clears `userSignOutRequested` so `AuthGateView` will
+    /// route the freshly-authenticated session into `MainView` instead of
+    /// staying on the sign-in screen.
+    func userDidSignIn() {
+        guard userSignOutRequested else { return }
+        logger.info("Clearing userSignOutRequested — sign-in flow completed")
+        userSignOutRequested = false
     }
 
     /// Rebuild the authenticated Convex client and force the SwiftUI tree to remount.
@@ -464,9 +480,30 @@ final class ConvexService: ObservableObject {
     }
 
     /// Sign out of both Convex and Clerk, clearing user-specific caches.
+    ///
+    /// Sets `userSignOutRequested = true` immediately so `AuthGateView` can
+    /// dismount `MainView` synchronously. We then drive the full cleanup
+    /// regardless of whether Clerk's network call succeeds — `client.logout()`
+    /// already swallows errors from `ClerkConvexAuthProvider`, and we force
+    /// `authState = .unauthenticated` afterwards as a belt-and-suspenders
+    /// guarantee in case the auth publisher didn't emit (CHAPTERCHECK-IOS-?).
     func logout() async {
+        logger.info("User-initiated sign out: starting")
+        SentryService.addBreadcrumb(message: "User-initiated sign out", category: "auth")
+
+        userSignOutRequested = true
+        tokenRefreshTask?.cancel()
+        tokenRefreshTask = nil
+
         await client.logout()
+        if case .unauthenticated = authState {
+            logger.info("Sign out: authState already .unauthenticated")
+        } else {
+            logger.info("Sign out: forcing authState to .unauthenticated (was \(String(describing: authState)))")
+            authState = .unauthenticated
+        }
         await ImageRepository.shared.clearCache()
+        logger.info("User-initiated sign out: complete (Clerk session=\(Clerk.shared.session == nil ? "nil" : "non-nil"))")
     }
 
     // MARK: - Query Convenience Methods

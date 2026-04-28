@@ -14,8 +14,8 @@ struct SettingsView: View {
     @State private var convexUser: UserWithPermissions?
     @State private var storageStats: StorageStats?
     @State private var cancellables = Set<AnyCancellable>()
-    @State private var showSignOutConfirmation = false
     @State private var showLogs = false
+    @State private var showSignOutConfirmation = false
 
     private let userRepository = UserRepository()
 
@@ -103,21 +103,6 @@ struct SettingsView: View {
                     } label: {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
-                    .confirmationDialog(
-                        "Are you sure you want to sign out?",
-                        isPresented: $showSignOutConfirmation,
-                        titleVisibility: .visible
-                    ) {
-                        Button("Sign Out", role: .destructive) {
-                            downloadManager.deleteAllDownloads()
-                            UserDefaults.standard.removeObject(forKey: "hasAuthenticatedBefore")
-                            Task {
-                                await convexService.logout()
-                            }
-                        }
-                    } message: {
-                        Text("Downloaded audiobooks will be removed from this device.")
-                    }
 
                     NavigationLink {
                         DeleteAccountView()
@@ -147,6 +132,11 @@ struct SettingsView: View {
                 NavigationStack {
                     ConsoleView()
                 }
+            }
+            .sheet(isPresented: $showSignOutConfirmation) {
+                SignOutConfirmationView(onSignOut: performSignOut)
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
             }
         }
     }
@@ -219,6 +209,16 @@ struct SettingsView: View {
             Text("Storage")
         } footer: {
             Text("Storage used by your uploaded audiobook files.")
+        }
+    }
+
+    // MARK: - Sign Out
+
+    private func performSignOut() {
+        downloadManager.deleteAllDownloads()
+        UserDefaults.standard.removeObject(forKey: "hasAuthenticatedBefore")
+        Task {
+            await convexService.logout()
         }
     }
 

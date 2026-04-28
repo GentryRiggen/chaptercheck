@@ -162,6 +162,12 @@ struct SignInView: View {
         isLoading = true
         errorMessage = nil
 
+        // User is explicitly attempting to authenticate. Clear any stale
+        // sign-out flag so AuthGateView can route an existing Clerk session
+        // (e.g. from a partial prior signOut) into MainView instead of
+        // bouncing the user back here with "already signed in".
+        ConvexService.shared.userDidSignIn()
+
         Task {
             do {
                 let result = try await Clerk.shared.auth.signInWithEmailCode(
@@ -186,6 +192,7 @@ struct SignInView: View {
                 if result.status == .complete {
                     // Auth state change is picked up by AuthGateView via Clerk.shared.session.
                     // Clearing the binding releases the branch guard in AuthGateView.
+                    ConvexService.shared.userDidSignIn()
                     self.pendingSignIn = nil
                 } else {
                     errorMessage = "Verification incomplete. Please try again."
