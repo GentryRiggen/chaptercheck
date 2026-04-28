@@ -34,8 +34,20 @@ jobs:
         with:
           xcode-version: "26"
 
-      - name: 📲 Install iOS platform
-        run: xcodebuild -downloadPlatform iOS
+      - name: 📲 Ensure iOS platform installed
+        run: |
+          set -e
+          # Xcode on macos-26 ships with the iOS SDK preinstalled. Skip the
+          # download (which requires the CoreSimulator service and has been
+          # flaking with "Unable to connect to simulator") when the SDK is
+          # already present. Only download as a fallback.
+          if xcodebuild -showsdks 2>/dev/null | grep -qE "iphoneos[0-9]"; then
+            echo "✅ iOS platform already installed:"
+            xcodebuild -showsdks | grep iphoneos
+          else
+            echo "📥 iOS platform missing — downloading..."
+            xcodebuild -downloadPlatform iOS
+          fi
 
       - name: 📦 Install XcodeGen
         run: brew install xcodegen
